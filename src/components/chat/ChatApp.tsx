@@ -41,6 +41,7 @@ export function ChatApp({
   const [countryFilter, setCountryFilter] = useState("");
   const [sending, setSending] = useState(false);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const refreshConversations = useCallback(async () => {
     const list = await loadConversations(getSupabase(), currentUser.id);
@@ -128,18 +129,26 @@ export function ChatApp({
   }, [activeConvId, getSupabase, loadMessages, refreshConversations]);
 
   async function openConversation(other: Profile, convId?: string) {
-    let id = convId;
-    if (!id) {
-      id =
-        (await findOrCreateConversation(getSupabase(), currentUser.id, other.id)) ??
-        undefined;
-    }
-    if (!id) return;
+    setChatError(null);
 
-    setActiveConvId(id);
+    if (!convId) {
+      const { convId: createdId, error } = await findOrCreateConversation(
+        getSupabase(),
+        currentUser.id,
+        other.id,
+      );
+      if (error) {
+        setChatError(error);
+        return;
+      }
+      if (!createdId) return;
+      convId = createdId;
+    }
+
+    setActiveConvId(convId);
     setActiveOther(other);
     setTab("chats");
-    await loadMessages(id);
+    await loadMessages(convId);
     await refreshConversations();
   }
 
@@ -148,6 +157,7 @@ export function ChatApp({
     if (!draft.trim() || !activeConvId || sending) return;
 
     setSending(true);
+    setChatError(null);
     const content = draft.trim();
     setDraft("");
 
@@ -161,7 +171,18 @@ export function ChatApp({
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      setChatError(
+        error.message.includes("row-level security")
+          ? "You can only message friends. Both of you must connect (follow each other)."
+          : error.message,
+      );
+      setDraft(content);
+      setSending(false);
+      return;
+    }
+
+    if (data) {
       setMessages((prev) => {
         if (prev.some((m) => m.id === data.id)) return prev;
         return [...prev, data as Message];
@@ -240,6 +261,12 @@ export function ChatApp({
           </div>
         </div>
 
+        {chatError ? (
+          <p className="border-b border-vintage-border bg-vintage-rust/10 px-4 py-2 text-xs text-vintage-rust">
+            {chatError}
+          </p>
+        ) : null}
+
         {tab === "chats" ? (
           <div className="flex-1 overflow-y-auto">
             {conversations.length === 0 ? (
@@ -310,6 +337,9 @@ export function ChatApp({
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-vintage-ink-muted">
+                Message people after you both connect (follow each other).
+              </p>
             </div>
             <div className="flex-1 overflow-y-auto">
               {discoverUsers.length === 0 ? (
@@ -408,6 +438,12 @@ export function ChatApp({
                 })
               )}
             </div>
+
+            {chatError ? (
+              <p className="border-t border-vintage-border px-4 py-2 text-xs text-vintage-rust">
+                {chatError}
+              </p>
+            ) : null}
 
             <form
               onSubmit={sendMessage}

@@ -1,10 +1,17 @@
-const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000").replace(
+import { getSupabase } from "@/lib/supabase";
+
+const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "https://itunes-mu.vercel.app").replace(
   /\/$/,
   "",
 );
 
 export function getApiUrl(): string {
   return API_URL;
+}
+
+export async function getAccessToken(): Promise<string | null> {
+  const { data } = await getSupabase().auth.getSession();
+  return data.session?.access_token ?? null;
 }
 
 export async function apiFetch<T>(

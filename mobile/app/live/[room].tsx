@@ -31,9 +31,12 @@ export default function LiveRoomScreen() {
   const [messages, setMessages] = useState<LiveChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [streamLive, setStreamLive] = useState(true);
   const listRef = useRef<FlatList>(null);
 
   const isHost = stream?.host_id === profile?.id;
+  const chatOpen = streamLive;
 
   const loadStream = useCallback(async () => {
     if (!room) return;
@@ -48,6 +51,7 @@ export default function LiveRoomScreen() {
     }
     const s = data as LiveStream;
     setStream(s);
+    setStreamLive(s.is_live);
     const { data: hostProfile } = await getSupabase()
       .from("profiles")
       .select("*")
@@ -65,6 +69,35 @@ export default function LiveRoomScreen() {
 
   useEffect(() => {
     if (!room) return;
+
+    async function refreshLiveStatus() {
+      const { data } = await getSupabase()
+        .from("live_streams")
+        .select("is_live")
+        .eq("room_name", room)
+        .maybeSingle();
+      if (data) setStreamLive(data.is_live);
+    }
+
+    refreshLiveStatus();
+
+    const statusChannel = getSupabase()
+      .channel(`live-status:${room}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "live_streams",
+          filter: `room_name=eq.${room}`,
+        },
+        (payload) => {
+          const row = payload.new as { is_live?: boolean };
+          if (typeof row.is_live === "boolean") setStreamLive(row.is_live);
+        },
+      )
+      .subscribe();
+
     const channel = getSupabase()
       .channel(`live-chat:${room}`)
       .on(
@@ -97,25 +130,34 @@ export default function LiveRoomScreen() {
       )
       .subscribe();
     return () => {
+      getSupabase().removeChannel(statusChannel);
       getSupabase().removeChannel(channel);
     };
   }, [room, profile]);
 
   async function sendChat() {
-    if (!draft.trim() || !room || !profile || !stream?.is_live) return;
+    if (!draft.trim() || !room || !profile || !chatOpen) return;
+    setChatError(null);
     const { message, error } = await sendLiveChatMessage(
       getSupabase(),
       room,
       profile.id,
       draft,
     );
+    if (error) {
+      setChatError(
+        error.includes("row-level security")
+          ? "Chat is only open while the stream is live."
+          : error,
+      );
+      return;
+    }
     if (message) {
       setMessages((prev) =>
         prev.some((m) => m.id === message.id) ? prev : [...prev, { ...message, author: profile }],
       );
       setDraft("");
     }
-    if (error) console.warn(error);
   }
 
   async function handleEnd() {
@@ -139,13 +181,13 @@ export default function LiveRoomScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.videoPlaceholder}>
-        <Text style={styles.liveBadge}>{stream.is_live ? "LIVE" : "ENDED"}</Text>
+        <Text style={styles.liveBadge}>{chatOpen ? "LIVE" : "ENDED"}</Text>
         <Text style={styles.streamTitle}>{stream.title}</Text>
         <Text style={styles.hostName}>{host?.display_name ?? "Host"}</Text>
         <Text style={styles.videoNote}>
           Native LiveKit video is coming soon. Use the web app to broadcast or watch video.
         </Text>
-        {isHost && stream.is_live && (
+        {isHost && chatOpen && (
           <Btn label="End stream" onPress={handleEnd} />
         )}
       </View>
@@ -180,7 +222,7 @@ export default function LiveRoomScreen() {
         ListEmptyComponent={<Text style={styles.emptyChat}>Say hello in live chat!</Text>}
       />
 
-      {stream.is_live ? (
+      {chatOpen ? (
         <View style={styles.composer}>
           <TextInput
             value={draft}
@@ -188,6 +230,7 @@ export default function LiveRoomScreen() {
             placeholder="Chat with everyone watching…"
             placeholderTextColor={colors.inkMuted}
             style={styles.input}
+            maxLength={500}
           />
           <Pressable onPress={sendChat} style={styles.send}>
             <Text style={styles.sendText}>Send</Text>
@@ -196,6 +239,7 @@ export default function LiveRoomScreen() {
       ) : (
         <Text style={styles.closed}>Chat closed — stream has ended</Text>
       )}
+      {chatError ? <Text style={styles.chatError}>{chatError}</Text> : null}
     </KeyboardAvoidingView>
   );
 }
@@ -258,5 +302,12 @@ const styles = StyleSheet.create({
   send: { justifyContent: "center", paddingHorizontal: 12 },
   sendText: { color: colors.rust, fontWeight: "700" },
   closed: { textAlign: "center", padding: spacing.md, color: colors.inkMuted },
+  chatError: {
+    textAlign: "center",
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    color: colors.rust,
+    fontSize: 12,
+  },
   missing: { textAlign: "center", color: colors.inkMuted, marginTop: 32 },
 });

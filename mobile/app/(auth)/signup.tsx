@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { Link, router } from "expo-router";
+import { OAuthButtons } from "@/components/OAuthButtons";
 import { Btn, ErrorText, Input, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { validateAuthForm, cleanUsername } from "@/lib/auth-validation";
@@ -64,6 +65,15 @@ export default function SignupScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.title}>Create account</Text>
+
+          <OAuthButtons
+            disabled={loading}
+            onSuccess={() => router.replace("/(tabs)/chat")}
+            onError={setError}
+          />
+
+          <Text style={styles.divider}>or sign up with email</Text>
+
           <Input value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
           <Input
             value={username}
@@ -101,7 +111,14 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.lg },
-  title: { fontSize: 28, fontWeight: "700", color: colors.ink, marginBottom: spacing.md },
+  title: { fontSize: 28, fontWeight: "700", color: colors.ink, marginBottom: spacing.sm },
+  divider: {
+    textAlign: "center",
+    color: colors.inkMuted,
+    fontSize: 12,
+    textTransform: "uppercase",
+    marginBottom: spacing.sm,
+  },
   footer: { textAlign: "center", marginTop: spacing.lg, color: colors.inkMuted },
   link: { color: colors.rust, fontWeight: "600" },
   success: { color: colors.ink, marginBottom: spacing.sm },

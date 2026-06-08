@@ -31,6 +31,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const refreshConversations = useCallback(async () => {
     if (!profile) return;
@@ -102,27 +103,49 @@ export default function ChatScreen() {
 
   async function openChat(other: Profile, convId?: string) {
     if (!profile) return;
-    let id = convId;
-    if (!id) {
-      id =
-        (await findOrCreateConversation(getSupabase(), profile.id, other.id)) ??
-        undefined;
+    setChatError(null);
+
+    if (!convId) {
+      const { convId: createdId, error } = await findOrCreateConversation(
+        getSupabase(),
+        profile.id,
+        other.id,
+      );
+      if (error) {
+        setChatError(error);
+        return;
+      }
+      if (!createdId) return;
+      convId = createdId;
     }
-    if (!id) return;
-    setActiveConvId(id);
+
+    setActiveConvId(convId);
     setActiveOther(other);
     setTab("chats");
   }
 
   async function sendMessage() {
     if (!draft.trim() || !activeConvId || !profile) return;
+    setChatError(null);
     const content = draft.trim();
     setDraft("");
-    await getSupabase().from("messages").insert({
+
+    const { error } = await getSupabase().from("messages").insert({
       conversation_id: activeConvId,
       sender_id: profile.id,
       content,
     });
+
+    if (error) {
+      setChatError(
+        error.message.includes("row-level security")
+          ? "You can only message friends. Both of you must connect (follow each other)."
+          : error.message,
+      );
+      setDraft(content);
+      return;
+    }
+
     refreshConversations();
   }
 
@@ -176,6 +199,7 @@ export default function ChatScreen() {
     <Screen>
       <Title>Chat</Title>
       <Subtitle>Messages and discover people</Subtitle>
+      {chatError ? <Text style={styles.error}>{chatError}</Text> : null}
       <View style={styles.tabs}>
         <Pressable onPress={() => setTab("chats")} style={[styles.tab, tab === "chats" && styles.tabActive]}>
           <Text style={tab === "chats" ? styles.tabTextActive : styles.tabText}>Chats</Text>
@@ -186,13 +210,16 @@ export default function ChatScreen() {
       </View>
 
       {tab === "discover" && (
-        <TextInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search people…"
-          placeholderTextColor={colors.inkMuted}
-          style={styles.search}
-        />
+        <>
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search people…"
+            placeholderTextColor={colors.inkMuted}
+            style={styles.search}
+          />
+          <Text style={styles.hint}>Message after you both connect (follow each other).</Text>
+        </>
       )}
 
       {tab === "chats" ? (
@@ -269,4 +296,6 @@ const styles = StyleSheet.create({
   name: { fontWeight: "700", color: colors.ink },
   preview: { fontSize: 13, color: colors.inkMuted },
   empty: { textAlign: "center", color: colors.inkMuted, marginTop: 24 },
+  error: { color: colors.rust, fontSize: 13, marginBottom: spacing.sm },
+  hint: { fontSize: 12, color: colors.inkMuted, marginBottom: spacing.sm },
 });

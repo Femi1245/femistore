@@ -12,7 +12,11 @@ export default function GoLiveScreen() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleStart() {
-    if (!title.trim() || !session?.access_token) return;
+    if (!title.trim()) return;
+    if (!session?.access_token) {
+      setError("You must be signed in to go live.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { data, error: apiError } = await startLiveStream(

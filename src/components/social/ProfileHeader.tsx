@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UserPlus, UserMinus, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { findOrCreateConversation } from "@/lib/chat";
+import { areMutualFriends, findOrCreateConversation } from "@/lib/chat";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -23,7 +23,14 @@ export function ProfileHeader({
   const isOwn = profile.id === currentUser.id;
   const [counts, setCounts] = useState(initialCounts);
   const [following, setFollowing] = useState(initialFollowing);
+  const [friends, setFriends] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOwn) return;
+    areMutualFriends(createClient(), currentUser.id, profile.id).then(setFriends);
+  }, [currentUser.id, profile.id, following, isOwn]);
 
   async function handleFollow() {
     setLoading(true);
@@ -36,12 +43,17 @@ export function ProfileHeader({
   }
 
   async function handleMessage() {
+    setMessageError(null);
     const supabase = createClient();
-    const convId = await findOrCreateConversation(
+    const { convId, error } = await findOrCreateConversation(
       supabase,
       currentUser.id,
       profile.id,
     );
+    if (error) {
+      setMessageError(error);
+      return;
+    }
     if (convId) window.location.href = "/chat";
   }
 
@@ -109,13 +121,26 @@ export function ProfileHeader({
                 </button>
                 <button
                   onClick={handleMessage}
-                  className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm"
+                  disabled={!friends}
+                  title={
+                    friends
+                      ? "Send a message"
+                      : "Both of you must connect (follow each other) to message"
+                  }
+                  className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <MessageCircle className="h-4 w-4" /> Message
                 </button>
               </>
             )}
           </div>
+          {messageError ? (
+            <p className="mt-2 text-sm text-vintage-rust">{messageError}</p>
+          ) : !isOwn && !friends ? (
+            <p className="mt-2 text-xs text-vintage-ink-muted">
+              Connect with each other (mutual follow) to unlock messaging.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

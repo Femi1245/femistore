@@ -28,6 +28,9 @@ export function LiveChat({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamLive, setStreamLive] = useState(isLive);
+
+  const chatOpen = streamLive;
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,11 +55,44 @@ export function LiveChat({
   }, [roomName]);
 
   useEffect(() => {
+    setStreamLive(isLive);
+  }, [isLive]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
   useEffect(() => {
     const supabase = createClient();
+
+    async function refreshLiveStatus() {
+      const { data } = await supabase
+        .from("live_streams")
+        .select("is_live")
+        .eq("room_name", roomName)
+        .maybeSingle();
+      if (data) setStreamLive(data.is_live);
+    }
+
+    refreshLiveStatus();
+
+    const statusChannel = supabase
+      .channel(`live-status:${roomName}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "live_streams",
+          filter: `room_name=eq.${roomName}`,
+        },
+        (payload) => {
+          const row = payload.new as { is_live?: boolean };
+          if (typeof row.is_live === "boolean") setStreamLive(row.is_live);
+        },
+      )
+      .subscribe();
+
     const channel = supabase
       .channel(`live-chat:${roomName}`)
       .on(
@@ -91,13 +127,14 @@ export function LiveChat({
       .subscribe();
 
     return () => {
+      supabase.removeChannel(statusChannel);
       supabase.removeChannel(channel);
     };
   }, [roomName, currentUser]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!draft.trim() || !isLive || sending) return;
+    if (!draft.trim() || !chatOpen || sending) return;
 
     setSending(true);
     setError(null);
@@ -188,7 +225,7 @@ export function LiveChat({
         <div ref={bottomRef} />
       </div>
 
-      {isLive ? (
+      {chatOpen ? (
         <form
           onSubmit={handleSubmit}
           className="flex gap-2 border-t border-vintage-border p-3"

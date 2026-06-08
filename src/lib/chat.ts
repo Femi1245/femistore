@@ -1,11 +1,61 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ConversationPreview, Profile } from "./types";
 
+export async function areMutualFriends(
+  supabase: SupabaseClient,
+  userId: string,
+  otherUserId: string,
+): Promise<boolean> {
+  if (userId === otherUserId) return false;
+
+  const [{ data: iFollow }, { data: theyFollow }] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", userId)
+      .eq("following_id", otherUserId)
+      .maybeSingle(),
+    supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", otherUserId)
+      .eq("following_id", userId)
+      .maybeSingle(),
+  ]);
+
+  return !!iFollow && !!theyFollow;
+}
+
+export async function canMessageUser(
+  supabase: SupabaseClient,
+  userId: string,
+  otherUserId: string,
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (userId === otherUserId) {
+    return { allowed: false, reason: "You cannot message yourself." };
+  }
+
+  const friends = await areMutualFriends(supabase, userId, otherUserId);
+  if (!friends) {
+    return {
+      allowed: false,
+      reason:
+        "You can only message friends. Both of you must connect (follow each other).",
+    };
+  }
+
+  return { allowed: true };
+}
+
 export async function findOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
-): Promise<string | null> {
+): Promise<{ convId: string | null; error?: string }> {
+  const access = await canMessageUser(supabase, userId, otherUserId);
+  if (!access.allowed) {
+    return { convId: null, error: access.reason };
+  }
   const { data: myConvs } = await supabase
     .from("conversation_members")
     .select("conversation_id")
@@ -21,7 +71,7 @@ export async function findOrCreateConversation(
       .in("conversation_id", myIds);
 
     if (shared && shared.length > 0) {
-      return shared[0].conversation_id;
+      return { convId: shared[0].conversation_id };
     }
   }
 
@@ -31,17 +81,27 @@ export async function findOrCreateConversation(
     .select("id")
     .single();
 
-  if (convError || !conv) return null;
+  if (convError || !conv) {
+    return { convId: null, error: convError?.message ?? "Could not create conversation." };
+  }
 
-  const { error: membersError } = await supabase
+  const { error: selfError } = await supabase
     .from("conversation_members")
-    .insert([
-      { conversation_id: conv.id, user_id: userId },
-      { conversation_id: conv.id, user_id: otherUserId },
-    ]);
+    .insert({ conversation_id: conv.id, user_id: userId });
 
-  if (membersError) return null;
-  return conv.id;
+  if (selfError) {
+    return { convId: null, error: selfError.message };
+  }
+
+  const { error: otherError } = await supabase
+    .from("conversation_members")
+    .insert({ conversation_id: conv.id, user_id: otherUserId });
+
+  if (otherError) {
+    return { convId: null, error: otherError.message };
+  }
+
+  return { convId: conv.id };
 }
 
 export async function loadConversations(

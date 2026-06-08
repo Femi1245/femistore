@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link, router } from "expo-router";
+import { OAuthButtons } from "@/components/OAuthButtons";
 import { Btn, ErrorText, Input, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { ensureProfile } from "@/lib/auth";
@@ -57,6 +58,14 @@ export default function LoginScreen() {
           <Text style={styles.brand}>iTunes</Text>
           <Text style={styles.tagline}>Connect and chat worldwide</Text>
 
+          <OAuthButtons
+            disabled={loading}
+            onSuccess={() => router.replace("/(tabs)/chat")}
+            onError={setError}
+          />
+
+          <Text style={styles.divider}>or sign in with email</Text>
+
           <Input
             value={email}
             onChangeText={setEmail}
@@ -89,7 +98,14 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.xl },
   logo: { width: 72, height: 72, alignSelf: "center", marginBottom: spacing.sm },
   brand: { fontSize: 32, fontWeight: "800", textAlign: "center", color: colors.rust },
-  tagline: { textAlign: "center", color: colors.inkMuted, marginBottom: spacing.lg },
+  tagline: { textAlign: "center", color: colors.inkMuted, marginBottom: spacing.md },
+  divider: {
+    textAlign: "center",
+    color: colors.inkMuted,
+    fontSize: 12,
+    textTransform: "uppercase",
+    marginBottom: spacing.sm,
+  },
   footer: { textAlign: "center", marginTop: spacing.lg, color: colors.inkMuted },
   link: { color: colors.rust, fontWeight: "600" },
 });
