@@ -1,0 +1,240 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Bell,
+  CircleDot,
+  FileText,
+  Heart,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Radio,
+  Repeat,
+  UserPlus,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  enrichNotification,
+  formatNotificationTime,
+  getNotificationHref,
+  getNotificationText,
+  loadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/notifications";
+import type { Notification, NotificationType, Profile } from "@/lib/types";
+import { Avatar } from "@/components/Avatar";
+
+const iconMap: Record<
+  NotificationType,
+  React.ComponentType<{ className?: string }>
+> = {
+  follow: UserPlus,
+  like: Heart,
+  comment: MessageSquare,
+  reshare: Repeat,
+  new_post: FileText,
+  new_status: CircleDot,
+  message: Mail,
+  live_started: Radio,
+  live_ended: Radio,
+};
+
+export function NotificationsView({ currentUser }: { currentUser: Profile }) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const { notifications: data, error: loadError } = await loadNotifications(
+      createClient(),
+      currentUser.id,
+    );
+    setNotifications(data);
+    if (loadError) setError(loadError);
+    setLoading(false);
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`notifications-list:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${currentUser.id}`,
+        },
+        async (payload) => {
+          const incoming = payload.new as Notification;
+          const enriched = await enrichNotification(supabase, incoming);
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === enriched.id)) return prev;
+            return [enriched, ...prev];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser.id]);
+
+  async function handleClick(notification: Notification) {
+    if (!notification.read_at) {
+      await markNotificationRead(
+        createClient(),
+        notification.id,
+        currentUser.id,
+      );
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notification.id
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
+    }
+  }
+
+  async function handleMarkAllRead() {
+    setMarkingAll(true);
+    await markAllNotificationsRead(createClient(), currentUser.id);
+    setNotifications((prev) =>
+      prev.map((n) => ({
+        ...n,
+        read_at: n.read_at ?? new Date().toISOString(),
+      })),
+    );
+    setMarkingAll(false);
+  }
+
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-vintage-ink">
+            Notifications
+          </h1>
+          <p className="text-sm text-vintage-ink-muted">
+            Follows, likes, comments, live streams, and more
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            disabled={markingAll}
+            className="vintage-btn shrink-0 px-3 py-1.5 text-xs disabled:opacity-50"
+          >
+            {markingAll ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              "Mark all read"
+            )}
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-vintage-rust" />
+        </div>
+      ) : error ? (
+        <div className="vintage-card p-6 text-center text-sm text-vintage-rust">
+          {error}
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="vintage-card flex flex-col items-center gap-3 p-10 text-center">
+          <Bell className="h-10 w-10 text-vintage-ink-muted" />
+          <p className="font-display text-lg font-bold text-vintage-ink">
+            No notifications yet
+          </p>
+          <p className="max-w-sm text-sm text-vintage-ink-muted">
+            When someone connects with you, likes your post, comments, goes live,
+            or sends a message, you&apos;ll see it here instantly.
+          </p>
+        </div>
+      ) : (
+        <ul className="vintage-card divide-y divide-vintage-border overflow-hidden">
+          {notifications.map((notification) => {
+            const Icon = iconMap[notification.type] ?? Bell;
+            const href = getNotificationHref(
+              notification,
+              notification.actor?.username,
+            );
+            const isUnread = !notification.read_at;
+            const actorName =
+              notification.actor?.display_name ??
+              (notification.actor_id ? "Someone" : "System");
+
+            return (
+              <li key={notification.id}>
+                <Link
+                  href={href}
+                  onClick={() => handleClick(notification)}
+                  className={`flex gap-3 px-4 py-3 transition-colors hover:bg-vintage-surface/60 ${
+                    isUnread ? "bg-vintage-rust/5" : ""
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    {notification.actor ? (
+                      <Avatar
+                        name={actorName}
+                        avatarUrl={notification.actor.avatar_url}
+                        size="md"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full vintage-card-inset">
+                        <Icon className="h-5 w-5 text-vintage-rust" />
+                      </div>
+                    )}
+                    <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-vintage-rust text-[var(--vintage-btn-text)]">
+                      <Icon className="h-3 w-3" />
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-sm leading-snug ${
+                        isUnread
+                          ? "font-semibold text-vintage-ink"
+                          : "text-vintage-ink"
+                      }`}
+                    >
+                      {getNotificationText(notification)}
+                    </p>
+                    <p className="mt-1 text-xs text-vintage-ink-muted">
+                      {formatNotificationTime(notification.created_at)}
+                    </p>
+                  </div>
+
+                  {isUnread && (
+                    <span
+                      className="mt-2 h-2 w-2 shrink-0 rounded-full bg-vintage-rust"
+                      aria-hidden
+                    />
+                  )}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}

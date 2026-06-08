@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "iTunes",
+    "slug": "itunes",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "itunes",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f4e8d4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.itunes.globalchat"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#f4e8d4"
+      },
+      "package": "com.itunes.globalchat"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow iTunes to access your photos for posts and profile pictures."
+        }
+      ],
+      "expo-web-browser",
+      "expo-image"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
