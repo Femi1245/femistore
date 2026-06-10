@@ -75,3 +75,15 @@ export async function endLiveStream(roomName: string, accessToken: string) {
     token: accessToken,
   });
 }
+
+export async function startCall(
+  conversationId: string,
+  callType: "audio" | "video",
+  accessToken: string,
+) {
+  return apiFetch<{ session: { id: string; call_type: string } }>("/api/calls/start", {
+    method: "POST",
+    body: JSON.stringify({ conversationId, callType }),
+    token: accessToken,
+  });
+}

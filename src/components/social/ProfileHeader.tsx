@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { UserPlus, UserMinus, MessageCircle } from "lucide-react";
+import { UserPlus, UserMinus, MessageCircle, Gift } from "lucide-react";
+import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
 import { areMutualFriends, findOrCreateConversation } from "@/lib/chat";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
@@ -26,6 +27,7 @@ export function ProfileHeader({
   const [friends, setFriends] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
+  const [showGift, setShowGift] = useState(false);
 
   useEffect(() => {
     if (isOwn) return;
@@ -131,9 +133,24 @@ export function ProfileHeader({
                 >
                   <MessageCircle className="h-4 w-4" /> Message
                 </button>
+                <button
+                  onClick={() => setShowGift(true)}
+                  disabled={!friends}
+                  title={friends ? "Send a gift" : "Connect first to send gifts"}
+                  className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Gift className="h-4 w-4" /> Gift
+                </button>
               </>
             )}
           </div>
+          {showGift && !isOwn && (
+            <GiftPickerModal
+              recipient={profile}
+              context="profile"
+              onClose={() => setShowGift(false)}
+            />
+          )}
           {messageError ? (
             <p className="mt-2 text-sm text-vintage-rust">{messageError}</p>
           ) : !isOwn && !friends ? (

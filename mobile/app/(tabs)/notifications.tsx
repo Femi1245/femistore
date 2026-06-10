@@ -27,6 +27,7 @@ const icons: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   message: "mail",
   live_started: "radio",
   live_ended: "radio-outline",
+  gift: "gift",
 };
 
 export default function NotificationsScreen() {

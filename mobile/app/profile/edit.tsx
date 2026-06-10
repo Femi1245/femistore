@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, Text } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { PhoneVerification } from "@/components/PhoneVerification";
 import { Btn, ErrorText, Input, Screen, Title } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,6 +68,7 @@ export default function EditProfileScreen() {
         <Input value={displayName} onChangeText={setDisplayName} placeholder="Display name" />
         <Input value={bio} onChangeText={setBio} placeholder="Bio" multiline style={{ minHeight: 80 }} />
         <Input value={country} onChangeText={setCountry} placeholder="Country" />
+        <PhoneVerification profile={profile} onVerified={refreshProfile} />
         {error ? <ErrorText>{error}</ErrorText> : null}
         <Btn label={loading ? "Saving…" : "Save changes"} onPress={save} disabled={loading} />
       </ScrollView>

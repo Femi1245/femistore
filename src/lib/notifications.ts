@@ -108,6 +108,10 @@ export function getNotificationHref(
       return `/live/${notification.entity_id}`;
     case "live_ended":
       return notification.actor_id ? `/profile/${actorUsername ?? ""}` : "/live";
+    case "gift":
+      if (notification.entity_type === "live") return "/live";
+      if (notification.entity_type === "chat") return "/chat";
+      return actorUsername ? `/profile/${actorUsername}` : "/feed";
     default:
       return "/feed";
   }
@@ -150,6 +154,10 @@ export function getNotificationText(notification: Notification): string {
       return notification.message
         ? `${name}'s live stream ended: ${notification.message}`
         : `${name}'s live stream has ended`;
+    case "gift":
+      return notification.message
+        ? `${name} sent you a gift: ${notification.message}`
+        : `${name} sent you a gift`;
     default:
       return "You have a new notification";
   }
@@ -175,6 +183,8 @@ export function getNotificationIcon(type: NotificationType): string {
       return "radio";
     case "live_ended":
       return "radio-off";
+    case "gift":
+      return "gift";
     default:
       return "bell";
   }

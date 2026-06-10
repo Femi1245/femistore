@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageCircle, Play, Radio, User, Settings } from "lucide-react";
+import { Gamepad2, Home, MessageCircle, Play, Radio, User, Settings } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -14,6 +14,7 @@ const links = [
   { href: "/watch", label: "Watch", icon: Play },
   { href: "/live", label: "Live", icon: Radio },
   { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/games", label: "Games", icon: Gamepad2 },
   { href: null, label: "Profile", icon: User, dynamic: true as const },
   { href: "/profile/edit", label: "Settings", icon: Settings },
 ];
@@ -34,6 +35,7 @@ export function AppNav({ user }: { user: Profile }) {
               (link.href === "/feed" && pathname.startsWith("/feed")) ||
               (link.href === "/watch" && pathname.startsWith("/watch")) ||
               (link.href === "/live" && pathname.startsWith("/live")) ||
+              (link.href === "/games" && pathname.startsWith("/games")) ||
               (link.dynamic &&
                 pathname.startsWith("/profile/") &&
                 !pathname.endsWith("/edit"));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -9,34 +10,57 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Audio } from "expo-av";
+import { router } from "expo-router";
 import { Avatar } from "@/components/Avatar";
-import { Loader, Screen, Subtitle, Title } from "@/components/ui";
+import { Btn, Loader, Screen, Subtitle, Title } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  conversationLabel,
   findOrCreateConversation,
   formatMessageTime,
+  joinChannel,
+  loadActiveChat,
   loadConversations,
+  loadMutualFriends,
+  loadPublicChannels,
+  secretMessageExpiry,
 } from "@/lib/chat";
+import { findUserByPhone } from "@/lib/phone";
+import { startCall } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
-import type { ConversationPreview, Message, Profile } from "@/lib/types";
+import { sendVoiceMessageFromUri } from "@/lib/voicemail";
+import type { ActiveChat, ConversationPreview, Message, Profile } from "@/lib/types";
+
+type Tab = "chats" | "secret" | "discover" | "phone" | "channels";
 
 export default function ChatScreen() {
   const { profile } = useAuth();
-  const [tab, setTab] = useState<"chats" | "discover">("chats");
+  const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
+  const [secretChats, setSecretChats] = useState<ConversationPreview[]>([]);
+  const [secretFriends, setSecretFriends] = useState<Profile[]>([]);
   const [discoverUsers, setDiscoverUsers] = useState<Profile[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [activeOther, setActiveOther] = useState<Profile | null>(null);
+  const [publicChannels, setPublicChannels] = useState<ConversationPreview[]>([]);
+  const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
+  const [phoneSearch, setPhoneSearch] = useState("");
+  const [phoneResult, setPhoneResult] = useState<Profile | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
 
   const refreshConversations = useCallback(async () => {
     if (!profile) return;
-    const list = await loadConversations(getSupabase(), profile.id);
-    setConversations(list);
+    const supabase = getSupabase();
+    const [regular, secret] = await Promise.all([
+      loadConversations(supabase, profile.id, "regular"),
+      loadConversations(supabase, profile.id, "secret"),
+    ]);
+    setConversations(regular);
+    setSecretChats(secret);
   }, [profile]);
 
   useEffect(() => {
@@ -46,17 +70,14 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!profile || tab !== "discover") return;
     async function load() {
-      if (!profile) return;
       let query = getSupabase()
         .from("profiles")
         .select("*")
-        .neq("id", profile.id)
+        .neq("id", profile!.id)
         .order("created_at", { ascending: false })
         .limit(40);
       if (search.trim()) {
-        query = query.or(
-          `display_name.ilike.%${search}%,username.ilike.%${search}%`,
-        );
+        query = query.or(`display_name.ilike.%${search}%,username.ilike.%${search}%`);
       }
       const { data } = await query;
       setDiscoverUsers((data as Profile[]) ?? []);
@@ -65,32 +86,43 @@ export default function ChatScreen() {
   }, [tab, search, profile]);
 
   useEffect(() => {
-    if (!activeConvId) return;
+    if (tab === "channels" && profile) {
+      loadPublicChannels(getSupabase(), profile.id).then(setPublicChannels);
+    }
+    if (tab === "secret" && profile) {
+      loadMutualFriends(getSupabase(), profile.id).then(setSecretFriends);
+    }
+  }, [tab, profile, conversations]);
+
+  useEffect(() => {
+    if (!activeChat?.convId) return;
     async function load() {
-      const { data } = await getSupabase()
+      let query = getSupabase()
         .from("messages")
         .select("*")
-        .eq("conversation_id", activeConvId)
+        .eq("conversation_id", activeChat!.convId)
         .order("created_at", { ascending: true });
+      if (activeChat!.isSecret) {
+        query = query.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+      }
+      const { data } = await query;
       setMessages((data as Message[]) ?? []);
     }
     load();
 
     const channel = getSupabase()
-      .channel(`messages:${activeConvId}`)
+      .channel(`messages:${activeChat.convId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `conversation_id=eq.${activeConvId}`,
+          filter: `conversation_id=eq.${activeChat.convId}`,
         },
         (payload) => {
           const msg = payload.new as Message;
-          setMessages((prev) =>
-            prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
-          );
+          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
           refreshConversations();
         },
       )
@@ -99,17 +131,29 @@ export default function ChatScreen() {
     return () => {
       getSupabase().removeChannel(channel);
     };
-  }, [activeConvId, refreshConversations]);
+  }, [activeChat?.convId, refreshConversations]);
 
-  async function openChat(other: Profile, convId?: string) {
+  async function openById(convId: string) {
     if (!profile) return;
     setChatError(null);
+    const chat = await loadActiveChat(getSupabase(), profile.id, convId);
+    if (!chat) {
+      setChatError("Could not open conversation.");
+      return;
+    }
+    setActiveChat(chat);
+    setTab("chats");
+  }
 
+  async function openDm(other: Profile, convId?: string, secret = false) {
+    if (!profile) return;
+    setChatError(null);
     if (!convId) {
       const { convId: createdId, error } = await findOrCreateConversation(
         getSupabase(),
         profile.id,
         other.id,
+        { secret },
       );
       if (error) {
         setChatError(error);
@@ -118,50 +162,141 @@ export default function ChatScreen() {
       if (!createdId) return;
       convId = createdId;
     }
+    await openById(convId);
+  }
 
-    setActiveConvId(convId);
-    setActiveOther(other);
-    setTab("chats");
+  async function searchPhone() {
+    setChatError(null);
+    setPhoneResult(null);
+    const { user, error } = await findUserByPhone(getSupabase(), phoneSearch);
+    if (error) {
+      setChatError(error);
+      return;
+    }
+    setPhoneResult(user);
+  }
+
+  async function handleJoinChannel(convId: string) {
+    if (!profile) return;
+    const { error } = await joinChannel(getSupabase(), profile.id, convId);
+    if (error) {
+      setChatError(error);
+      return;
+    }
+    await refreshConversations();
+    await openById(convId);
+  }
+
+  async function handleStartCall(callType: "audio" | "video") {
+    if (!activeChat?.convId || !profile) return;
+    if (activeChat.kind === "channel") {
+      setChatError("Calls are not available in channels.");
+      return;
+    }
+    const token = (await getSupabase().auth.getSession()).data.session?.access_token;
+    if (!token) return;
+    const { data, error } = await startCall(activeChat.convId, callType, token);
+    if (error) {
+      setChatError(error);
+      return;
+    }
+    Alert.alert(
+      callType === "video" ? "Video call started" : "Voice call started",
+      activeChat.kind === "group"
+        ? "Group members can join on the web app. LiveKit mobile calls are coming soon."
+        : "The other person will be notified. Join the call on the web app for now.",
+    );
+    void data;
+  }
+
+  async function startVoiceNote() {
+    if (!activeChat?.convId || !profile) return;
+    try {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await rec.startAsync();
+      setRecording(rec);
+    } catch {
+      setChatError("Microphone permission required for voicemail.");
+    }
+  }
+
+  async function stopVoiceNote() {
+    if (!recording || !activeChat?.convId || !profile) return;
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    const status = await recording.getStatusAsync();
+    setRecording(null);
+    if (!uri) return;
+    const duration =
+      status.isLoaded && "durationMillis" in status
+        ? status.durationMillis / 1000
+        : 1;
+    const { error } = await sendVoiceMessageFromUri(
+      getSupabase(),
+      activeChat.convId,
+      profile.id,
+      uri,
+      duration,
+      activeChat.isSecret ? secretMessageExpiry() : null,
+    );
+    if (error) setChatError(error);
+    else refreshConversations();
   }
 
   async function sendMessage() {
-    if (!draft.trim() || !activeConvId || !profile) return;
+    if (!draft.trim() || !activeChat?.convId || !profile || !activeChat.canPost) return;
     setChatError(null);
     const content = draft.trim();
     setDraft("");
 
     const { error } = await getSupabase().from("messages").insert({
-      conversation_id: activeConvId,
+      conversation_id: activeChat.convId,
       sender_id: profile.id,
       content,
+      ...(activeChat.isSecret ? { expires_at: secretMessageExpiry() } : {}),
     });
 
     if (error) {
       setChatError(
         error.message.includes("row-level security")
-          ? "You can only message friends. Both of you must connect (follow each other)."
+          ? "You cannot send messages here."
           : error.message,
       );
       setDraft(content);
       return;
     }
-
     refreshConversations();
   }
 
   if (!profile) return <Loader />;
 
-  if (activeConvId && activeOther) {
+  if (activeChat) {
     return (
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.chatHeader}>
-          <Pressable onPress={() => { setActiveConvId(null); setActiveOther(null); }}>
+          <Pressable onPress={() => setActiveChat(null)}>
             <Text style={styles.back}>← Back</Text>
           </Pressable>
-          <Text style={styles.chatTitle}>{activeOther.display_name}</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.chatTitle}>{activeChat.title}</Text>
+            <Text style={styles.chatSub}>{activeChat.subtitle}</Text>
+          </View>
+          {activeChat.kind !== "channel" && (
+            <View style={styles.callBtns}>
+              <Pressable onPress={() => handleStartCall("audio")} style={styles.callBtn}>
+                <Text style={styles.callBtnText}>Call</Text>
+              </Pressable>
+              <Pressable onPress={() => handleStartCall("video")} style={styles.callBtn}>
+                <Text style={styles.callBtnText}>Video</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
         <FlatList
           data={messages}
@@ -169,28 +304,54 @@ export default function ChatScreen() {
           contentContainerStyle={styles.messages}
           renderItem={({ item }) => {
             const mine = item.sender_id === profile.id;
+            const sender = activeChat.members?.find((m) => m.id === item.sender_id);
             return (
               <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                <Text style={mine ? styles.bubbleTextMine : styles.bubbleText}>
-                  {item.content}
-                </Text>
+                {!mine && activeChat.kind !== "dm" && (
+                  <Text style={styles.sender}>{sender?.display_name ?? "Member"}</Text>
+                )}
+                {item.message_type === "voice" ? (
+                  <Text style={mine ? styles.bubbleTextMine : styles.bubbleText}>
+                    🎤 {item.content}
+                  </Text>
+                ) : item.message_type === "call_log" ? (
+                  <Text style={[mine ? styles.bubbleTextMine : styles.bubbleText, styles.callLog]}>
+                    {item.content}
+                  </Text>
+                ) : (
+                  <Text style={mine ? styles.bubbleTextMine : styles.bubbleText}>{item.content}</Text>
+                )}
                 <Text style={styles.time}>{formatMessageTime(item.created_at)}</Text>
               </View>
             );
           }}
         />
-        <View style={styles.composer}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Message…"
-            placeholderTextColor={colors.inkMuted}
-            style={styles.input}
-          />
-          <Pressable onPress={sendMessage} style={styles.send}>
-            <Text style={styles.sendText}>Send</Text>
-          </Pressable>
-        </View>
+        {chatError ? <Text style={styles.error}>{chatError}</Text> : null}
+        {activeChat.canPost ? (
+          <View style={styles.composer}>
+            {recording ? (
+              <Pressable onPress={stopVoiceNote} style={styles.voiceRecording}>
+                <Text style={styles.sendText}>■ Send voicemail</Text>
+              </Pressable>
+            ) : (
+              <Pressable onPress={startVoiceNote} style={styles.micBtn}>
+                <Text style={styles.sendText}>🎤</Text>
+              </Pressable>
+            )}
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={activeChat.kind === "channel" ? "Post update…" : "Message…"}
+              placeholderTextColor={colors.inkMuted}
+              style={styles.input}
+            />
+            <Pressable onPress={sendMessage} style={styles.send}>
+              <Text style={styles.sendText}>Send</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.readOnly}>Subscribers can read — only admins post.</Text>
+        )}
       </KeyboardAvoidingView>
     );
   }
@@ -198,15 +359,20 @@ export default function ChatScreen() {
   return (
     <Screen>
       <Title>Chat</Title>
-      <Subtitle>Messages and discover people</Subtitle>
+      <Subtitle>DMs, groups, channels & phone</Subtitle>
+      <View style={styles.createRow}>
+        <Btn label="Group" onPress={() => router.push("/chat/create-group")} variant="outline" />
+        <Btn label="Channel" onPress={() => router.push("/chat/create-channel")} variant="outline" />
+      </View>
       {chatError ? <Text style={styles.error}>{chatError}</Text> : null}
       <View style={styles.tabs}>
-        <Pressable onPress={() => setTab("chats")} style={[styles.tab, tab === "chats" && styles.tabActive]}>
-          <Text style={tab === "chats" ? styles.tabTextActive : styles.tabText}>Chats</Text>
-        </Pressable>
-        <Pressable onPress={() => setTab("discover")} style={[styles.tab, tab === "discover" && styles.tabActive]}>
-          <Text style={tab === "discover" ? styles.tabTextActive : styles.tabText}>Discover</Text>
-        </Pressable>
+        {(["chats", "secret", "discover", "phone", "channels"] as Tab[]).map((t) => (
+          <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabActive]}>
+            <Text style={tab === t ? styles.tabTextActive : styles.tabText}>
+              {t === "secret" ? "🔒 Secret" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {tab === "discover" && (
@@ -222,31 +388,93 @@ export default function ChatScreen() {
         </>
       )}
 
-      {tab === "chats" ? (
+      {tab === "phone" && (
+        <View>
+          <TextInput
+            value={phoneSearch}
+            onChangeText={setPhoneSearch}
+            placeholder="+2348012345678"
+            placeholderTextColor={colors.inkMuted}
+            style={styles.search}
+          />
+          <Btn label="Find by phone" onPress={searchPhone} />
+          {phoneResult && (
+            <Pressable style={styles.row} onPress={() => openDm(phoneResult)}>
+              <Avatar name={phoneResult.display_name} avatarUrl={phoneResult.avatar_url} />
+              <View style={styles.rowText}>
+                <Text style={styles.name}>{phoneResult.display_name}</Text>
+                <Text style={styles.preview}>@{phoneResult.username}</Text>
+              </View>
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {tab === "secret" && (
+        <>
+          <Text style={styles.hint}>
+            Private chats hidden from main list. Messages delete after 24 hours.
+          </Text>
+          <FlatList
+            data={secretChats}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <Pressable style={styles.row} onPress={() => openById(item.id)}>
+                <Text style={styles.secretIcon}>🔒</Text>
+                <View style={styles.rowText}>
+                  <Text style={styles.name}>{item.other_user?.display_name ?? "Secret"}</Text>
+                  <Text style={styles.preview} numberOfLines={1}>
+                    {item.last_message ?? "Open secret chat"}
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+            ListEmptyComponent={<Text style={styles.empty}>No secret chats yet.</Text>}
+          />
+          <Text style={styles.hint}>Start secret chat with a friend:</Text>
+          <FlatList
+            data={secretFriends}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <Pressable style={styles.row} onPress={() => openDm(item, undefined, true)}>
+                <Avatar name={item.display_name} avatarUrl={item.avatar_url} size="sm" />
+                <Text style={styles.name}>{item.display_name}</Text>
+              </Pressable>
+            )}
+          />
+        </>
+      )}
+
+      {tab === "chats" && (
         <FlatList
           data={conversations}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => openChat(item.other_user, item.id)}>
-              <Avatar name={item.other_user.display_name} avatarUrl={item.other_user.avatar_url} />
+            <Pressable style={styles.row} onPress={() => openById(item.id)}>
+              <Avatar
+                name={conversationLabel(item)}
+                avatarUrl={item.other_user?.avatar_url ?? null}
+              />
               <View style={styles.rowText}>
-                <Text style={styles.name}>{item.other_user.display_name}</Text>
+                <Text style={styles.name}>{conversationLabel(item)}</Text>
                 <Text style={styles.preview} numberOfLines={1}>
-                  {item.last_message ?? "Start chatting"}
+                  {item.kind !== "dm"
+                    ? `${item.kind} · ${item.last_message ?? "No messages"}`
+                    : (item.last_message ?? "Start chatting")}
                 </Text>
               </View>
             </Pressable>
           )}
-          ListEmptyComponent={
-            <Text style={styles.empty}>No conversations yet. Discover people to chat!</Text>
-          }
+          ListEmptyComponent={<Text style={styles.empty}>No conversations yet.</Text>}
         />
-      ) : (
+      )}
+
+      {tab === "discover" && (
         <FlatList
           data={discoverUsers}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => openChat(item)}>
+            <Pressable style={styles.row} onPress={() => openDm(item)}>
               <Avatar name={item.display_name} avatarUrl={item.avatar_url} />
               <View style={styles.rowText}>
                 <Text style={styles.name}>{item.display_name}</Text>
@@ -257,12 +485,33 @@ export default function ChatScreen() {
           ListEmptyComponent={<Text style={styles.empty}>No users found.</Text>}
         />
       )}
+
+      {tab === "channels" && (
+        <FlatList
+          data={publicChannels}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Pressable style={styles.row} onPress={() => handleJoinChannel(item.id)}>
+              <View style={styles.channelIcon}>
+                <Text style={styles.channelHash}>#</Text>
+              </View>
+              <View style={styles.rowText}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.preview} numberOfLines={1}>{item.last_message}</Text>
+              </View>
+              <Text style={styles.join}>Join</Text>
+            </Pressable>
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>No public channels.</Text>}
+        />
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.cream },
+  createRow: { flexDirection: "row", gap: 8, marginBottom: spacing.sm },
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -272,30 +521,44 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: colors.border,
   },
+  headerText: { flex: 1 },
   back: { color: colors.rust, fontWeight: "600" },
   chatTitle: { fontSize: 18, fontWeight: "700", color: colors.ink },
+  chatSub: { fontSize: 12, color: colors.inkMuted },
   messages: { padding: spacing.md, flexGrow: 1 },
   bubble: { maxWidth: "80%", marginBottom: 8, padding: 10, borderRadius: 8 },
   bubbleMine: { alignSelf: "flex-end", backgroundColor: colors.rust },
   bubbleTheirs: { alignSelf: "flex-start", backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border },
+  sender: { fontSize: 10, fontWeight: "700", color: colors.rust, marginBottom: 2 },
   bubbleText: { color: colors.ink },
   bubbleTextMine: { color: colors.btnText },
   time: { fontSize: 10, marginTop: 4, opacity: 0.7, color: colors.inkMuted },
+  readOnly: { textAlign: "center", padding: spacing.md, color: colors.inkMuted, fontSize: 12 },
   composer: { flexDirection: "row", padding: spacing.sm, gap: 8, borderTopWidth: 2, borderTopColor: colors.border, backgroundColor: colors.paper },
   input: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, color: colors.ink },
   send: { justifyContent: "center", paddingHorizontal: 12 },
   sendText: { color: colors.rust, fontWeight: "700" },
-  tabs: { flexDirection: "row", marginBottom: spacing.sm, gap: 8 },
-  tab: { flex: 1, paddingVertical: 8, alignItems: "center", borderWidth: 2, borderColor: colors.border, borderRadius: 4 },
+  tabs: { flexDirection: "row", flexWrap: "wrap", marginBottom: spacing.sm, gap: 6 },
+  tab: { paddingVertical: 8, paddingHorizontal: 10, borderWidth: 2, borderColor: colors.border, borderRadius: 4 },
   tabActive: { backgroundColor: colors.rust, borderColor: colors.rustDark },
-  tabText: { color: colors.inkMuted, fontWeight: "600" },
-  tabTextActive: { color: colors.btnText, fontWeight: "600" },
+  tabText: { color: colors.inkMuted, fontWeight: "600", fontSize: 12 },
+  tabTextActive: { color: colors.btnText, fontWeight: "600", fontSize: 12 },
   search: { borderWidth: 2, borderColor: colors.border, borderRadius: 4, padding: 10, marginBottom: spacing.sm, color: colors.ink, backgroundColor: colors.white },
-  row: { flexDirection: "row", gap: spacing.sm, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  row: { flexDirection: "row", gap: spacing.sm, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, alignItems: "center" },
   rowText: { flex: 1 },
   name: { fontWeight: "700", color: colors.ink },
   preview: { fontSize: 13, color: colors.inkMuted },
   empty: { textAlign: "center", color: colors.inkMuted, marginTop: 24 },
   error: { color: colors.rust, fontSize: 13, marginBottom: spacing.sm },
   hint: { fontSize: 12, color: colors.inkMuted, marginBottom: spacing.sm },
+  channelIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.rust + "22", alignItems: "center", justifyContent: "center" },
+  channelHash: { color: colors.rust, fontWeight: "800", fontSize: 18 },
+  join: { color: colors.rust, fontWeight: "700", fontSize: 13 },
+  callBtns: { flexDirection: "row", gap: 6 },
+  callBtn: { borderWidth: 1, borderColor: colors.rust, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 },
+  callBtnText: { color: colors.rust, fontWeight: "700", fontSize: 12 },
+  micBtn: { justifyContent: "center", paddingHorizontal: 8 },
+  voiceRecording: { flex: 1, justifyContent: "center", paddingHorizontal: 8 },
+  callLog: { fontStyle: "italic" },
+  secretIcon: { fontSize: 20, width: 40, textAlign: "center" },
 });

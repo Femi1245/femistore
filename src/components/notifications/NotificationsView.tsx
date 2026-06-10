@@ -13,6 +13,7 @@ import {
   Radio,
   Repeat,
   UserPlus,
+  Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -40,6 +41,7 @@ const iconMap: Record<
   message: Mail,
   live_started: Radio,
   live_ended: Radio,
+  gift: Gift,
 };
 
 export function NotificationsView({ currentUser }: { currentUser: Profile }) {

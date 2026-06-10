@@ -1,5 +1,5 @@
-const CACHE = "itunes-shell-v1";
-const SHELL = ["/", "/feed", "/offline"];
+const CACHE = "itunes-shell-v2";
+const SHELL = ["/", "/feed", "/games", "/offline"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

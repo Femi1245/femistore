@@ -6,22 +6,52 @@ export type Profile = {
   avatar_url: string | null;
   bio: string;
   date_of_birth: string | null;
+  phone_e164: string | null;
+  phone_verified_at: string | null;
   created_at: string;
 };
+
+export type ConversationKind = "dm" | "group" | "channel";
+export type MemberRole = "owner" | "admin" | "member";
+
+export type MessageType = "text" | "voice" | "call_log";
 
 export type Message = {
   id: string;
   conversation_id: string;
   sender_id: string;
   content: string;
+  message_type: MessageType;
+  media_url: string | null;
+  media_duration_seconds: number | null;
+  expires_at: string | null;
   created_at: string;
 };
 
 export type ConversationPreview = {
   id: string;
-  other_user: Profile;
+  kind: ConversationKind;
+  name: string | null;
+  is_secret?: boolean;
+  other_user?: Profile;
+  member_count?: number;
+  my_role?: MemberRole;
   last_message: string | null;
   last_message_at: string | null;
+};
+
+export type ActiveChat = {
+  convId: string;
+  kind: ConversationKind;
+  title: string;
+  subtitle: string;
+  avatarName: string;
+  avatarUrl: string | null;
+  isSecret?: boolean;
+  otherUser?: Profile;
+  canPost: boolean;
+  members?: Profile[];
+  myRole?: MemberRole;
 };
 
 export type Post = {
@@ -71,7 +101,8 @@ export type NotificationType =
   | "new_status"
   | "message"
   | "live_started"
-  | "live_ended";
+  | "live_ended"
+  | "gift";
 
 export type Notification = {
   id: string;

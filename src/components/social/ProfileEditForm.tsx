@@ -7,6 +7,7 @@ import { uploadMedia } from "@/lib/storage";
 import { COUNTRIES } from "@/lib/countries";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { PhoneVerification } from "@/components/settings/PhoneVerification";
 
 export function ProfileEditForm({ profile }: { profile: Profile }) {
   const router = useRouter();
@@ -149,6 +150,8 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
           className="vintage-input w-full px-4 py-2.5"
         />
       </div>
+
+      <PhoneVerification profile={profile} onVerified={() => router.refresh()} />
 
       <div>
         <label className="mb-1 block text-xs font-medium text-vintage-ink-muted">

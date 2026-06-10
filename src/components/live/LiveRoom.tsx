@@ -12,8 +12,11 @@ import {
 import "@livekit/components-styles";
 import { Track } from "livekit-client";
 import { Loader2, Radio } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { LiveStream, Profile } from "@/lib/types";
 import { LiveChat } from "@/components/live/LiveChat";
+import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
+import { LiveGiftFeed } from "@/components/gifts/LiveGiftFeed";
 
 function ViewerVideo() {
   const tracks = useTracks(
@@ -78,6 +81,8 @@ export function LiveRoom({
   const [isHost, setIsHost] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [host, setHost] = useState<Profile | null>(stream.host ?? null);
+  const [showGift, setShowGift] = useState(false);
 
   const fetchToken = useCallback(async () => {
     setLoading(true);
@@ -98,6 +103,18 @@ export function LiveRoom({
   useEffect(() => {
     fetchToken();
   }, [fetchToken]);
+
+  useEffect(() => {
+    if (host) return;
+    createClient()
+      .from("profiles")
+      .select("*")
+      .eq("id", stream.host_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setHost(data as Profile);
+      });
+  }, [stream.host_id, host]);
 
   async function handleEndLive() {
     await fetch("/api/live/end", {
@@ -182,13 +199,32 @@ export function LiveRoom({
           )}
         </div>
 
-        <LiveChat
-          roomName={roomName}
-          currentUser={currentUser}
-          hostId={stream.host_id}
-          isLive={stream.is_live}
-        />
+        <div className="flex flex-col gap-4">
+          {host && (
+            <LiveGiftFeed
+              roomName={roomName}
+              host={host}
+              currentUser={currentUser}
+              onSendGift={() => setShowGift(true)}
+            />
+          )}
+          <LiveChat
+            roomName={roomName}
+            currentUser={currentUser}
+            hostId={stream.host_id}
+            isLive={stream.is_live}
+          />
+        </div>
       </div>
+
+      {showGift && host && currentUser.id !== host.id && (
+        <GiftPickerModal
+          recipient={host}
+          context="live"
+          roomName={roomName}
+          onClose={() => setShowGift(false)}
+        />
+      )}
     </div>
   );
 }

@@ -3,13 +3,16 @@ import * as FileSystem from "expo-file-system";
 
 export async function uploadMediaFromUri(
   supabase: SupabaseClient,
-  bucket: "avatars" | "post-media",
+  bucket: "avatars" | "post-media" | "voice-messages",
   userId: string,
   uri: string,
   mimeType: string,
+  subfolder?: string,
 ): Promise<{ url: string | null; error?: string }> {
   const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
-  const path = `${userId}/${Date.now()}.${ext}`;
+  const path = subfolder
+    ? `${userId}/${subfolder}/${Date.now()}.${ext}`
+    : `${userId}/${Date.now()}.${ext}`;
 
   const base64 = await FileSystem.readAsStringAsync(uri, {
     encoding: "base64",
