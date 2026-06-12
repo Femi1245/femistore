@@ -29,7 +29,7 @@ export function InstallAppPrompt() {
   useEffect(() => {
     if (isStandalone()) return;
 
-    const dismissed = localStorage.getItem("itunes-install-dismissed");
+    const dismissed = localStorage.getItem("zumelia-install-dismissed");
     if (dismissed) return;
 
     if (isIos()) {
@@ -51,7 +51,7 @@ export function InstallAppPrompt() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem("itunes-install-dismissed", "1");
+    localStorage.setItem("zumelia-install-dismissed", "1");
     setVisible(false);
   }
 
@@ -73,7 +73,7 @@ export function InstallAppPrompt() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold text-vintage-ink">
-            Install iTunes app
+            Install Zumelia app
           </p>
           {iosHint ? (
             <p className="mt-1 text-xs leading-relaxed text-vintage-ink-muted">
@@ -82,7 +82,7 @@ export function InstallAppPrompt() {
             </p>
           ) : (
             <p className="mt-1 text-xs text-vintage-ink-muted">
-              Add iTunes to your home screen for faster access and notifications.
+              Add Zumelia to your home screen for faster access and notifications.
             </p>
           )}
           <div className="mt-3 flex gap-2">

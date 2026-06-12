@@ -44,7 +44,7 @@ export function LibraryVideoCard({
           {video.title}
         </h3>
         <p className="text-xs text-vintage-ink-muted">
-          {meta ?? video.channelTitle ?? "iTunes Watch"}
+          {meta ?? video.channelTitle ?? "Zumelia Watch"}
         </p>
       </div>
     </Link>

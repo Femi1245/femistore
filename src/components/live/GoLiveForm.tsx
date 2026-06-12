@@ -51,7 +51,7 @@ export function GoLiveForm() {
         <h2 className="font-display text-lg font-bold text-vintage-ink">Go live</h2>
       </div>
       <p className="text-sm text-vintage-ink-muted">
-        Share live video with people on iTunes. Allow camera and microphone when prompted.
+        Share live video with people on Zumelia. Allow camera and microphone when prompted.
       </p>
       <div>
         <label className="mb-1 block text-xs font-medium text-vintage-ink-muted">

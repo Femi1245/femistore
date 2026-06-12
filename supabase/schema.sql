@@ -1,4 +1,4 @@
--- iTunes global chat — run in Supabase SQL Editor
+-- Zumelia global chat — run in Supabase SQL Editor
 
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,

@@ -56,7 +56,7 @@ export function VideoSearchView() {
       <div>
         <h1 className="font-display text-2xl font-bold text-vintage-ink">Watch</h1>
         <p className="text-sm text-vintage-ink-muted">
-          Search the library and stream videos right inside iTunes.
+          Search the library and stream videos right inside Zumelia.
         </p>
       </div>
 
@@ -136,7 +136,7 @@ export function VideoSearchView() {
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-vintage-ink-muted">
             Concerts, interviews, music videos, podcasts, and more — all in one place
-            on iTunes Watch.
+            on Zumelia Watch.
           </p>
         </div>
       )}

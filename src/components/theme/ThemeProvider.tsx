@@ -8,7 +8,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem
-      storageKey="itunes-theme"
+      storageKey="zumelia-theme"
       disableTransitionOnChange={false}
     >
       {children}

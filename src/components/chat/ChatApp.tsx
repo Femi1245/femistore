@@ -865,7 +865,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   <p className="py-8 text-center text-sm text-vintage-ink-muted">
                     {activeChat.kind === "channel"
                       ? "Channel updates will appear here. Only admins can post."
-                      : "Say hello — you're connected on iTunes."}
+                      : "Say hello — you're connected on Zumelia."}
                   </p>
                 ) : (
                   messages.map((msg) => {
@@ -976,7 +976,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               <div className="flex h-20 w-20 items-center justify-center vintage-card">
                 <Globe className="h-10 w-10 text-vintage-rust" />
               </div>
-              <h2 className="font-display text-xl font-semibold">Connect globally on iTunes</h2>
+              <h2 className="font-display text-xl font-semibold">Connect globally on Zumelia</h2>
               <p className="max-w-sm text-sm text-vintage-ink-muted">
                 Pick a chat, create a group or channel, or find friends by phone number.
               </p>

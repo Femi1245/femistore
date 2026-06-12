@@ -5,7 +5,7 @@ export default function OfflinePage() {
     <div className="vintage-page flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <h1 className="font-display text-2xl font-bold text-vintage-ink">You&apos;re offline</h1>
       <p className="mt-2 max-w-sm text-sm text-vintage-ink-muted">
-        iTunes needs an internet connection for chat, live streams, and your feed.
+        Zumelia needs an internet connection for chat, live streams, and your feed.
         While you wait, play offline games — no connection required.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">

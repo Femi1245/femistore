@@ -48,7 +48,7 @@ export default async function WatchVideoPage({
 
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-vintage-rust">
           <Radio className="h-3.5 w-3.5" />
-          Now playing on iTunes
+          Now playing on Zumelia
         </div>
 
         <SiteVideoPlayer
@@ -66,7 +66,7 @@ export default async function WatchVideoPage({
             <p className="mt-2 text-sm text-vintage-ink-muted">{details.channelTitle}</p>
           )}
           <p className="mt-3 text-xs uppercase tracking-wide text-vintage-ink-muted/80">
-            Streamed through iTunes Watch
+            Streamed through Zumelia Watch
           </p>
         </div>
       </div>

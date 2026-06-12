@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "iTunes — Global Chat",
-    short_name: "iTunes",
+    name: "Zumelia — Global Chat",
+    short_name: "Zumelia",
     description:
-      "Connect, chat, watch, and go live with people worldwide on iTunes.",
+      "Connect, chat, watch, and go live with people worldwide on Zumelia.",
     start_url: "/feed",
     scope: "/",
     display: "standalone",

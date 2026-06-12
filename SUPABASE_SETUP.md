@@ -1,4 +1,4 @@
-# Supabase setup for iTunes chat
+# Supabase setup for Zumelia chat
 
 ## 1. Environment variables
 

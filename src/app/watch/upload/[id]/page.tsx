@@ -27,7 +27,7 @@ export default async function WatchUploadPage({
     videoKey: video.id,
     source: "upload" as const,
     title: video.title,
-    channelTitle: "iTunes Upload",
+    channelTitle: "Zumelia Upload",
     thumbnailUrl: video.thumbnail_url,
     videoUrl: video.video_url,
   };
@@ -50,13 +50,13 @@ export default async function WatchUploadPage({
 
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-vintage-rust">
           <Radio className="h-3.5 w-3.5" />
-          Now playing on iTunes
+          Now playing on Zumelia
         </div>
 
         <NativeVideoPlayer
           src={video.video_url}
           title={video.title}
-          channelTitle="Uploaded on iTunes"
+          channelTitle="Uploaded on Zumelia"
           poster={video.thumbnail_url}
         />
 
@@ -68,7 +68,7 @@ export default async function WatchUploadPage({
             <p className="mt-2 text-sm text-vintage-ink-muted">{video.description}</p>
           )}
           <p className="mt-3 text-xs uppercase tracking-wide text-vintage-ink-muted/80">
-            Hosted on iTunes Watch
+            Hosted on Zumelia Watch
           </p>
         </div>
       </div>

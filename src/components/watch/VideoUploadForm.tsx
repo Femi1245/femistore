@@ -57,10 +57,10 @@ export function VideoUploadForm({ user }: { user: Profile }) {
     <form onSubmit={handleSubmit} className="vintage-card space-y-4 p-6">
       <div>
         <h2 className="font-display text-lg font-semibold text-vintage-ink">
-          Upload to iTunes Watch
+          Upload to Zumelia Watch
         </h2>
         <p className="mt-1 text-sm text-vintage-ink-muted">
-          Share your own videos — they play directly from iTunes, not an external embed.
+          Share your own videos — they play directly from Zumelia, not an external embed.
         </p>
       </div>
 

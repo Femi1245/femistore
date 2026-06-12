@@ -55,7 +55,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
           <Image source={require("@/assets/icon.png")} style={styles.logo} />
-          <Text style={styles.brand}>iTunes</Text>
+          <Text style={styles.brand}>Zumelia</Text>
           <Text style={styles.tagline}>Connect and chat worldwide</Text>
 
           <OAuthButtons

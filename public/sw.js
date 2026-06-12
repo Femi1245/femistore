@@ -1,4 +1,4 @@
-const CACHE = "itunes-shell-v2";
+const CACHE = "zumelia-shell-v1";
 const SHELL = ["/", "/feed", "/games", "/offline"];
 
 self.addEventListener("install", (event) => {

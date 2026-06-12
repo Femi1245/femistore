@@ -18,14 +18,14 @@ const libre = Libre_Baskerville({
 });
 
 export const metadata: Metadata = {
-  title: "iTunes — Global Chat",
+  title: "Zumelia — Global Chat",
   description:
-    "Connect and chat with people worldwide. Real-time messaging across borders on iTunes.",
-  applicationName: "iTunes",
+    "Connect and chat with people worldwide. Real-time messaging across borders on Zumelia.",
+  applicationName: "Zumelia",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "iTunes",
+    title: "Zumelia",
   },
   formatDetection: {
     telephone: false,

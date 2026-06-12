@@ -387,7 +387,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <p className="mt-6 text-center text-sm text-vintage-ink-muted">
             {mode === "login" ? (
               <>
-                New to iTunes?{" "}
+                New to Zumelia?{" "}
                 <Link href="/signup" className="font-medium text-vintage-rust hover:underline">
                   Sign up free
                 </Link>

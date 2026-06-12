@@ -10,7 +10,7 @@ export type OAuthProvider = "google" | "github" | "twitter";
 
 export function getOAuthRedirectUri(): string {
   return makeRedirectUri({
-    scheme: "itunes",
+    scheme: "zumelia",
     path: "auth/callback",
   });
 }
@@ -49,7 +49,7 @@ export async function signInWithOAuthProvider(
   const redirectTo = getOAuthRedirectUri();
 
   if (__DEV__) {
-    console.log("[iTunes] OAuth redirect URL (add to Supabase if needed):", redirectTo);
+    console.log("[Zumelia] OAuth redirect URL (add to Supabase if needed):", redirectTo);
   }
 
   const { data, error } = await supabase.auth.signInWithOAuth({

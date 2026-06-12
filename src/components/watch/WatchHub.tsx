@@ -105,7 +105,7 @@ export function WatchHub({ user }: { user: Profile }) {
       <div>
         <h1 className="font-display text-2xl font-bold text-vintage-ink">Watch</h1>
         <p className="text-sm text-vintage-ink-muted">
-          Search, upload, save playlists, and pick up where you left off on iTunes.
+          Search, upload, save playlists, and pick up where you left off on Zumelia.
         </p>
       </div>
 

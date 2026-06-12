@@ -1,4 +1,4 @@
--- iTunes social features — run in Supabase SQL Editor AFTER schema.sql
+-- Zumelia social features — run in Supabase SQL Editor AFTER schema.sql
 
 -- Profile fields
 alter table public.profiles

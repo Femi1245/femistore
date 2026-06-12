@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "iTunes",
-    "slug": "itunes",
+    "name": "Zumelia",
+    "slug": "zumelia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "itunes",
+    "scheme": "zumelia",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/icon.png",
@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.itunes.globalchat"
+      "bundleIdentifier": "com.zumelia.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#f4e8d4"
       },
-      "package": "com.itunes.globalchat"
+      "package": "com.zumelia.app"
     },
     "plugins": [
       "expo-router",
@@ -29,7 +29,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow iTunes to access your photos for posts and profile pictures."
+          "photosPermission": "Allow Zumelia to access your photos for posts and profile pictures."
         }
       ],
       "expo-web-browser",

@@ -16,11 +16,11 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       className="inline-flex items-center gap-2 font-display font-bold"
     >
       <NextImage
-        src="/images/itunt.png"
-        alt="iTunes"
+        src="/images/zumelia.png"
+        alt="Zumelia"
         width={px}
         height={px}
-        className="object-contain"
+        className="rounded-lg object-contain"
         priority={size === "lg"}
       />
       <span
@@ -28,7 +28,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
           size === "sm" ? "text-lg" : size === "lg" ? "text-4xl" : "text-2xl"
         }`}
       >
-        Tunes
+        Zumelia
       </span>
     </Link>
   );

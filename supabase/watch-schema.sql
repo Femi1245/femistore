@@ -1,4 +1,4 @@
--- iTunes Watch — run in Supabase SQL Editor AFTER social-schema.sql
+-- Zumelia Watch — run in Supabase SQL Editor AFTER social-schema.sql
 
 -- Watch history
 create table if not exists public.watch_history (

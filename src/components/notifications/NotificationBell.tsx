@@ -45,7 +45,7 @@ export function NotificationBell({ userId }: { userId: string }) {
               const incoming = payload.new as Notification;
               const enriched = await enrichNotification(supabase, incoming);
               const { getNotificationText } = await import("@/lib/notifications");
-              new Notification("iTunes", {
+              new Notification("Zumelia", {
                 body: getNotificationText(enriched),
               });
             }

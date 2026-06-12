@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
- * Native app shell for iTunes.
+ * Native app shell for Zumelia.
  *
  * Deploy your Next.js app first (Vercel, etc.), then set CAPACITOR_SERVER_URL
  * to that HTTPS URL before building Android/iOS packages.
@@ -11,8 +11,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const serverUrl = process.env.CAPACITOR_SERVER_URL;
 
 const config: CapacitorConfig = {
-  appId: "com.itunes.globalchat",
-  appName: "iTunes",
+  appId: "com.zumelia.app",
+  appName: "Zumelia",
   webDir: "public",
   server: serverUrl
     ? {

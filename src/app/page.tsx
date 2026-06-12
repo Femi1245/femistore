@@ -26,7 +26,7 @@ export default async function HomePage() {
         </p>
         <h1 className="font-display mx-auto max-w-3xl text-4xl font-bold leading-tight tracking-tight text-vintage-ink md:text-6xl">
           The world&apos;s conversation starts on{" "}
-          <span className="text-vintage-gradient">iTunes</span>
+          <span className="text-vintage-gradient">Zumelia</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-vintage-ink-muted">
           A global chatting platform where people across countries meet, message in
@@ -76,7 +76,7 @@ export default async function HomePage() {
       </section>
 
       <footer className="border-t-2 border-vintage-border py-8 text-center text-sm text-vintage-ink-muted">
-        © {new Date().getFullYear()} iTunes — chat globally, connect freely.
+        © {new Date().getFullYear()} Zumelia — chat globally, connect freely.
       </footer>
     </div>
   );

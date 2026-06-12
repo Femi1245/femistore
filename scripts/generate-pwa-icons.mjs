@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
-const input = path.join(root, "public/images/itunt.png");
+const input = path.join(root, "public/images/zumelia.png");
 const outDir = path.join(root, "public/pwa");
 
 const sizes = [72, 96, 128, 144, 152, 192, 384, 512];

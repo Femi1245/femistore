@@ -297,7 +297,7 @@ export function SiteVideoPlayer({
                 <Play className="h-7 w-7 fill-current pl-1" />
               </span>
               <span className="relative mt-4 rounded-sm bg-black/55 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/90">
-                iTunes Watch
+                Zumelia Watch
               </span>
             </button>
           )}
