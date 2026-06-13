@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Globe, MessageCircle, Shield, Zap } from "lucide-react";
 import { HomeNavActions } from "@/components/layout/HomeNavActions";
 import { Logo } from "@/components/Logo";
@@ -6,7 +7,22 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+
+  // OAuth providers (or a misconfigured Site URL) can deliver the auth code to
+  // the root instead of /auth/callback. Forward it so the session is created.
+  if (params.code) {
+    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}`);
+  }
+  if (params.error) {
+    redirect(`/login?error=${encodeURIComponent(params.error)}`);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
