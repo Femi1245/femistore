@@ -26,8 +26,7 @@ export function PhoneVerification({
 
   const verified = !!profile.phone_verified_at && !!profile.phone_e164;
 
-  async function handleSendOtp(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSendOtp() {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -44,8 +43,7 @@ export function PhoneVerification({
     setSuccess("Verification code sent. Check your SMS.");
   }
 
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleVerifyOtp() {
     setLoading(true);
     setError(null);
 
@@ -85,26 +83,39 @@ export function PhoneVerification({
       {!verified && (
         <>
           {step === "idle" ? (
-            <form onSubmit={handleSendOtp} className="space-y-3">
+            <div className="space-y-3">
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!loading && phone.trim()) handleSendOtp();
+                  }
+                }}
                 placeholder="+2348012345678"
                 className="vintage-input w-full px-3 py-2 text-sm"
               />
               <button
-                type="submit"
+                type="button"
+                onClick={handleSendOtp}
                 disabled={loading || !phone.trim()}
                 className="vintage-btn w-full py-2 text-sm disabled:opacity-50"
               >
                 {loading ? "Sending…" : "Send verification code"}
               </button>
-            </form>
+            </div>
           ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-3">
+            <div className="space-y-3">
               <input
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!loading && otp.length >= 4) handleVerifyOtp();
+                  }
+                }}
                 placeholder="6-digit code"
                 maxLength={6}
                 className="vintage-input w-full px-3 py-2 text-sm"
@@ -118,14 +129,15 @@ export function PhoneVerification({
                   Back
                 </button>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleVerifyOtp}
                   disabled={loading || otp.length < 4}
                   className="vintage-btn flex-1 py-2 text-sm disabled:opacity-50"
                 >
                   {loading ? "Verifying…" : "Verify"}
                 </button>
               </div>
-            </form>
+            </div>
           )}
         </>
       )}

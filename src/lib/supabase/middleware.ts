@@ -32,9 +32,21 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  let authCheckFailed = false;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+  } catch {
+    // Transient network error reaching Supabase. Don't bounce the user —
+    // let the request through and let the page-level guard decide once
+    // connectivity is restored. This prevents redirect loops / surprise logouts.
+    authCheckFailed = true;
+  }
+
+  if (authCheckFailed) {
+    return supabaseResponse;
+  }
 
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||

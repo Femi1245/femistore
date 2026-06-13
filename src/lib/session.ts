@@ -5,9 +5,18 @@ import type { Profile } from "@/lib/types";
 
 export async function requireUser(): Promise<Profile> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  let user = null;
+  try {
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+  } catch {
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "Couldn't reach the server. Check your connection and try again.",
+      )}`,
+    );
+  }
 
   if (!user) redirect("/login");
 
