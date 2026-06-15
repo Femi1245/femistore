@@ -62,42 +62,20 @@ export function ProfileHeader({
   const birthdate = formatBirthdate(profile.date_of_birth);
 
   return (
-    <div className="vintage-card p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        <Avatar
-          name={profile.display_name}
-          avatarUrl={profile.avatar_url}
-          size="xl"
-        />
-        <div className="flex-1 min-w-0">
-          <h1 className="font-display text-2xl font-bold text-vintage-ink">
-            {profile.display_name}
-          </h1>
-          <p className="text-vintage-rust">@{profile.username}</p>
-          {profile.country && (
-            <p className="mt-1 text-sm text-vintage-ink-muted">{profile.country}</p>
-          )}
-          {birthdate && (
-            <p className="mt-1 text-sm text-vintage-ink-muted">Born {birthdate}</p>
-          )}
-          {profile.bio && (
-            <p className="mt-3 text-sm leading-relaxed text-vintage-ink whitespace-pre-wrap">
-              {profile.bio}
-            </p>
-          )}
-
-          <div className="mt-4 flex gap-6 text-sm">
-            <span>
-              <strong className="text-vintage-ink">{counts.followers}</strong>{" "}
-              <span className="text-vintage-ink-muted">Followers</span>
-            </span>
-            <span>
-              <strong className="text-vintage-ink">{counts.following}</strong>{" "}
-              <span className="text-vintage-ink-muted">Following</span>
-            </span>
+    <div className="vintage-card overflow-hidden">
+      <div className="relative h-28 bg-gradient-to-br from-vintage-rust via-vintage-rust-dark to-vintage-mustard sm:h-36">
+        <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5)_0,transparent_40%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.35)_0,transparent_45%)]" />
+      </div>
+      <div className="px-5 pb-6 sm:px-6">
+        <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
+          <div className="rounded-full ring-4 ring-vintage-paper">
+            <Avatar
+              name={profile.display_name}
+              avatarUrl={profile.avatar_url}
+              size="xl"
+            />
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 sm:pb-1">
             {isOwn ? (
               <Link href="/profile/edit" className="vintage-btn px-4 py-2 text-sm">
                 Edit profile
@@ -144,22 +122,60 @@ export function ProfileHeader({
               </>
             )}
           </div>
-          {showGift && !isOwn && (
-            <GiftPickerModal
-              recipient={profile}
-              context="profile"
-              onClose={() => setShowGift(false)}
-            />
+        </div>
+
+        <div className="mt-4">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
+            {profile.display_name}
+          </h1>
+          <p className="text-sm font-medium text-vintage-rust">@{profile.username}</p>
+
+          {(profile.country || birthdate) && (
+            <p className="mt-2 text-sm text-vintage-ink-muted">
+              {[profile.country, birthdate ? `Born ${birthdate}` : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
           )}
+
+          {profile.bio && (
+            <p className="mt-3 text-sm leading-relaxed text-vintage-ink whitespace-pre-wrap">
+              {profile.bio}
+            </p>
+          )}
+
+          <div className="mt-4 flex gap-3">
+            <div className="vintage-card-inset px-4 py-2">
+              <span className="font-display text-lg font-bold text-vintage-ink">
+                {counts.followers}
+              </span>{" "}
+              <span className="text-sm text-vintage-ink-muted">Followers</span>
+            </div>
+            <div className="vintage-card-inset px-4 py-2">
+              <span className="font-display text-lg font-bold text-vintage-ink">
+                {counts.following}
+              </span>{" "}
+              <span className="text-sm text-vintage-ink-muted">Following</span>
+            </div>
+          </div>
+
           {messageError ? (
-            <p className="mt-2 text-sm text-vintage-rust">{messageError}</p>
+            <p className="mt-3 text-sm text-vintage-rust">{messageError}</p>
           ) : !isOwn && !friends ? (
-            <p className="mt-2 text-xs text-vintage-ink-muted">
+            <p className="mt-3 text-xs text-vintage-ink-muted">
               Connect with each other (mutual follow) to unlock messaging.
             </p>
           ) : null}
         </div>
       </div>
+
+      {showGift && !isOwn && (
+        <GiftPickerModal
+          recipient={profile}
+          context="profile"
+          onClose={() => setShowGift(false)}
+        />
+      )}
     </div>
   );
 }

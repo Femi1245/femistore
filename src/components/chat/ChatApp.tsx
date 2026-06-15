@@ -450,8 +450,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
         />
       )}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside className="flex w-full flex-col border-r-2 border-vintage-border bg-vintage-paper md:w-80 lg:w-96">
-          <div className="border-b-2 border-vintage-border p-3">
+        <aside className="flex w-full flex-col border-r border-vintage-border bg-vintage-paper md:w-80 lg:w-96">
+          <div className="border-b border-vintage-border p-3">
             <div className="mb-2 flex items-center gap-2 vintage-card-inset px-3 py-2">
               <Link href={`/profile/${currentUser.username}`}>
                 <Avatar
@@ -472,14 +472,14 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               <button
                 type="button"
                 onClick={() => setModal("group")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-sm vintage-card-inset py-2 text-xs text-vintage-ink-muted hover:text-vintage-ink"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg vintage-card-inset py-2 text-xs font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
               >
                 <Users className="h-3.5 w-3.5" /> Group
               </button>
               <button
                 type="button"
                 onClick={() => setModal("channel")}
-                className="flex flex-1 items-center justify-center gap-1 rounded-sm vintage-card-inset py-2 text-xs text-vintage-ink-muted hover:text-vintage-ink"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg vintage-card-inset py-2 text-xs font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
               >
                 <Megaphone className="h-3.5 w-3.5" /> Channel
               </button>
@@ -488,13 +488,13 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
             <div className="mb-2 flex gap-1">
               <Link
                 href="/feed"
-                className="flex flex-1 items-center justify-center gap-1 rounded-sm vintage-card-inset py-2 text-xs text-vintage-ink-muted hover:text-vintage-ink"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg vintage-card-inset py-2 text-xs font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
               >
                 <Home className="h-3.5 w-3.5" /> Feed
               </Link>
               <Link
                 href={`/profile/${currentUser.username}`}
-                className="flex flex-1 items-center justify-center gap-1 rounded-sm vintage-card-inset py-2 text-xs text-vintage-ink-muted hover:text-vintage-ink"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg vintage-card-inset py-2 text-xs font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
               >
                 <User className="h-3.5 w-3.5" /> Profile
               </Link>
@@ -548,38 +548,56 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   </button>
                 </div>
               ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversationById(conv.id)}
-                    className={`flex w-full items-center gap-3 border-b border-vintage-border/40 px-4 py-3 text-left transition hover:bg-vintage-paper-dark/50 ${
-                      activeChat?.convId === conv.id ? "bg-vintage-rust/10" : ""
-                    }`}
-                  >
-                    <Avatar
-                      name={conversationLabel(conv)}
-                      avatarUrl={conv.other_user?.avatar_url ?? null}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate font-medium">{conversationLabel(conv)}</p>
-                        {conv.last_message_at && (
-                          <span className="shrink-0 text-xs text-vintage-ink-muted">
-                            {formatMessageTime(conv.last_message_at)}
-                          </span>
+                <div className="space-y-0.5 p-2">
+                  {conversations.map((conv) => {
+                    const active = activeChat?.convId === conv.id;
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => openConversationById(conv.id)}
+                        className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                          active
+                            ? "bg-vintage-rust/10"
+                            : "hover:bg-vintage-paper-dark/60"
+                        }`}
+                      >
+                        {active && (
+                          <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-vintage-rust" />
                         )}
-                      </div>
-                      <p className="truncate text-xs text-vintage-ink-muted">
-                        {conv.kind === "dm"
-                          ? conv.other_user?.country
-                          : conv.kind === "group"
-                            ? `Group · ${conv.member_count ?? 0} members`
-                            : `Channel · ${conv.member_count ?? 0} subscribers`}
-                        {conv.last_message ? ` · ${conv.last_message}` : ""}
-                      </p>
-                    </div>
-                  </button>
-                ))
+                        <Avatar
+                          name={conversationLabel(conv)}
+                          avatarUrl={conv.other_user?.avatar_url ?? null}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p
+                              className={`truncate ${
+                                active
+                                  ? "font-semibold text-vintage-rust"
+                                  : "font-medium text-vintage-ink"
+                              }`}
+                            >
+                              {conversationLabel(conv)}
+                            </p>
+                            {conv.last_message_at && (
+                              <span className="shrink-0 text-[11px] text-vintage-ink-muted">
+                                {formatMessageTime(conv.last_message_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="truncate text-xs text-vintage-ink-muted">
+                            {conv.kind === "dm"
+                              ? conv.other_user?.country
+                              : conv.kind === "group"
+                                ? `Group · ${conv.member_count ?? 0} members`
+                                : `Channel · ${conv.member_count ?? 0} subscribers`}
+                            {conv.last_message ? ` · ${conv.last_message}` : ""}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
