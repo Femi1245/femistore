@@ -54,7 +54,14 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthCallback = request.nextUrl.pathname.startsWith("/auth/callback");
 
-  const protectedPrefixes = ["/chat", "/feed", "/profile", "/live", "/watch"];
+  const protectedPrefixes = [
+    "/chat",
+    "/feed",
+    "/profile",
+    "/live",
+    "/watch",
+    "/notifications",
+  ];
   const isProtected = protectedPrefixes.some((p) =>
     request.nextUrl.pathname.startsWith(p),
   );
