@@ -1,20 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Libre_Baskerville, Playfair_Display } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import "./globals.css";
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const display = Plus_Jakarta_Sans({
+  variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const libre = Libre_Baskerville({
-  variable: "--font-libre",
+const body = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -37,8 +37,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#b85c38" },
-    { media: "(prefers-color-scheme: dark)", color: "#14100e" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0e10" },
   ],
 };
 
@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${libre.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="app-body min-h-full flex flex-col" suppressHydrationWarning>

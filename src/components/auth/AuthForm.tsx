@@ -365,6 +365,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
 
+            {mode === "login" && (
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-vintage-rust hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
+
             {error && (
               <p className="vintage-card-inset px-3 py-2 text-sm text-vintage-rust">{error}</p>
             )}
