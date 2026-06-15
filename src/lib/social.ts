@@ -29,6 +29,33 @@ export async function getFollowCounts(
   };
 }
 
+export async function loadSuggestedProfiles(
+  supabase: SupabaseClient,
+  userId: string,
+  limit = 4,
+): Promise<Profile[]> {
+  const { data: followingRows } = await supabase
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", userId);
+
+  const excludeIds = [
+    userId,
+    ...((followingRows as { following_id: string }[] | null)?.map(
+      (r) => r.following_id,
+    ) ?? []),
+  ];
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .not("id", "in", `(${excludeIds.join(",")})`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data as Profile[]) ?? [];
+}
+
 export async function isFollowing(
   supabase: SupabaseClient,
   followerId: string,

@@ -45,7 +45,7 @@ export function AppNav({ user }: { user: Profile }) {
               <Link
                 key={link.label}
                 href={href}
-                className={`flex items-center gap-1.5 rounded-sm px-3 py-2 text-sm font-semibold vintage-nav-link ${
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold vintage-nav-link ${
                   active ? "vintage-nav-link-active" : ""
                 }`}
               >

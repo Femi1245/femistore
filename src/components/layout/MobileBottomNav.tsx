@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Gamepad2, Home, MessageCircle, Play, Radio } from "lucide-react";
+import { Gamepad2, Home, MessageCircle, Play, Radio } from "lucide-react";
 const tabs = [
   { href: "/feed", label: "Feed", icon: Home, match: (p: string) => p === "/feed" || p.startsWith("/profile/") },
   { href: "/watch", label: "Watch", icon: Play, match: (p: string) => p.startsWith("/watch") },
   { href: "/live", label: "Live", icon: Radio, match: (p: string) => p.startsWith("/live") },
   { href: "/games", label: "Games", icon: Gamepad2, match: (p: string) => p.startsWith("/games") },
   { href: "/chat", label: "Chat", icon: MessageCircle, match: (p: string) => p === "/chat" },
-  { href: "/notifications", label: "Alerts", icon: Bell, match: (p: string) => p.startsWith("/notifications") },
 ];
 
 export function MobileBottomNav() {
@@ -17,7 +16,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="vintage-nav fixed bottom-0 left-0 right-0 z-50 border-b-0 border-t-[3px] md:hidden"
+      className="vintage-nav fixed bottom-0 left-0 right-0 z-50 border-b-0 border-t md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Main navigation"
     >
