@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ImageIcon, Video, Send } from "lucide-react";
+import { ImageIcon, Video, Send, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadMedia } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
@@ -92,13 +92,23 @@ export function CreatePost({
       </div>
 
       {preview && (
-        <div className="mt-3 overflow-hidden rounded-sm border-2 border-vintage-border">
-          {file?.type.startsWith("video/") ? (
-            <video src={preview} controls className="max-h-80 w-full" />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="Preview" className="max-h-80 w-full object-cover" />
-          )}
+        <div className="mt-3 pl-0 sm:pl-[60px]">
+          <div className="relative overflow-hidden rounded-xl border border-vintage-border">
+            {file?.type.startsWith("video/") ? (
+              <video src={preview} controls className="max-h-80 w-full" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="Preview" className="max-h-80 w-full object-cover" />
+            )}
+            <button
+              type="button"
+              onClick={() => handleFile(null)}
+              aria-label="Remove media"
+              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/75"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -106,10 +116,11 @@ export function CreatePost({
         <p className="mt-2 text-sm text-vintage-rust">{error}</p>
       )}
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex gap-2">
-          <label className="cursor-pointer rounded-sm p-2 text-vintage-ink-muted hover:bg-vintage-paper-dark hover:text-vintage-ink">
+      <div className="mt-3 flex items-center justify-between pl-0 sm:pl-[60px]">
+        <div className="flex gap-1">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust">
             <ImageIcon className="h-5 w-5" />
+            <span className="hidden sm:inline">Photo</span>
             <input
               ref={inputRef}
               type="file"
@@ -118,8 +129,9 @@ export function CreatePost({
               onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
             />
           </label>
-          <label className="cursor-pointer rounded-sm p-2 text-vintage-ink-muted hover:bg-vintage-paper-dark hover:text-vintage-ink">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust">
             <Video className="h-5 w-5" />
+            <span className="hidden sm:inline">Video</span>
             <input
               type="file"
               accept="video/*"
@@ -131,7 +143,7 @@ export function CreatePost({
         <button
           type="submit"
           disabled={loading || (!content.trim() && !file)}
-          className="vintage-btn flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-40"
+          className="vintage-btn flex items-center gap-2 px-5 py-2 text-sm disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
           {loading ? "Posting…" : "Post"}

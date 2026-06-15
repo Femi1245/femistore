@@ -775,9 +775,9 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           {activeChat ? (
             <>
               <header
-                className={`flex items-center gap-3 border-b-2 px-4 py-3 ${
+                className={`flex items-center gap-3 border-b px-4 py-3 ${
                   activeChat.isSecret
-                    ? "border-vintage-ink/30 bg-vintage-ink/5"
+                    ? "border-vintage-ink/20 bg-vintage-ink/5"
                     : "border-vintage-border bg-vintage-paper"
                 }`}
               >
@@ -924,7 +924,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               ) : null}
 
               {activeChat.canPost ? (
-                <div className="border-t-2 border-vintage-border bg-vintage-paper p-4">
+                <div className="border-t border-vintage-border bg-vintage-paper p-4">
                   {recordingVoice ? (
                     <VoiceRecorder
                       disabled={sendingVoice}
@@ -973,10 +973,12 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-              <div className="flex h-20 w-20 items-center justify-center vintage-card">
-                <Globe className="h-10 w-10 text-vintage-rust" />
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-vintage-rust to-vintage-rust-dark text-white shadow-lg">
+                <Globe className="h-10 w-10" />
               </div>
-              <h2 className="font-display text-xl font-semibold">Connect globally on Zumelia</h2>
+              <h2 className="font-display text-xl font-bold tracking-tight">
+                Connect globally on Zumelia
+              </h2>
               <p className="max-w-sm text-sm text-vintage-ink-muted">
                 Pick a chat, create a group or channel, or find friends by phone number.
               </p>

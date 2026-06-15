@@ -155,23 +155,25 @@ export function PostCard({
       <div className="mt-3 pl-0 sm:pl-[52px]">
         <PostBody post={post} />
 
-        <div className="mt-4 flex items-center gap-1 border-t border-vintage-border/50 pt-3">
+        <div className="mt-4 flex items-center gap-1 border-t border-vintage-border pt-2">
           <button
             onClick={handleLike}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               engagement.liked_by_me
-                ? "text-vintage-rust"
-                : "text-vintage-ink-muted hover:bg-vintage-paper-dark/50"
+                ? "bg-vintage-rust/10 text-vintage-rust"
+                : "text-vintage-ink-muted hover:bg-vintage-rust/10 hover:text-vintage-rust"
             }`}
           >
             <Heart
-              className={`h-4 w-4 ${engagement.liked_by_me ? "fill-current" : ""}`}
+              className={`h-4 w-4 transition-transform ${
+                engagement.liked_by_me ? "scale-110 fill-current" : ""
+              }`}
             />
             {engagement.likes || ""}
           </button>
           <button
             onClick={toggleComments}
-            className="flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm text-vintage-ink-muted hover:bg-vintage-paper-dark/50"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
           >
             <MessageCircle className="h-4 w-4" />
             {engagement.comments || ""}
@@ -179,7 +181,11 @@ export function PostCard({
           <button
             onClick={() => setReshareOpen(!reshareOpen)}
             disabled={engagement.reshared_by_me}
-            className="flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm text-vintage-ink-muted hover:bg-vintage-paper-dark/50 disabled:opacity-40"
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:opacity-40 ${
+              engagement.reshared_by_me
+                ? "text-vintage-olive"
+                : "text-vintage-ink-muted hover:bg-vintage-olive/10 hover:text-vintage-olive"
+            }`}
           >
             <Repeat2 className="h-4 w-4" />
             {engagement.reshares || ""}
