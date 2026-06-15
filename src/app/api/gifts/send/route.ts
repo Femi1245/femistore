@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { areMutualFriends } from "@/lib/chat";
-import { sendGiftDemo, type SendGiftInput } from "@/lib/gifts";
+import { createGift, sendGiftDemo, type SendGiftInput } from "@/lib/gifts";
+import { initializeTransaction, isPaystackConfigured } from "@/lib/paystack";
 import { createAuthenticatedClient } from "@/lib/supabase/route-auth";
 
 export async function POST(request: Request) {
@@ -64,22 +65,68 @@ export async function POST(request: Request) {
     }
   }
 
-  const { gift, error } = await sendGiftDemo(supabase, user.id, {
+  const giftInput: SendGiftInput = {
     catalogId,
     recipientId,
     context,
     conversationId,
     roomName,
     note,
+  };
+
+  // No payment provider configured → demo mode (no real charge).
+  if (!isPaystackConfigured()) {
+    const { gift, error } = await sendGiftDemo(supabase, user.id, giftInput);
+    if (error || !gift) {
+      return NextResponse.json({ error: error ?? "Failed to send gift" }, { status: 500 });
+    }
+    return NextResponse.json({
+      gift,
+      paymentNote:
+        "Demo mode — no charge. Add PAYSTACK_SECRET_KEY to enable real checkout.",
+    });
+  }
+
+  // Real payment: create a pending gift, then start a Paystack transaction.
+  const { gift, error } = await createGift(supabase, user.id, giftInput, {
+    status: "pending",
+    provider: "paystack",
   });
 
   if (error || !gift) {
-    return NextResponse.json({ error: error ?? "Failed to send gift" }, { status: 500 });
+    return NextResponse.json({ error: error ?? "Failed to create gift" }, { status: 500 });
   }
 
-  return NextResponse.json({
-    gift,
-    paymentNote:
-      "Demo mode — no charge yet. Stripe / Paystack integration will be added soon.",
-  });
+  const email = user.email ?? `${user.id}@users.zumelia.app`;
+  const origin = new URL(request.url).origin;
+
+  try {
+    const tx = await initializeTransaction({
+      email,
+      amountSubunit: gift.amount_cents,
+      currency: "USD",
+      reference: gift.id,
+      callbackUrl: `${origin}/api/gifts/callback`,
+      metadata: {
+        gift_id: gift.id,
+        sender_id: user.id,
+        recipient_id: recipientId,
+        context,
+      },
+    });
+
+    return NextResponse.json({
+      authorization_url: tx.authorization_url,
+      reference: gift.id,
+    });
+  } catch {
+    await supabase
+      .from("sent_gifts")
+      .update({ payment_status: "failed" })
+      .eq("id", gift.id);
+    return NextResponse.json(
+      { error: "Could not start payment. Try again." },
+      { status: 502 },
+    );
+  }
 }

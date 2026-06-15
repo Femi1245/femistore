@@ -57,24 +57,38 @@ export type SendGiftInput = {
   note?: string;
 };
 
-export async function sendGiftDemo(
+async function getCatalogItem(
+  supabase: SupabaseClient,
+  catalogId: string,
+): Promise<GiftCatalogItem | null> {
+  const { data } = await supabase
+    .from("gift_catalog")
+    .select("*")
+    .eq("id", catalogId)
+    .maybeSingle();
+  return (data as GiftCatalogItem | null) ?? null;
+}
+
+/**
+ * Inserts a gift row. `paymentStatus` is "mock" for demo mode, or "pending"
+ * when a real payment provider must confirm it before fulfilment.
+ */
+export async function createGift(
   supabase: SupabaseClient,
   senderId: string,
   input: SendGiftInput,
-): Promise<{ gift: SentGift | null; error?: string }> {
+  payment: {
+    status: "mock" | "pending";
+    provider?: string | null;
+    reference?: string | null;
+  },
+): Promise<{ gift: SentGift | null; catalog: GiftCatalogItem | null; error?: string }> {
   if (senderId === input.recipientId) {
-    return { gift: null, error: "You cannot send a gift to yourself." };
+    return { gift: null, catalog: null, error: "You cannot send a gift to yourself." };
   }
 
-  const { data: item } = await supabase
-    .from("gift_catalog")
-    .select("*")
-    .eq("id", input.catalogId)
-    .maybeSingle();
-
-  if (!item) return { gift: null, error: "Gift not found." };
-
-  const catalog = item as GiftCatalogItem;
+  const catalog = await getCatalogItem(supabase, input.catalogId);
+  if (!catalog) return { gift: null, catalog: null, error: "Gift not found." };
 
   const { data: gift, error } = await supabase
     .from("sent_gifts")
@@ -87,9 +101,9 @@ export async function sendGiftDemo(
       room_name: input.roomName ?? null,
       note: (input.note ?? "").trim().slice(0, 200),
       amount_cents: catalog.price_cents,
-      payment_status: "mock",
-      payment_provider: null,
-      payment_reference: null,
+      payment_status: payment.status,
+      payment_provider: payment.provider ?? null,
+      payment_reference: payment.reference ?? null,
     })
     .select("*")
     .single();
@@ -98,43 +112,84 @@ export async function sendGiftDemo(
     if (error?.code === "PGRST205") {
       return {
         gift: null,
+        catalog,
         error: "Run supabase/gifts-schema.sql in Supabase SQL Editor first.",
       };
     }
-    return { gift: null, error: error?.message ?? "Could not send gift." };
+    return { gift: null, catalog, error: error?.message ?? "Could not send gift." };
   }
 
   const sent = gift as SentGift;
   sent.catalog = catalog;
+  return { gift: sent, catalog };
+}
 
-  const senderName = (
-    await supabase
-      .from("profiles")
-      .select("display_name")
-      .eq("id", senderId)
-      .maybeSingle()
-  ).data?.display_name;
+/**
+ * Delivers a gift's side effects: a notification to the recipient and, for chat
+ * gifts, a message in the conversation. Safe to call once a gift is confirmed.
+ */
+export async function fulfillGift(
+  supabase: SupabaseClient,
+  gift: SentGift,
+): Promise<void> {
+  const catalog = gift.catalog ?? (await getCatalogItem(supabase, gift.catalog_id));
+  if (!catalog) return;
 
-  const notifMessage = `${catalog.emoji} ${catalog.name}${input.note ? ` — "${input.note.trim()}"` : ""}`;
+  const note = (gift.note ?? "").trim();
+  const notifMessage = `${catalog.emoji} ${catalog.name}${note ? ` — "${note}"` : ""}`;
 
   await supabase.from("notifications").insert({
-    recipient_id: input.recipientId,
-    actor_id: senderId,
+    recipient_id: gift.recipient_id,
+    actor_id: gift.sender_id,
     type: "gift",
-    entity_type: input.context,
-    entity_id: sent.id,
+    entity_type: gift.context,
+    entity_id: gift.id,
     message: notifMessage,
   });
 
-  if (input.context === "chat" && input.conversationId) {
+  if (gift.context === "chat" && gift.conversation_id) {
     await supabase.from("messages").insert({
-      conversation_id: input.conversationId,
-      sender_id: senderId,
-      content: `${catalog.emoji} sent ${catalog.name}${input.note ? `: ${input.note.trim()}` : ""}`,
+      conversation_id: gift.conversation_id,
+      sender_id: gift.sender_id,
+      content: `${catalog.emoji} sent ${catalog.name}${note ? `: ${note}` : ""}`,
       message_type: "gift",
-      sent_gift_id: sent.id,
+      sent_gift_id: gift.id,
     });
   }
+}
 
-  return { gift: sent };
+/**
+ * Confirms a pending gift after a successful payment and fulfils it exactly
+ * once. The `.eq("payment_status", "pending")` guard makes this idempotent, so
+ * the webhook and the redirect callback can both call it safely.
+ */
+export async function markGiftPaidAndFulfill(
+  supabase: SupabaseClient,
+  giftId: string,
+  providerReference: string,
+): Promise<void> {
+  const { data: gift } = await supabase
+    .from("sent_gifts")
+    .update({ payment_status: "paid", payment_reference: providerReference })
+    .eq("id", giftId)
+    .eq("payment_status", "pending")
+    .select("*")
+    .maybeSingle();
+
+  if (!gift) return; // already processed, failed, or not found
+  await fulfillGift(supabase, gift as SentGift);
+}
+
+/** Demo flow: insert as "mock" and fulfil immediately (no real charge). */
+export async function sendGiftDemo(
+  supabase: SupabaseClient,
+  senderId: string,
+  input: SendGiftInput,
+): Promise<{ gift: SentGift | null; error?: string }> {
+  const { gift, error } = await createGift(supabase, senderId, input, {
+    status: "mock",
+  });
+  if (error || !gift) return { gift: null, error };
+  await fulfillGift(supabase, gift);
+  return { gift };
 }

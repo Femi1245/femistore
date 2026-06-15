@@ -59,13 +59,21 @@ export function GiftPickerModal({
     });
 
     const data = await res.json();
-    setSending(false);
 
     if (!res.ok) {
+      setSending(false);
       setError(data.error ?? "Could not send gift");
       return;
     }
 
+    // Real payment: redirect to the secure Paystack checkout.
+    if (data.authorization_url) {
+      window.location.href = data.authorization_url;
+      return;
+    }
+
+    // Demo mode: gift was delivered immediately.
+    setSending(false);
     setSuccess(data.paymentNote ?? "Gift sent!");
     onSent?.(picked);
     setTimeout(onClose, 1500);
@@ -89,8 +97,8 @@ export function GiftPickerModal({
           {context === "live" ? " during live stream" : ""}
         </p>
 
-        <p className="mb-4 rounded-sm bg-vintage-rust/10 px-3 py-2 text-xs text-vintage-rust">
-          Demo mode — payments not charged yet. Real checkout (Stripe / Paystack) coming soon.
+        <p className="mb-4 rounded-lg bg-vintage-rust/10 px-3 py-2 text-xs text-vintage-rust">
+          Secure checkout via Paystack. You'll confirm payment on the next screen.
         </p>
 
         {loading ? (
