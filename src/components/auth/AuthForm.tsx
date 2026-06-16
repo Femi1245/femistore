@@ -16,6 +16,7 @@ import {
   validateUsername,
 } from "@/lib/auth-validation";
 import { COUNTRIES } from "@/lib/countries";
+import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
 import { SetupNotice } from "@/components/auth/SetupNotice";
@@ -33,6 +34,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [country, setCountry] = useState("Global");
+  const [accountType, setAccountType] = useState<"personal" | "business">("personal");
+  const [businessName, setBusinessName] = useState("");
+  const [businessCategory, setBusinessCategory] = useState("Other");
   const [error, setError] = useState<string | null>(urlError);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
@@ -154,6 +158,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (mode === "signup") {
         const cleanUsernameValue = cleanUsername(username);
 
+        if (accountType === "business" && !businessName.trim()) {
+          setError("Business name is required for business accounts.");
+          setLoading(false);
+          return;
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -163,6 +173,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
               display_name: displayName.trim(),
               username: cleanUsernameValue,
               country,
+              account_kind: accountType,
+              ...(accountType === "business"
+                ? {
+                    business_name: businessName.trim(),
+                    business_category: businessCategory,
+                  }
+                : {}),
             },
           },
         });
@@ -186,7 +203,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
             setError(profileError ?? "Could not create your profile.");
             return;
           }
-          router.push("/chat");
+          router.push(
+            accountType === "business" ? "/profile/business/setup" : "/chat",
+          );
           router.refresh();
           return;
         }
@@ -300,9 +319,74 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {mode === "signup" && (
               <>
+                <div>
+                  <p className="mb-2 text-xs font-medium text-vintage-ink-muted">Account type</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAccountType("personal")}
+                      className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                        accountType === "personal"
+                          ? "bg-vintage-rust/15 text-vintage-rust ring-1 ring-vintage-rust/40"
+                          : "vintage-card-inset text-vintage-ink-muted"
+                      }`}
+                    >
+                      Personal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAccountType("business")}
+                      className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                        accountType === "business"
+                          ? "bg-vintage-rust/15 text-vintage-rust ring-1 ring-vintage-rust/40"
+                          : "vintage-card-inset text-vintage-ink-muted"
+                      }`}
+                    >
+                      Business
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-vintage-ink-muted">
+                    {accountType === "business"
+                      ? "Showcase your brand and reach customers on Zumelia."
+                      : "Connect with friends and share your life."}
+                  </p>
+                </div>
+
+                {accountType === "business" && (
+                  <>
+                    <TextField
+                      id="businessName"
+                      label="Business name"
+                      value={businessName}
+                      onChange={setBusinessName}
+                      placeholder="Your brand or company name"
+                    />
+                    <div>
+                      <label
+                        htmlFor="businessCategory"
+                        className="mb-1 block text-xs font-medium text-vintage-ink-muted"
+                      >
+                        Business category
+                      </label>
+                      <select
+                        id="businessCategory"
+                        value={businessCategory}
+                        onChange={(e) => setBusinessCategory(e.target.value)}
+                        className="vintage-input w-full px-4 py-2.5"
+                      >
+                        {BUSINESS_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
                 <TextField
                   id="displayName"
-                  label="Display name"
+                  label={accountType === "business" ? "Your name (owner / contact)" : "Display name"}
                   value={displayName}
                   onChange={(value) => updateField("displayName", value)}
                   onBlur={() => validateField("displayName")}

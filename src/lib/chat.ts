@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canEditWithinWindow } from "@/lib/edit-window";
+import { ASSISTANT_USERNAME } from "@/lib/assistant";
 import type {
   ActiveChat,
   ConversationKind,
@@ -68,6 +70,16 @@ export async function canMessageUser(
 ): Promise<{ allowed: boolean; reason?: string }> {
   if (userId === otherUserId) {
     return { allowed: false, reason: "You cannot message yourself." };
+  }
+
+  const { data: otherProfile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", otherUserId)
+    .maybeSingle();
+
+  if (otherProfile?.username === ASSISTANT_USERNAME) {
+    return { allowed: true };
   }
 
   const friends = await areMutualFriends(supabase, userId, otherUserId);
@@ -526,6 +538,31 @@ export function formatMessageTime(iso: string): string {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+export async function editMessage(
+  supabase: SupabaseClient,
+  messageId: string,
+  userId: string,
+  content: string,
+  createdAt: string,
+): Promise<{ error?: string }> {
+  if (!canEditWithinWindow(createdAt)) {
+    return { error: "You can only edit messages within 5 minutes of sending." };
+  }
+
+  const trimmed = content.trim();
+  if (!trimmed) return { error: "Message cannot be empty." };
+
+  const { error } = await supabase
+    .from("messages")
+    .update({ content: trimmed, edited_at: new Date().toISOString() })
+    .eq("id", messageId)
+    .eq("sender_id", userId)
+    .eq("message_type", "text");
+
+  if (error) return { error: error.message };
+  return {};
 }
 
 export function conversationLabel(conv: ConversationPreview): string {

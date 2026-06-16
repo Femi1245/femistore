@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
+import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
 import "./globals.css";
 
 const display = Plus_Jakarta_Sans({
@@ -59,6 +60,7 @@ export default function RootLayout({
           <RegisterServiceWorker />
           {children}
           <InstallAppPrompt />
+          <AssistantWidgetLoader />
         </ThemeProvider>
       </body>
     </html>

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProfileHeader } from "@/components/social/ProfileHeader";
 import { ProfilePosts } from "@/components/social/ProfilePosts";
+import { BusinessProfileShowcase } from "@/components/business/BusinessProfileShowcase";
+import { hasBusinessProfile } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { getFollowCounts, isFollowing } from "@/lib/social";
@@ -25,6 +27,9 @@ export default async function ProfilePage({
 
   if (!profile) notFound();
 
+  const typedProfile = profile as import("@/lib/types").Profile;
+  const showBusinessShowcase = hasBusinessProfile(typedProfile);
+
   const [counts, following] = await Promise.all([
     getFollowCounts(supabase, profile.id),
     currentUser.id !== profile.id
@@ -36,11 +41,12 @@ export default async function ProfilePage({
     <AppShell user={currentUser} wide>
       <div className="space-y-6">
         <ProfileHeader
-          profile={profile}
+          profile={typedProfile}
           currentUser={currentUser}
           initialCounts={counts}
           initialFollowing={following}
         />
+        {showBusinessShowcase && <BusinessProfileShowcase profile={typedProfile} />}
         <div>
           <h2 className="font-display mb-4 text-lg font-semibold text-vintage-ink">Posts</h2>
           <ProfilePosts

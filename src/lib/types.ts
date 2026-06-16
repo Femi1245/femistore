@@ -1,3 +1,6 @@
+export type AccountKind = "personal" | "business";
+export type AccountMode = "personal" | "business";
+
 export type Profile = {
   id: string;
   username: string;
@@ -8,7 +11,32 @@ export type Profile = {
   date_of_birth: string | null;
   phone_e164: string | null;
   phone_verified_at: string | null;
+  last_seen_at: string | null;
+  account_kind: AccountKind;
+  business_enabled: boolean;
+  active_mode: AccountMode;
+  business_name: string | null;
+  business_category: string | null;
+  business_tagline: string | null;
+  business_description: string | null;
+  business_website: string | null;
+  business_email: string | null;
+  business_phone: string | null;
+  business_location: string | null;
+  business_cover_url: string | null;
+  business_services: string | null;
   created_at: string;
+};
+
+export type ChatWallpaperType = "default" | "color" | "image";
+
+export type ConversationMemberSettings = {
+  conversation_id: string;
+  user_id: string;
+  wallpaper_type: ChatWallpaperType;
+  wallpaper_color: string | null;
+  wallpaper_url: string | null;
+  updated_at: string;
 };
 
 export type ConversationKind = "dm" | "group" | "channel";
@@ -27,6 +55,7 @@ export type Message = {
   expires_at: string | null;
   sent_gift_id: string | null;
   created_at: string;
+  edited_at: string | null;
 };
 
 export type CallType = "audio" | "video";
@@ -79,6 +108,7 @@ export type Post = {
   media_type: "image" | "video" | null;
   reshare_of: string | null;
   created_at: string;
+  edited_at: string | null;
   author?: Profile;
   original_post?: Post | null;
 };

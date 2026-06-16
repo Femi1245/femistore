@@ -1,10 +1,31 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import type { Profile } from "./types";
+import type { AccountKind, AccountMode, Profile } from "./types";
 
 export type ProfileResult = {
   profile: Profile | null;
   error?: string;
 };
+
+function normalizeProfile(row: Record<string, unknown>): Profile {
+  const p = row as Profile;
+  return {
+    ...p,
+    account_kind: (p.account_kind ?? "personal") as AccountKind,
+    business_enabled: p.business_enabled ?? false,
+    active_mode: (p.active_mode ?? "personal") as AccountMode,
+    business_name: p.business_name ?? null,
+    business_category: p.business_category ?? null,
+    business_tagline: p.business_tagline ?? null,
+    business_description: p.business_description ?? null,
+    business_website: p.business_website ?? null,
+    business_email: p.business_email ?? null,
+    business_phone: p.business_phone ?? null,
+    business_location: p.business_location ?? null,
+    business_cover_url: p.business_cover_url ?? null,
+    business_services: p.business_services ?? null,
+    last_seen_at: p.last_seen_at ?? null,
+  };
+}
 
 function mapProfileError(message: string, code?: string): string {
   if (code === "PGRST205" || message.includes("profiles")) {
@@ -36,7 +57,7 @@ export async function ensureProfile(
     };
   }
 
-  if (existing) return { profile: existing as Profile };
+  if (existing) return { profile: normalizeProfile(existing as Record<string, unknown>) };
 
   const meta = user.user_metadata ?? {};
   const emailPrefix = user.email?.split("@")[0] ?? `user_${user.id.slice(0, 8)}`;
@@ -71,6 +92,9 @@ export async function ensureProfile(
     }
   }
 
+  const accountKind = (meta.account_kind as string) === "business" ? "business" : "personal";
+  const isBusinessSignup = accountKind === "business";
+
   const { data: created, error } = await supabase
     .from("profiles")
     .upsert(
@@ -79,6 +103,16 @@ export async function ensureProfile(
         username,
         display_name: displayName,
         country: String(meta.country ?? "Global"),
+        account_kind: accountKind,
+        active_mode: isBusinessSignup ? "business" : "personal",
+        business_enabled: isBusinessSignup,
+        ...(isBusinessSignup && meta.business_name
+          ? {
+              business_name: String(meta.business_name),
+              business_category: String(meta.business_category ?? "Other"),
+              business_tagline: String(meta.business_tagline ?? ""),
+            }
+          : {}),
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       },
       { onConflict: "id" },
@@ -93,5 +127,5 @@ export async function ensureProfile(
     };
   }
 
-  return { profile: created as Profile };
+  return { profile: normalizeProfile(created as Record<string, unknown>) };
 }

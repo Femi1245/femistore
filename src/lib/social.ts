@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { canEditWithinWindow } from "@/lib/edit-window";
 import type {
   Comment,
   FollowCounts,
@@ -338,6 +339,30 @@ export async function resharePost(
   });
 
   return { data: newPost };
+}
+
+export async function editPost(
+  supabase: SupabaseClient,
+  postId: string,
+  userId: string,
+  content: string,
+  createdAt: string,
+): Promise<{ error?: string }> {
+  if (!canEditWithinWindow(createdAt)) {
+    return { error: "You can only edit posts within 5 minutes of posting." };
+  }
+
+  const trimmed = content.trim();
+  if (!trimmed) return { error: "Post cannot be empty." };
+
+  const { error } = await supabase
+    .from("posts")
+    .update({ content: trimmed, edited_at: new Date().toISOString() })
+    .eq("id", postId)
+    .eq("user_id", userId);
+
+  if (error) return { error: error.message };
+  return {};
 }
 
 export function formatPostDate(iso: string): string {

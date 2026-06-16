@@ -170,6 +170,21 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
         </select>
       </div>
 
+      <div className="rounded-xl border border-vintage-border bg-vintage-paper-dark/40 p-4">
+        <p className="text-sm font-semibold text-vintage-ink">Business on Zumelia</p>
+        <p className="mt-1 text-xs text-vintage-ink-muted">
+          {profile.business_enabled
+            ? "Manage your business showcase and switch between personal and business mode in the nav bar."
+            : "Create a business profile to advertise and showcase what you do."}
+        </p>
+        <a
+          href={profile.business_enabled ? "/profile/business/edit" : "/profile/business/setup"}
+          className="vintage-btn-outline mt-3 inline-flex px-4 py-2 text-sm"
+        >
+          {profile.business_enabled ? "Edit business profile" : "Create business profile"}
+        </a>
+      </div>
+
       {error && (
         <p className="vintage-card-inset px-3 py-2 text-sm text-vintage-rust">{error}</p>
       )}

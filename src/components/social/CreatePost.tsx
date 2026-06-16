@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ImageIcon, Video, Send, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getPostingLabel } from "@/lib/business";
 import { uploadMedia } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -80,6 +81,12 @@ export function CreatePost({
       onSubmit={handleSubmit}
       className="vintage-card p-4"
     >
+      {getPostingLabel(user) !== user.display_name && (
+        <p className="mb-3 text-xs text-vintage-ink-muted">
+          Posting as{" "}
+          <span className="font-semibold text-vintage-rust">{getPostingLabel(user)}</span>
+        </p>
+      )}
       <div className="flex gap-3">
         <Avatar name={user.display_name} avatarUrl={user.avatar_url} />
         <textarea

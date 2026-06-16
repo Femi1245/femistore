@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Gamepad2, Play, Radio, UserPlus } from "lucide-react";
+import { Gamepad2, Play, Radio, UserPlus, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { loadSuggestedProfiles, toggleFollow } from "@/lib/social";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
 const quickActions = [
+  { href: "/discover/businesses", label: "Discover businesses", icon: Briefcase },
   { href: "/live/go-live", label: "Go Live", icon: Radio },
   { href: "/watch", label: "Watch videos", icon: Play },
   { href: "/games", label: "Play games", icon: Gamepad2 },

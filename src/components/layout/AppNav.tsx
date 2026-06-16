@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gamepad2, Home, MessageCircle, Play, Radio, User, Settings } from "lucide-react";
+import { Gamepad2, Home, MessageCircle, Play, Radio, User, Settings, Briefcase } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { AccountModeSwitcher } from "@/components/business/AccountModeSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const links = [
@@ -14,6 +15,7 @@ const links = [
   { href: "/watch", label: "Watch", icon: Play },
   { href: "/live", label: "Live", icon: Radio },
   { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/discover/businesses", label: "Businesses", icon: Briefcase },
   { href: "/games", label: "Games", icon: Gamepad2 },
   { href: null, label: "Profile", icon: User, dynamic: true as const },
   { href: "/profile/edit", label: "Settings", icon: Settings },
@@ -36,6 +38,7 @@ export function AppNav({ user }: { user: Profile }) {
               (link.href === "/watch" && pathname.startsWith("/watch")) ||
               (link.href === "/live" && pathname.startsWith("/live")) ||
               (link.href === "/games" && pathname.startsWith("/games")) ||
+              (link.href === "/discover/businesses" && pathname.startsWith("/discover")) ||
               (link.dynamic &&
                 pathname.startsWith("/profile/") &&
                 !pathname.endsWith("/edit"));
@@ -56,6 +59,7 @@ export function AppNav({ user }: { user: Profile }) {
           })}
         </nav>
         <div className="flex items-center gap-2">
+          <AccountModeSwitcher user={user} />
           <NotificationBell userId={user.id} />
           <ThemeToggle />
           <Link href={profileHref}>

@@ -7,10 +7,15 @@ import {
   MessageCircle,
   Repeat2,
   Send,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { canEditWithinWindow } from "@/lib/edit-window";
 import {
   addComment,
+  editPost,
   formatPostDate,
   loadComments,
   resharePost,
@@ -19,15 +24,25 @@ import {
 import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
-function PostBody({ post }: { post: PostWithMeta }) {
+function PostBody({
+  post,
+  contentOverride,
+}: {
+  post: PostWithMeta;
+  contentOverride?: string;
+}) {
   const target = post.original_post ?? post;
+  const displayContent = contentOverride ?? post.content;
 
   return (
     <>
-      {post.reshare_of && post.content && (
-        <p className="mb-2 text-sm text-vintage-ink-muted">{post.content}</p>
+      {post.reshare_of && displayContent && (
+        <p className="mb-2 text-sm text-vintage-ink-muted">{displayContent}</p>
       )}
-      {target.content && (
+      {!post.reshare_of && displayContent && (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed">{displayContent}</p>
+      )}
+      {post.reshare_of && target.content && (
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{target.content}</p>
       )}
       {target.media_url && target.media_type === "image" && (
@@ -65,9 +80,18 @@ export function PostCard({
   const [loadingComments, setLoadingComments] = useState(false);
   const [reshareOpen, setReshareOpen] = useState(false);
   const [reshareCaption, setReshareCaption] = useState("");
+  const [content, setContent] = useState(post.content);
+  const [editedAt, setEditedAt] = useState(post.edited_at ?? null);
+  const [editing, setEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState(post.content);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const author = post.author;
   const rootId = post.reshare_of ?? post.id;
+  const isOwnPost = post.user_id === currentUser.id;
+  const canEdit =
+    isOwnPost && canEditWithinWindow(post.created_at);
 
   const loadCommentsList = useCallback(async () => {
     setLoadingComments(true);
@@ -120,6 +144,27 @@ export function PostCard({
     if (next) await loadCommentsList();
   }
 
+  async function handleSaveEdit() {
+    setSavingEdit(true);
+    setEditError(null);
+    const { error } = await editPost(
+      createClient(),
+      post.id,
+      currentUser.id,
+      editDraft,
+      post.created_at,
+    );
+    setSavingEdit(false);
+    if (error) {
+      setEditError(error);
+      return;
+    }
+    setContent(editDraft.trim());
+    setEditedAt(new Date().toISOString());
+    setEditing(false);
+    onUpdate();
+  }
+
   if (!author) return null;
 
   return (
@@ -142,7 +187,20 @@ export function PostCard({
             <span className="text-vintage-ink-muted">@{author.username}</span>
             <span className="text-xs text-vintage-ink-muted/70">
               · {formatPostDate(post.created_at)}
+              {editedAt ? " · edited" : ""}
             </span>
+            {canEdit && !editing && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditDraft(content);
+                  setEditing(true);
+                }}
+                className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-vintage-ink-muted hover:bg-vintage-paper-dark hover:text-vintage-rust"
+              >
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            )}
           </div>
           {post.reshare_of && (
             <p className="mt-0.5 flex items-center gap-1 text-xs text-vintage-rust">
@@ -153,7 +211,42 @@ export function PostCard({
       </div>
 
       <div className="mt-3 pl-0 sm:pl-[52px]">
-        <PostBody post={post} />
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              rows={3}
+              className="vintage-input w-full resize-none px-3 py-2 text-sm"
+            />
+            {editError && <p className="text-xs text-vintage-rust">{editError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={savingEdit || !editDraft.trim()}
+                className="vintage-btn flex items-center gap-1 px-3 py-1.5 text-xs disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" /> Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setEditError(null);
+                }}
+                className="vintage-btn-outline flex items-center gap-1 px-3 py-1.5 text-xs"
+              >
+                <X className="h-3.5 w-3.5" /> Cancel
+              </button>
+            </div>
+            <p className="text-[10px] text-vintage-ink-muted">
+              You can edit for 5 minutes after posting.
+            </p>
+          </div>
+        ) : (
+          <PostBody post={post} contentOverride={content} />
+        )}
 
         <div className="mt-4 flex items-center gap-1 border-t border-vintage-border pt-2">
           <button

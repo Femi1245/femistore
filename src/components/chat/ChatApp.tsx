@@ -19,12 +19,19 @@ import {
   Video,
   Lock,
   Gift,
+  Palette,
+  Pencil,
+  Check,
+  X,
+  Bot,
+  Briefcase,
 } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { createClient } from "@/lib/supabase/client";
 import {
   conversationLabel,
+  editMessage,
   findOrCreateConversation,
   formatMessageTime,
   joinChannel,
@@ -34,12 +41,16 @@ import {
   loadPublicChannels,
   secretMessageExpiry,
 } from "@/lib/chat";
+import { chatThemeBackgroundStyle, loadChatTheme } from "@/lib/chat-themes";
+import { canEditWithinWindow } from "@/lib/edit-window";
 import { findUserByPhone } from "@/lib/phone";
+import { formatLastSeen, isOnline } from "@/lib/presence";
 import { sendVoiceMessage } from "@/lib/voicemail";
 import type {
   ActiveChat,
   CallSession,
   CallType,
+  ConversationMemberSettings,
   ConversationPreview,
   Message,
   Profile,
@@ -51,6 +62,12 @@ import { IncomingCallModal } from "@/components/chat/IncomingCallModal";
 import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
+import { ChatThemeModal } from "@/components/chat/ChatThemeModal";
+import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
+import {
+  ASSISTANT_DISPLAY_NAME,
+  isAssistantProfile,
+} from "@/lib/assistant";
 
 type Tab = "chats" | "discover" | "phone" | "channels" | "secret";
 
@@ -84,6 +101,17 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [sendingVoice, setSendingVoice] = useState(false);
   const [recordingVoice, setRecordingVoice] = useState(false);
   const [showGift, setShowGift] = useState(false);
+  const [chatTheme, setChatTheme] = useState<ConversationMemberSettings | null>(null);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editMessageDraft, setEditMessageDraft] = useState("");
+  const [messageEditError, setMessageEditError] = useState<string | null>(null);
+  const [savingMessageEdit, setSavingMessageEdit] = useState(false);
+  const [assistantOpening, setAssistantOpening] = useState(false);
+  const [assistantThinking, setAssistantThinking] = useState(false);
+
+  const isAssistantChat =
+    !!activeChat?.otherUser && isAssistantProfile(activeChat.otherUser);
 
   const refreshConversations = useCallback(async () => {
     const supabase = getSupabase();
@@ -215,12 +243,55 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           refreshConversations();
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${activeChat.convId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)),
+          );
+        },
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [activeChat?.convId, getSupabase, loadMessages, refreshConversations]);
+
+  useEffect(() => {
+    if (!activeChat?.otherUser) return;
+
+    const refreshPresence = async () => {
+      const { data } = await getSupabase()
+        .from("profiles")
+        .select("last_seen_at")
+        .eq("id", activeChat.otherUser!.id)
+        .maybeSingle();
+
+      if (!data?.last_seen_at) return;
+
+      setActiveChat((prev) => {
+        if (!prev?.otherUser || prev.otherUser.id !== activeChat.otherUser!.id) {
+          return prev;
+        }
+        return {
+          ...prev,
+          otherUser: { ...prev.otherUser, last_seen_at: data.last_seen_at },
+        };
+      });
+    };
+
+    refreshPresence();
+    const interval = window.setInterval(refreshPresence, 30_000);
+    return () => window.clearInterval(interval);
+  }, [activeChat?.otherUser?.id, getSupabase]);
 
   async function openConversationById(convId: string) {
     setChatError(null);
@@ -231,6 +302,9 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     }
     setActiveChat(chat);
     setTab(chat.isSecret ? "secret" : "chats");
+    setEditingMessageId(null);
+    const theme = await loadChatTheme(getSupabase(), currentUser.id, convId);
+    setChatTheme(theme);
     await loadMessages(convId, chat.isSecret);
     await refreshConversations();
   }
@@ -254,6 +328,29 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     }
 
     await openConversationById(convId);
+  }
+
+  async function openAssistantChat() {
+    setAssistantOpening(true);
+    setChatError(null);
+    try {
+      const res = await fetch("/api/assistant/conversation", { method: "POST" });
+      const data = (await res.json()) as {
+        convId?: string;
+        assistant?: Profile;
+        error?: string;
+      };
+      if (!res.ok || !data.convId) {
+        setChatError(data.error ?? "Could not open Zumelia AI.");
+        return;
+      }
+      await openConversationById(data.convId);
+      setTab("chats");
+    } catch {
+      setChatError("Could not open Zumelia AI.");
+    } finally {
+      setAssistantOpening(false);
+    }
   }
 
   async function searchByPhone(e: React.FormEvent) {
@@ -373,6 +470,36 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     await openConversationById(convId);
   }
 
+  async function handleSaveMessageEdit(messageId: string, createdAt: string) {
+    setSavingMessageEdit(true);
+    setMessageEditError(null);
+    const { error } = await editMessage(
+      getSupabase(),
+      messageId,
+      currentUser.id,
+      editMessageDraft,
+      createdAt,
+    );
+    setSavingMessageEdit(false);
+    if (error) {
+      setMessageEditError(error);
+      return;
+    }
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? {
+              ...m,
+              content: editMessageDraft.trim(),
+              edited_at: new Date().toISOString(),
+            }
+          : m,
+      ),
+    );
+    setEditingMessageId(null);
+    setEditMessageDraft("");
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.trim() || !activeChat?.convId || sending || !activeChat.canPost) return;
@@ -410,6 +537,32 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
         return [...prev, data as Message];
       });
       await refreshConversations();
+
+      if (
+        activeChat.otherUser &&
+        isAssistantProfile(activeChat.otherUser) &&
+        activeChat.convId
+      ) {
+        setAssistantThinking(true);
+        void fetch("/api/assistant/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: content,
+            conversationId: activeChat.convId,
+          }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const data = (await res.json()) as { error?: string };
+              setChatError(data.error ?? "Zumelia AI could not reply.");
+            }
+          })
+          .catch(() => {
+            setChatError("Zumelia AI could not reply. Try again.");
+          })
+          .finally(() => setAssistantThinking(false));
+      }
     }
 
     setSending(false);
@@ -419,6 +572,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
 
   return (
     <div className="vintage-page flex h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] text-vintage-ink md:pb-0">
+      <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
       {incomingCall && (
         <IncomingCallModal
@@ -534,6 +688,28 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
 
           {tab === "chats" && (
             <div className="flex-1 overflow-y-auto">
+              <div className="border-b border-vintage-border/60 p-2">
+                <button
+                  type="button"
+                  onClick={() => void openAssistantChat()}
+                  disabled={assistantOpening}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                    isAssistantChat
+                      ? "bg-vintage-rust/10"
+                      : "hover:bg-vintage-paper-dark/60"
+                  }`}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0]">
+                    <Bot className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-vintage-ink">{ASSISTANT_DISPLAY_NAME}</p>
+                    <p className="truncate text-xs text-vintage-ink-muted">
+                      Ask anything — app help, business, ideas…
+                    </p>
+                  </div>
+                </button>
+              </div>
               {conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                   <Users className="h-10 w-10 text-vintage-border" />
@@ -605,6 +781,12 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           {tab === "discover" && (
             <>
               <div className="space-y-2 border-b-2 border-vintage-border p-3">
+                <Link
+                  href="/discover/businesses"
+                  className="flex items-center gap-2 rounded-lg vintage-card-inset px-3 py-2 text-xs font-semibold text-vintage-rust transition hover:bg-vintage-rust/10"
+                >
+                  <Briefcase className="h-3.5 w-3.5" /> Discover businesses
+                </Link>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-rust" />
                   <input
@@ -803,6 +985,17 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   <Lock className="h-4 w-4 shrink-0 text-vintage-rust" aria-hidden />
                 )}
                 {activeChat.otherUser ? (
+                  isAssistantProfile(activeChat.otherUser) ? (
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0]">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{ASSISTANT_DISPLAY_NAME}</p>
+                        <p className="text-xs text-vintage-ink-muted">Always here to help</p>
+                      </div>
+                    </div>
+                  ) : (
                   <Link
                     href={`/profile/${activeChat.otherUser.username}`}
                     className="flex items-center gap-3"
@@ -813,9 +1006,26 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     />
                     <div>
                       <p className="font-semibold hover:text-vintage-rust">{activeChat.title}</p>
-                      <p className="text-xs text-vintage-ink-muted">{activeChat.subtitle}</p>
+                      <p className="text-xs text-vintage-ink-muted">
+                        @{activeChat.otherUser.username}
+                        {activeChat.otherUser.last_seen_at != null && (
+                          <>
+                            {" · "}
+                            <span
+                              className={
+                                isOnline(activeChat.otherUser.last_seen_at)
+                                  ? "font-medium text-vintage-olive"
+                                  : ""
+                              }
+                            >
+                              {formatLastSeen(activeChat.otherUser.last_seen_at)}
+                            </span>
+                          </>
+                        )}
+                      </p>
                     </div>
                   </Link>
+                  )
                 ) : (
                   <div className="flex flex-1 items-center gap-3">
                     <Avatar name={activeChat.avatarName} avatarUrl={activeChat.avatarUrl} />
@@ -837,7 +1047,17 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                 )}
                 {activeChat.kind !== "channel" && (
                   <div className="ml-auto flex gap-1">
-                    {activeChat.kind === "dm" && activeChat.otherUser && (
+                    <button
+                      type="button"
+                      onClick={() => setShowThemeModal(true)}
+                      title="Chat theme"
+                      className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                    >
+                      <Palette className="h-4 w-4" />
+                    </button>
+                    {activeChat.kind === "dm" &&
+                      activeChat.otherUser &&
+                      !isAssistantProfile(activeChat.otherUser) && (
                       <button
                         type="button"
                         onClick={() => setShowGift(true)}
@@ -847,22 +1067,26 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         <Gift className="h-4 w-4" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => startCall("audio")}
-                      title="Voice call"
-                      className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
-                    >
-                      <PhoneCall className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startCall("video")}
-                      title={activeChat.kind === "group" ? "Group video call" : "Video call"}
-                      className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
-                    >
-                      <Video className="h-4 w-4" />
-                    </button>
+                    {!isAssistantChat && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => startCall("audio")}
+                          title="Voice call"
+                          className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                        >
+                          <PhoneCall className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startCall("video")}
+                          title={activeChat.kind === "group" ? "Group video call" : "Video call"}
+                          className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                        >
+                          <Video className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </header>
@@ -875,8 +1099,19 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   onSent={() => loadMessages(activeChat.convId, activeChat.isSecret)}
                 />
               )}
+              {showThemeModal && (
+                <ChatThemeModal
+                  userId={currentUser.id}
+                  conversationId={activeChat.convId}
+                  onClose={() => setShowThemeModal(false)}
+                  onSaved={setChatTheme}
+                />
+              )}
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+              <div
+                className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+                style={chatThemeBackgroundStyle(chatTheme)}
+              >
                 {loadingMsgs ? (
                   <p className="text-center text-sm text-vintage-ink-muted">Loading messages…</p>
                 ) : messages.length === 0 ? (
@@ -889,10 +1124,15 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   messages.map((msg) => {
                     const isMine = msg.sender_id === currentUser.id;
                     const sender = activeChat.members?.find((m) => m.id === msg.sender_id);
+                    const isText = !msg.message_type || msg.message_type === "text";
+                    const canEditMsg =
+                      isMine && isText && canEditWithinWindow(msg.created_at);
+                    const isEditing = editingMessageId === msg.id;
+
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                        className={`group flex ${isMine ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
@@ -906,7 +1146,39 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                               {sender?.display_name ?? "Member"}
                             </p>
                           )}
-                          {msg.message_type === "voice" && msg.media_url ? (
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editMessageDraft}
+                                onChange={(e) => setEditMessageDraft(e.target.value)}
+                                rows={2}
+                                className="vintage-input w-full resize-none px-2 py-1.5 text-sm text-vintage-ink"
+                              />
+                              {messageEditError && (
+                                <p className="text-[10px] text-vintage-rust">{messageEditError}</p>
+                              )}
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveMessageEdit(msg.id, msg.created_at)}
+                                  disabled={savingMessageEdit || !editMessageDraft.trim()}
+                                  className="flex items-center gap-1 rounded-lg bg-white/20 px-2 py-1 text-[10px] font-semibold disabled:opacity-50"
+                                >
+                                  <Check className="h-3 w-3" /> Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingMessageId(null);
+                                    setMessageEditError(null);
+                                  }}
+                                  className="flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[10px]"
+                                >
+                                  <X className="h-3 w-3" /> Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : msg.message_type === "voice" && msg.media_url ? (
                             <VoiceMessageBubble
                               url={msg.media_url}
                               durationSeconds={msg.media_duration_seconds}
@@ -921,17 +1193,42 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                               {msg.content}
                             </p>
                           )}
-                          <p
-                            className={`mt-1 text-[10px] ${
+                          <div
+                            className={`mt-1 flex items-center gap-2 text-[10px] ${
                               isMine ? "text-[#fff8f0]/70" : "text-vintage-ink-muted"
                             }`}
                           >
-                            {formatMessageTime(msg.created_at)}
-                          </p>
+                            <span>
+                              {formatMessageTime(msg.created_at)}
+                              {msg.edited_at ? " · edited" : ""}
+                            </span>
+                            {canEditMsg && !isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMessageId(msg.id);
+                                  setEditMessageDraft(msg.content);
+                                  setMessageEditError(null);
+                                }}
+                                className={`flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 ${
+                                  isMine ? "hover:text-white" : "hover:text-vintage-rust"
+                                }`}
+                              >
+                                <Pencil className="h-3 w-3" /> Edit
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   })
+                )}
+                {assistantThinking && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl rounded-bl-sm vintage-card-inset px-4 py-2.5 text-sm text-vintage-ink-muted">
+                      Zumelia AI is thinking…
+                    </div>
+                  </div>
                 )}
               </div>
 

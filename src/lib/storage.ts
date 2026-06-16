@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function uploadMedia(
   supabase: SupabaseClient,
-  bucket: "avatars" | "post-media" | "voice-messages",
+  bucket: "avatars" | "post-media" | "voice-messages" | "chat-wallpapers" | "business-media",
   userId: string,
   file: File,
   subfolder?: string,

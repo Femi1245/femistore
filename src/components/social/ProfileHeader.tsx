@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { UserPlus, UserMinus, MessageCircle, Gift } from "lucide-react";
+import { UserPlus, UserMinus, MessageCircle, Gift, Briefcase } from "lucide-react";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
 import { areMutualFriends, findOrCreateConversation } from "@/lib/chat";
+import { hasBusinessProfile } from "@/lib/business";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -60,10 +61,23 @@ export function ProfileHeader({
   }
 
   const birthdate = formatBirthdate(profile.date_of_birth);
+  const isBusinessAccount = profile.account_kind === "business";
+  const showBusiness = hasBusinessProfile(profile);
 
   return (
     <div className="vintage-card overflow-hidden">
-      <div className="relative h-28 bg-gradient-to-br from-vintage-rust via-vintage-rust-dark to-vintage-mustard sm:h-36">
+      <div
+        className="relative h-28 bg-gradient-to-br from-vintage-rust via-vintage-rust-dark to-vintage-mustard sm:h-36"
+        style={
+          profile.business_cover_url && (isBusinessAccount || showBusiness)
+            ? {
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(${profile.business_cover_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
+      >
         <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5)_0,transparent_40%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.35)_0,transparent_45%)]" />
       </div>
       <div className="px-5 pb-6 sm:px-6">
@@ -77,9 +91,26 @@ export function ProfileHeader({
           </div>
           <div className="flex flex-wrap gap-2 sm:pb-1">
             {isOwn ? (
-              <Link href="/profile/edit" className="vintage-btn px-4 py-2 text-sm">
-                Edit profile
-              </Link>
+              <>
+                <Link href="/profile/edit" className="vintage-btn px-4 py-2 text-sm">
+                  Edit profile
+                </Link>
+                {showBusiness ? (
+                  <Link
+                    href="/profile/business/edit"
+                    className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm"
+                  >
+                    <Briefcase className="h-4 w-4" /> Business
+                  </Link>
+                ) : (
+                  <Link
+                    href="/profile/business/setup"
+                    className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm"
+                  >
+                    <Briefcase className="h-4 w-4" /> Add business
+                  </Link>
+                )}
+              </>
             ) : (
               <>
                 <button
@@ -126,9 +157,23 @@ export function ProfileHeader({
 
         <div className="mt-4">
           <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
-            {profile.display_name}
+            {isBusinessAccount && profile.business_name
+              ? profile.business_name
+              : profile.display_name}
           </h1>
-          <p className="text-sm font-medium text-vintage-rust">@{profile.username}</p>
+          <p className="text-sm font-medium text-vintage-rust">
+            @{profile.username}
+            {isBusinessAccount && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-vintage-rust/15 px-2 py-0.5 text-[10px] font-semibold uppercase">
+                <Briefcase className="h-3 w-3" /> Business
+              </span>
+            )}
+          </p>
+          {isBusinessAccount && profile.display_name && (
+            <p className="mt-1 text-sm text-vintage-ink-muted">
+              Contact: {profile.display_name}
+            </p>
+          )}
 
           {(profile.country || birthdate) && (
             <p className="mt-2 text-sm text-vintage-ink-muted">
