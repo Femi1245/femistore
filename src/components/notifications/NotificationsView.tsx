@@ -14,6 +14,8 @@ import {
   Repeat,
   UserPlus,
   Gift,
+  Check,
+  MailOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -24,7 +26,11 @@ import {
   loadNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  markNotificationUnread,
 } from "@/lib/notifications";
+import { markConversationUnread } from "@/lib/chat-folders";
+import { CHAT_UNREAD_REFRESH_EVENT } from "@/components/chat/useUnreadChatCount";
+import { NOTIFICATION_UNREAD_REFRESH_EVENT } from "@/components/notifications/useUnreadNotificationCount";
 import type { Notification, NotificationType, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
@@ -85,6 +91,9 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
             if (prev.some((n) => n.id === enriched.id)) return prev;
             return [enriched, ...prev];
           });
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
+          }
         },
       )
       .subscribe();
@@ -93,6 +102,63 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
       supabase.removeChannel(channel);
     };
   }, [currentUser.id]);
+
+  async function handleMarkRead(
+    e: React.MouseEvent,
+    notification: Notification,
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (notification.read_at) return;
+
+    await markNotificationRead(
+      createClient(),
+      notification.id,
+      currentUser.id,
+    );
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notification.id
+          ? { ...n, read_at: new Date().toISOString() }
+          : n,
+      ),
+    );
+    window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
+  }
+
+  async function handleMarkUnread(
+    e: React.MouseEvent,
+    notification: Notification,
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!notification.read_at) return;
+
+    const supabase = createClient();
+    await markNotificationUnread(supabase, notification.id, currentUser.id);
+
+    if (
+      notification.type === "message" &&
+      notification.entity_type === "conversation" &&
+      notification.entity_id
+    ) {
+      await markConversationUnread(
+        supabase,
+        currentUser.id,
+        notification.entity_id,
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event(CHAT_UNREAD_REFRESH_EVENT));
+      }
+    }
+
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notification.id ? { ...n, read_at: null } : n,
+      ),
+    );
+    window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
+  }
 
   async function handleClick(notification: Notification) {
     if (!notification.read_at) {
@@ -109,6 +175,7 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
         ),
       );
     }
+    window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
   }
 
   async function handleMarkAllRead() {
@@ -121,6 +188,7 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
       })),
     );
     setMarkingAll(false);
+    window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
   }
 
   const unreadCount = notifications.filter((n) => !n.read_at).length;
@@ -185,13 +253,16 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
               (notification.actor_id ? "Someone" : "System");
 
             return (
-              <li key={notification.id}>
+              <li
+                key={notification.id}
+                className={`flex items-stretch gap-1 ${
+                  isUnread ? "bg-vintage-rust/5" : ""
+                }`}
+              >
                 <Link
                   href={href}
                   onClick={() => handleClick(notification)}
-                  className={`flex gap-3 px-4 py-3 transition-colors hover:bg-vintage-surface/60 ${
-                    isUnread ? "bg-vintage-rust/5" : ""
-                  }`}
+                  className="flex min-w-0 flex-1 gap-3 px-4 py-3 transition-colors hover:bg-vintage-surface/60"
                 >
                   <div className="relative shrink-0">
                     {notification.actor ? (
@@ -232,6 +303,30 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
                     />
                   )}
                 </Link>
+
+                <div className="flex shrink-0 items-center pr-2">
+                  {isUnread ? (
+                    <button
+                      type="button"
+                      onClick={(e) => void handleMarkRead(e, notification)}
+                      className="rounded-lg p-2 text-vintage-ink-muted transition hover:bg-vintage-paper-dark hover:text-vintage-ink"
+                      title="Mark as read"
+                      aria-label="Mark as read"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => void handleMarkUnread(e, notification)}
+                      className="rounded-lg p-2 text-vintage-ink-muted transition hover:bg-vintage-paper-dark hover:text-vintage-rust"
+                      title="Mark as unread"
+                      aria-label="Mark as unread"
+                    >
+                      <MailOpen className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}

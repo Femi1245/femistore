@@ -88,6 +88,18 @@ export async function markAllNotificationsRead(
     .is("read_at", null);
 }
 
+export async function markNotificationUnread(
+  supabase: SupabaseClient,
+  notificationId: string,
+  userId: string,
+) {
+  return supabase
+    .from("notifications")
+    .update({ read_at: null })
+    .eq("id", notificationId)
+    .eq("recipient_id", userId);
+}
+
 export function getNotificationHref(
   notification: Notification,
   actorUsername?: string,

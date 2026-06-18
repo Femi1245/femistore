@@ -1,5 +1,6 @@
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { AppShellMain } from "@/components/layout/AppShellMain";
 import { StatusBar } from "@/components/status/StatusBar";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
 import type { Profile } from "@/lib/types";
@@ -19,12 +20,17 @@ export function AppShell({
 }) {
   const maxWidth = fullWidth ? "max-w-6xl" : wide ? "max-w-3xl" : "max-w-5xl";
   return (
-    <div className="vintage-page min-h-screen pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="vintage-page min-h-screen pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0">
       <LastSeenUpdater userId={user.id} />
       <AppNav user={user} />
       {showStatus && <StatusBar user={user} />}
-      <main className={`mx-auto px-4 py-6 ${maxWidth}`}>{children}</main>
-      <MobileBottomNav />
+      <AppShellMain maxWidth={maxWidth}>{children}</AppShellMain>
+      <MobileBottomNav
+        userId={user.id}
+        username={user.username}
+        displayName={user.display_name}
+        avatarUrl={user.avatar_url}
+      />
     </div>
   );
 }

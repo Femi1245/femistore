@@ -66,7 +66,7 @@ export function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[60] md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[60] md:bottom-4 md:left-auto md:right-4 md:max-w-sm">
       <div className="vintage-card flex items-start gap-3 p-4 shadow-lg">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-vintage-rust text-[var(--vintage-btn-text)]">
           <Download className="h-5 w-5" />

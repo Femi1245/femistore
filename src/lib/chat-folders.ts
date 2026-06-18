@@ -117,3 +117,19 @@ export async function markConversationRead(
     { onConflict: "conversation_id,user_id" },
   );
 }
+
+export async function markConversationUnread(
+  supabase: SupabaseClient,
+  userId: string,
+  conversationId: string,
+): Promise<void> {
+  await supabase.from("conversation_member_settings").upsert(
+    {
+      conversation_id: conversationId,
+      user_id: userId,
+      last_read_at: null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "conversation_id,user_id" },
+  );
+}

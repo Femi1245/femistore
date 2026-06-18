@@ -118,7 +118,7 @@ export function BusinessSetupForm({
 
       <div>
         <label className="mb-1 block text-xs font-medium text-vintage-ink-muted">
-          Cover image (optional)
+          Profile banner (shown at top of your profile)
         </label>
         <div
           className="relative mb-2 h-32 overflow-hidden rounded-xl border border-vintage-border bg-vintage-paper-dark"

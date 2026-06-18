@@ -7,13 +7,19 @@ const imageSizes = {
   lg: 56,
 } as const;
 
-export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+export function Logo({
+  size = "md",
+  compact = false,
+}: {
+  size?: "sm" | "md" | "lg";
+  compact?: boolean;
+}) {
   const px = imageSizes[size];
 
   return (
     <Link
       href="/"
-      className="inline-flex items-center gap-2 font-display font-bold"
+      className="inline-flex shrink-0 items-center gap-2 font-display font-bold"
     >
       <NextImage
         src="/images/zumelia.png"
@@ -26,7 +32,7 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       <span
         className={`text-vintage-gradient ${
           size === "sm" ? "text-lg" : size === "lg" ? "text-4xl" : "text-2xl"
-        }`}
+        } ${compact ? "hidden xl:inline" : ""}`}
       >
         Zumelia
       </span>

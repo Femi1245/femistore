@@ -22,6 +22,7 @@ import {
   removeKeywordMute,
 } from "@/lib/content-filters";
 import { loadMyAppeals, submitAppeal } from "@/lib/safety";
+import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceSection";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
 
 export function SettingsView({ profile }: { profile: Profile }) {
@@ -132,6 +133,8 @@ export function SettingsView({ profile }: { profile: Profile }) {
       {error && (
         <p className="rounded-lg bg-vintage-rust/10 px-3 py-2 text-sm text-vintage-rust">{error}</p>
       )}
+
+      <MobileAppearanceSection />
 
       <section className="vintage-card p-5 space-y-4">
         <h2 className="font-display font-bold text-vintage-ink">Privacy</h2>

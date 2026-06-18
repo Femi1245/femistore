@@ -20,7 +20,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className={`vintage-btn-outline flex h-9 w-9 shrink-0 items-center justify-center p-0 ${className}`}
+      className={`nav-icon-btn ${className}`}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
     >

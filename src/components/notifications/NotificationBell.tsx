@@ -2,33 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   enrichNotification,
-  getUnreadNotificationCount,
+  getNotificationText,
 } from "@/lib/notifications";
-import type { Notification, Profile } from "@/lib/types";
+import type { Notification } from "@/lib/types";
+import { useUnreadNotificationCount, NOTIFICATION_UNREAD_REFRESH_EVENT } from "@/components/notifications/useUnreadNotificationCount";
 
 export function NotificationBell({ userId }: { userId: string }) {
   const pathname = usePathname();
-  const [unread, setUnread] = useState(0);
+  const unread = useUnreadNotificationCount(userId);
   const active = pathname === "/notifications" || pathname.startsWith("/notifications");
-
-  const refreshCount = useCallback(async () => {
-    const count = await getUnreadNotificationCount(createClient(), userId);
-    setUnread(count);
-  }, [userId]);
-
-  useEffect(() => {
-    refreshCount();
-  }, [refreshCount, pathname]);
 
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications-push:${userId}`)
       .on(
         "postgres_changes",
         {
@@ -38,13 +30,11 @@ export function NotificationBell({ userId }: { userId: string }) {
           filter: `recipient_id=eq.${userId}`,
         },
         async (payload) => {
-          setUnread((prev) => prev + 1);
-
+          window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
           if (typeof window !== "undefined" && "Notification" in window) {
             if (Notification.permission === "granted") {
               const incoming = payload.new as Notification;
-              const enriched = await enrichNotification(supabase, incoming);
-              const { getNotificationText } = await import("@/lib/notifications");
+              const enriched = await enrichNotification(createClient(), incoming);
               new Notification("Zumelia", {
                 body: getNotificationText(enriched),
               });
@@ -52,24 +42,12 @@ export function NotificationBell({ userId }: { userId: string }) {
           }
         },
       )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${userId}`,
-        },
-        () => {
-          refreshCount();
-        },
-      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, refreshCount]);
+  }, [userId]);
 
   useEffect(() => {
     if (
@@ -84,12 +62,11 @@ export function NotificationBell({ userId }: { userId: string }) {
   return (
     <Link
       href="/notifications"
-      className={`relative flex items-center justify-center rounded-sm p-2 vintage-nav-link ${
-        active ? "vintage-nav-link-active" : ""
-      }`}
+      className={`nav-icon-btn ${active ? "nav-icon-btn-active" : ""}`}
       aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
+      title="Notifications"
     >
-      <Bell className="h-5 w-5" />
+      <Bell className="h-[18px] w-[18px]" />
       {unread > 0 && (
         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-vintage-rust px-1 text-[10px] font-bold text-[var(--vintage-btn-text)]">
           {unread > 99 ? "99+" : unread}

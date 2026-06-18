@@ -562,6 +562,18 @@ export async function loadConversations(
   return previews;
 }
 
+export async function getUnreadChatCount(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  const { loadPendingRequests } = await import("@/lib/message-requests");
+  const [unreadChats, pendingRequests] = await Promise.all([
+    loadConversations(supabase, userId, "unread"),
+    loadPendingRequests(supabase, userId),
+  ]);
+  return unreadChats.length + pendingRequests.length;
+}
+
 export async function loadActiveChat(
   supabase: SupabaseClient,
   userId: string,

@@ -252,6 +252,29 @@ body {
   font-weight: 600;
 }
 
+.nav-icon-btn {
+  position: relative;
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--vintage-ink-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-icon-btn:hover {
+  background: var(--vintage-paper-dark);
+  color: var(--vintage-ink);
+}
+
+.nav-icon-btn-active {
+  background: color-mix(in srgb, var(--vintage-rust) 12%, transparent);
+  color: var(--vintage-rust);
+}
+
 /* ── Type ──────────────────────────────────────────────────────────────── */
 .font-display {
   font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
@@ -357,6 +380,67 @@ body {
   background: color-mix(in srgb, var(--vintage-rust) 18%, transparent);
   color: var(--vintage-rust);
   box-shadow: 0 0 16px -6px var(--vintage-glow);
+}
+
+.dark .nav-icon-btn-active {
+  background: color-mix(in srgb, var(--vintage-rust) 18%, transparent);
+  color: var(--vintage-rust);
+  box-shadow: 0 0 16px -6px var(--vintage-glow);
+}
+
+/* ── Mobile app shell ─────────────────────────────────────────────────────── */
+.mobile-top-bar {
+  padding-top: env(safe-area-inset-top);
+}
+
+.mobile-tab-bar {
+  border-top: 1px solid var(--vintage-border);
+  background: color-mix(in srgb, var(--vintage-paper) 88%, transparent);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  box-shadow: 0 -8px 32px -12px var(--vintage-shadow);
+}
+
+.mobile-tab-active-pill {
+  background: color-mix(in srgb, var(--vintage-rust) 14%, transparent);
+}
+
+.mobile-tab-item-active .mobile-tab-active-pill {
+  background: color-mix(in srgb, var(--vintage-rust) 16%, transparent);
+}
+
+.mobile-tab-bar-preview {
+  border: 1px solid var(--vintage-border);
+  background: color-mix(in srgb, var(--vintage-paper) 90%, transparent);
+}
+
+.mobile-compact-main {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.mobile-compact-main .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .vintage-card {
+    border-radius: 14px;
+  }
+
+  .mobile-compact-main .vintage-card {
+    border-radius: 12px;
+  }
+}
+
+.dark .mobile-tab-bar {
+  background: rgba(11, 11, 13, 0.82);
+  border-color: var(--vintage-border);
+  box-shadow: 0 -12px 40px -16px rgba(0, 0, 0, 0.85);
+}
+
+.dark .mobile-tab-bar-preview {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* Neon online/status dot helper */

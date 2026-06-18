@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { CHAT_UNREAD_REFRESH_EVENT } from "@/components/chat/useUnreadChatCount";
 import { createClient } from "@/lib/supabase/client";
 import {
   conversationLabel,
@@ -160,6 +161,9 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setArchivedChats(archived);
     setUnreadChats(unread);
     setChatFolders(folders);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(CHAT_UNREAD_REFRESH_EVENT));
+    }
   }, [getSupabase, currentUser.id, activeFolderId]);
 
   useEffect(() => {
@@ -721,7 +725,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const countriesInDiscover = [...new Set(discoverUsers.map((u) => u.country))].sort();
 
   return (
-    <div className="vintage-page flex h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] text-vintage-ink md:pb-0">
+    <div className="vintage-page flex h-screen flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] text-vintage-ink md:pb-0">
       <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
       {incomingCall && (
@@ -1759,7 +1763,12 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           )}
         </main>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav
+        userId={currentUser.id}
+        username={currentUser.username}
+        displayName={currentUser.display_name}
+        avatarUrl={currentUser.avatar_url}
+      />
     </div>
   );
 }

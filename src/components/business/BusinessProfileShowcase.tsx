@@ -14,12 +14,6 @@ export function BusinessProfileShowcase({
 
   return (
     <section className="vintage-card overflow-hidden">
-      {profile.business_cover_url && (
-        <div
-          className="h-40 bg-cover bg-center sm:h-48"
-          style={{ backgroundImage: `url(${profile.business_cover_url})` }}
-        />
-      )}
       <div className="p-5 sm:p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-vintage-rust/15 px-3 py-1 text-xs font-semibold text-vintage-rust">

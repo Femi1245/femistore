@@ -27,14 +27,14 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
   }, [refresh]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust md:h-11 md:w-11">
             <Newspaper className="h-5 w-5" />
           </div>
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-bold tracking-tight text-vintage-ink md:text-2xl">
               Your Feed
             </h1>
             <p className="text-sm text-vintage-ink-muted">
