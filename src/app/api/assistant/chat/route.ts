@@ -77,10 +77,10 @@ export async function POST(request: Request) {
         body.conversationId,
         assistant.id,
       );
-      const reply = await generateAssistantReply(history);
+      const { reply, provider } = await generateAssistantReply(history);
       const saved = await insertAssistantReply(body.conversationId, assistant.id, reply);
 
-      return NextResponse.json({ reply, messageId: saved.id, source: "openai" });
+      return NextResponse.json({ reply, messageId: saved.id, source: provider });
     }
 
     if (user) {
@@ -89,20 +89,20 @@ export async function POST(request: Request) {
       await ensureUserMessageInConversation(convId, user.id, message);
 
       const history = await loadRecentConversationMessages(convId, assistant.id);
-      const reply = await generateAssistantReply(history);
+      const { reply, provider } = await generateAssistantReply(history);
       const saved = await insertAssistantReply(convId, assistant.id, reply);
 
       return NextResponse.json({
         reply,
         conversationId: convId,
         messageId: saved.id,
-        source: "openai",
+        source: provider,
       });
     }
 
     const history = body.history ?? [];
-    const reply = await generateAssistantReply(history, message);
-    return NextResponse.json({ reply, source: "openai" });
+    const { reply, provider } = await generateAssistantReply(history, message);
+    return NextResponse.json({ reply, source: provider });
   } catch (err) {
     const text = err instanceof Error ? err.message : "Assistant error.";
     return NextResponse.json({ error: text }, { status: 500 });

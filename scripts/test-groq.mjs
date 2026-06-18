@@ -1,6 +1,6 @@
 /**
- * Quick OpenAI connectivity check.
- * Usage: node scripts/test-openai.mjs
+ * Quick Groq connectivity check.
+ * Usage: node scripts/test-groq.mjs
  */
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -21,15 +21,15 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const apiKey = process.env.OPENAI_API_KEY?.trim();
-const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+const apiKey = process.env.GROQ_API_KEY?.trim();
+const model = process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
 
 if (!apiKey) {
-  console.error("OPENAI_API_KEY is not set in .env.local");
+  console.error("GROQ_API_KEY is not set in .env.local");
   process.exit(1);
 }
 
-const res = await fetch("https://api.openai.com/v1/chat/completions", {
+const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${apiKey}`,
@@ -48,7 +48,7 @@ const res = await fetch("https://api.openai.com/v1/chat/completions", {
 const json = await res.json();
 
 if (!res.ok) {
-  console.error("OpenAI error:", res.status, json.error?.message ?? json);
+  console.error("Groq error:", res.status, json.error?.message ?? json);
   process.exit(1);
 }
 

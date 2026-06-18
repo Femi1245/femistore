@@ -30,6 +30,13 @@ export function BusinessSetupForm({
   const [coverUrl, setCoverUrl] = useState(profile.business_cover_url);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [contactEnabled, setContactEnabled] = useState(profile.business_contact_enabled ?? true);
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(
+    profile.business_auto_reply_enabled ?? false,
+  );
+  const [autoReplyMessage, setAutoReplyMessage] = useState(
+    profile.business_auto_reply_message ?? "",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +81,9 @@ export function BusinessSetupForm({
       business_location: location,
       business_services: services,
       business_cover_url: newCoverUrl,
+      business_contact_enabled: contactEnabled,
+      business_auto_reply_enabled: autoReplyEnabled,
+      business_auto_reply_message: autoReplyMessage,
     };
 
     const { error: saveError } =
@@ -230,6 +240,37 @@ export function BusinessSetupForm({
             className="vintage-input w-full px-4 py-2.5"
           />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-vintage-border bg-vintage-paper-dark/40 p-4 space-y-4">
+        <p className="text-sm font-semibold text-vintage-ink">Customer messaging</p>
+        <label className="flex items-center gap-2 text-sm text-vintage-ink">
+          <input
+            type="checkbox"
+            checked={contactEnabled}
+            onChange={(e) => setContactEnabled(e.target.checked)}
+            className="rounded border-vintage-border"
+          />
+          Let anyone message this business (no mutual follow required)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-vintage-ink">
+          <input
+            type="checkbox"
+            checked={autoReplyEnabled}
+            onChange={(e) => setAutoReplyEnabled(e.target.checked)}
+            className="rounded border-vintage-border"
+          />
+          Send automatic welcome reply when someone messages
+        </label>
+        {autoReplyEnabled && (
+          <textarea
+            value={autoReplyMessage}
+            onChange={(e) => setAutoReplyMessage(e.target.value)}
+            rows={3}
+            placeholder="e.g. Thanks for reaching out! We offer coaching Mon–Fri. How can we help?"
+            className="vintage-input w-full resize-none px-4 py-3 text-sm"
+          />
+        )}
       </div>
 
       {error && <p className="text-sm text-vintage-rust">{error}</p>}

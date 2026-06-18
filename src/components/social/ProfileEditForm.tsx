@@ -79,6 +79,17 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <p className="text-sm text-vintage-ink-muted">
+          Update how you appear on Zumelia.
+        </p>
+        <a
+          href="/profile/settings"
+          className="vintage-btn-outline shrink-0 px-3 py-2 text-sm font-semibold"
+        >
+          Privacy & safety
+        </a>
+      </div>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <Avatar
           name={displayName}

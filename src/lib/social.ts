@@ -213,16 +213,38 @@ export async function enrichPosts(
   }));
 }
 
+export type FeedMode = "friends" | "following";
+
 export async function loadFeed(
   supabase: SupabaseClient,
   userId: string,
+  mode: FeedMode = "friends",
 ): Promise<PostWithMeta[]> {
-  const { data: following } = await supabase
-    .from("follows")
-    .select("following_id")
-    .eq("follower_id", userId);
+  const { loadBlockedIds, loadMutedIds } = await import("@/lib/safety");
+  const { loadKeywordMutes, filterPostsByKeywords } = await import("@/lib/content-filters");
 
-  const ids = [userId, ...(following?.map((f) => f.following_id) ?? [])];
+  const [blockedIds, mutedIds, keywordRows] = await Promise.all([
+    loadBlockedIds(supabase, userId),
+    loadMutedIds(supabase, userId),
+    loadKeywordMutes(supabase, userId),
+  ]);
+  const keywords = keywordRows.map((k) => k.keyword);
+
+  let ids: string[] = [userId];
+
+  if (mode === "friends") {
+    const { loadMutualFriends } = await import("@/lib/chat");
+    const friends = await loadMutualFriends(supabase, userId);
+    ids = [userId, ...friends.map((f) => f.id)];
+  } else {
+    const { data: following } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId);
+    ids = [userId, ...(following?.map((f) => f.following_id) ?? [])];
+  }
+
+  if (ids.length === 0) return [];
 
   const { data: posts } = await supabase
     .from("posts")
@@ -231,7 +253,11 @@ export async function loadFeed(
     .order("created_at", { ascending: false })
     .limit(50);
 
-  return enrichPosts(supabase, (posts as Post[]) ?? [], userId);
+  const enriched = await enrichPosts(supabase, (posts as Post[]) ?? [], userId);
+  const filtered = enriched.filter(
+    (p) => !blockedIds.has(p.user_id) && !mutedIds.has(p.user_id),
+  );
+  return filterPostsByKeywords(filtered, keywords);
 }
 
 export async function loadUserPosts(
@@ -269,11 +295,29 @@ export async function loadComments(
     .in("id", userIds);
 
   const map = new Map((profiles as Profile[])?.map((p) => [p.id, p]));
+  const byId = new Map(comments.map((c) => [c.id, c]));
 
-  return comments.map((c) => ({
-    ...c,
-    author: map.get(c.user_id),
-  }));
+  return comments.map((c) => {
+    const author = map.get(c.user_id);
+    let reply_to = null;
+    if (c.reply_to_id) {
+      const parent = byId.get(c.reply_to_id);
+      if (parent) {
+        reply_to = {
+          id: parent.id,
+          content: parent.content,
+          user_id: parent.user_id,
+          author: map.get(parent.user_id),
+        };
+      }
+    }
+    return {
+      ...c,
+      reply_to_id: c.reply_to_id ?? null,
+      author,
+      reply_to,
+    };
+  });
 }
 
 export async function toggleLike(
@@ -298,10 +342,16 @@ export async function addComment(
   postId: string,
   userId: string,
   content: string,
+  replyToId?: string | null,
 ) {
   return supabase
     .from("comments")
-    .insert({ post_id: postId, user_id: userId, content })
+    .insert({
+      post_id: postId,
+      user_id: userId,
+      content,
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
+    })
     .select()
     .single();
 }

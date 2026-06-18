@@ -166,7 +166,7 @@ export function AssistantWidget() {
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length === 0 && (
               <p className="text-sm text-vintage-ink-muted">
-                Hi! I can help with Zumelia, your business profile, ideas, or everyday questions.
+                Hi! Ask me anything — general knowledge, homework, coding, writing, or how to use Zumelia.
               </p>
             )}
             {messages.map((m) => (
@@ -208,7 +208,7 @@ export function AssistantWidget() {
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ask Zumelia AI…"
+                placeholder="Ask anything…"
                 className="vintage-input min-w-0 flex-1 px-3 py-2 text-sm"
                 disabled={sending}
               />

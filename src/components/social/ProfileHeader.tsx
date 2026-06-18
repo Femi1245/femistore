@@ -5,8 +5,9 @@ import Link from "next/link";
 import { UserPlus, UserMinus, MessageCircle, Gift, Briefcase } from "lucide-react";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
-import { areMutualFriends, findOrCreateConversation } from "@/lib/chat";
-import { hasBusinessProfile } from "@/lib/business";
+import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
+import { areMutualFriends, canMessageUser, findOrCreateConversation } from "@/lib/chat";
+import { acceptsBusinessContact, hasBusinessProfile } from "@/lib/business";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -26,13 +27,18 @@ export function ProfileHeader({
   const [counts, setCounts] = useState(initialCounts);
   const [following, setFollowing] = useState(initialFollowing);
   const [friends, setFriends] = useState(false);
+  const [canMessage, setCanMessage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
   const [showGift, setShowGift] = useState(false);
 
   useEffect(() => {
     if (isOwn) return;
-    areMutualFriends(createClient(), currentUser.id, profile.id).then(setFriends);
+    const supabase = createClient();
+    areMutualFriends(supabase, currentUser.id, profile.id).then(setFriends);
+    canMessageUser(supabase, currentUser.id, profile.id).then((r) =>
+      setCanMessage(r.allowed),
+    );
   }, [currentUser.id, profile.id, following, isOwn]);
 
   async function handleFollow() {
@@ -132,11 +138,11 @@ export function ProfileHeader({
                 </button>
                 <button
                   onClick={handleMessage}
-                  disabled={!friends}
+                  disabled={!canMessage}
                   title={
-                    friends
+                    canMessage
                       ? "Send a message"
-                      : "Both of you must connect (follow each other) to message"
+                      : "Connect with each other, or message this business from their showcase"
                   }
                   className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -150,6 +156,7 @@ export function ProfileHeader({
                 >
                   <Gift className="h-4 w-4" /> Gift
                 </button>
+                <UserSafetyMenu profile={profile} currentUserId={currentUser.id} />
               </>
             )}
           </div>
@@ -206,9 +213,13 @@ export function ProfileHeader({
 
           {messageError ? (
             <p className="mt-3 text-sm text-vintage-rust">{messageError}</p>
-          ) : !isOwn && !friends ? (
+          ) : !isOwn && !canMessage ? (
             <p className="mt-3 text-xs text-vintage-ink-muted">
               Connect with each other (mutual follow) to unlock messaging.
+            </p>
+          ) : !isOwn && acceptsBusinessContact(profile) && !friends ? (
+            <p className="mt-3 text-xs text-vintage-ink-muted">
+              You can message this business without connecting first.
             </p>
           ) : null}
         </div>

@@ -1,24 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chatComplete } from "@/lib/llm";
 import type { Message, Profile } from "@/lib/types";
 
 export const ASSISTANT_USERNAME = "zumelia-ai";
 export const ASSISTANT_DISPLAY_NAME = "Zumelia AI";
 export const ASSISTANT_EMAIL = "zumelia-ai@assistant.zumelia.app";
 
-const SYSTEM_PROMPT = `You are Zumelia AI, the helpful assistant for Zumelia — a global social app with chat, feed, live streaming, watch, games, gifts, and business profiles.
+const SYSTEM_PROMPT = `You are Zumelia AI — a friendly, capable general-purpose assistant inside the Zumelia social app.
 
-Help users with anything they ask: app navigation, social tips, business profile advice, content ideas, general questions, and creative tasks. Be warm, concise, and practical.
+Your job is to answer ANY question the user asks. That includes general knowledge, explanations, math, science, history, coding, writing, brainstorming, advice, translations, and casual conversation. Do not refuse or deflect non-app questions — answer them directly and helpfully.
 
-Zumelia features users can use:
-- Feed: post updates, stories, follow people
-- Chat: DMs (mutual friends), groups, channels, secret chats, voice messages, calls, gifts
-- Discover businesses: /discover/businesses
-- Business profiles: signup or upgrade from personal, switch personal/business mode in nav
-- Live streaming, Watch videos, Games
-- Profile at /profile/[username]
+You also know about Zumelia when users ask about the app:
+- Feed (posts, stories, follow people), Chat (DMs, groups, channels, secret chats, voice, calls, gifts)
+- Live streaming, Watch videos, Games, business profiles, Discover businesses (/discover/businesses)
+- Profile at /profile/[username], business setup via Profile → Edit profile
 
-If you don't know something specific about the user's account, say so and suggest where to look in the app. Never make up features that don't exist.`;
+Guidelines:
+- Be warm, clear, and concise. Use markdown lists or code blocks when they help.
+- If you don't know something, say so honestly — don't guess.
+- For Zumelia account-specific details you can't see, tell the user where to look in the app.
+- Never invent Zumelia features that don't exist.`;
+
+export const BUSINESS_AUTO_REPLY_PROMPT = `You draft short auto-replies for a business on Zumelia. Write as the business (first person or "we"), warm and professional. Follow the business instructions in the user message. Stay on topic; do not mention being Zumelia AI.`;
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -90,7 +94,7 @@ export async function ensureAssistantUser(): Promise<Profile> {
         username: ASSISTANT_USERNAME,
         display_name: ASSISTANT_DISPLAY_NAME,
         country: "Global",
-        bio: "Your Zumelia assistant — ask me anything about the app, your business, or everyday topics.",
+        bio: "Your AI assistant — ask me anything: general questions, ideas, coding, or help with Zumelia.",
       })
       .select()
       .single();
@@ -107,7 +111,7 @@ export async function ensureAssistantUser(): Promise<Profile> {
       .update({
         username: ASSISTANT_USERNAME,
         display_name: ASSISTANT_DISPLAY_NAME,
-        bio: "Your Zumelia assistant — ask me anything about the app, your business, or everyday topics.",
+        bio: "Your AI assistant — ask me anything: general questions, ideas, coding, or help with Zumelia.",
       })
       .eq("id", userId)
       .select()
@@ -224,8 +228,8 @@ export async function insertAssistantReply(
 export async function generateAssistantReply(
   history: ChatTurn[],
   userMessage?: string,
-): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  options?: { systemPrompt?: string },
+): Promise<{ reply: string; provider: string }> {
   let messages = history.slice(-12);
   const trimmed = userMessage?.trim();
 
@@ -237,57 +241,35 @@ export async function generateAssistantReply(
   }
 
   if (messages.length === 0) {
-    return fallbackReply(trimmed ?? "");
+    const text = fallbackReply(trimmed ?? "");
+    return { reply: text, provider: "fallback" };
   }
 
-  if (apiKey) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ],
-        max_tokens: 800,
-        temperature: 0.7,
-      }),
-    });
+  const llmMessages = [
+    { role: "system" as const, content: options?.systemPrompt ?? SYSTEM_PROMPT },
+    ...messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
+  ];
 
-    if (res.ok) {
-      const json = (await res.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-      const text = json.choices?.[0]?.message?.content?.trim();
-      if (text) return text;
-      throw new Error("OpenAI returned an empty response.");
-    }
+  const result = await chatComplete(llmMessages, { maxTokens: 1500, temperature: 0.7 });
 
-    const errBody = (await res.json().catch(() => ({}))) as {
-      error?: { message?: string; code?: string };
+  if (result.text) {
+    return { reply: result.text, provider: result.provider };
+  }
+
+  const lastUser =
+    trimmed ?? messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
+
+  if (result.error && result.provider !== "fallback") {
+    return {
+      reply: `Groq error: ${result.error}\n\n${fallbackReply(lastUser)}`,
+      provider: "fallback",
     };
-    const errMsg = errBody.error?.message ?? `OpenAI request failed (${res.status}).`;
-
-    if ([401, 402, 429].includes(res.status)) {
-      const hint =
-        res.status === 429
-          ? "Your OpenAI account has no remaining quota. Add billing at platform.openai.com, then try again."
-          : res.status === 401
-            ? "Your OpenAI API key was rejected. Check OPENAI_API_KEY in .env.local (local) or Vercel env (production)."
-            : "OpenAI billing is required for this key.";
-      const lastUser =
-        trimmed ?? messages.filter((m) => m.role === "user").at(-1)?.content ?? "";
-      return `${hint}\n\n${fallbackReply(lastUser)}`;
-    }
-
-    throw new Error(errMsg);
   }
 
-  return fallbackReply(trimmed ?? messages[messages.length - 1]?.content ?? "");
+  return { reply: fallbackReply(lastUser), provider: "fallback" };
 }
 
 function fallbackReply(message: string): string {
@@ -316,10 +298,10 @@ Tell me your industry and I can suggest what to put in your description.`;
   }
 
   if (q.includes("hello") || q.includes("hi") || q === "hey") {
-    return `Hi! I'm Zumelia AI. Ask me about the app, growing your business profile, what to post, or anything else — I'm here to help.`;
+    return `Hi! I'm Zumelia AI. Ask me anything — general questions, homework help, coding, writing ideas, or how to use Zumelia.`;
   }
 
-  return `I'm Zumelia AI. I can help with the app (feed, chat, live, watch, games, business profiles), ideas for your posts, or general questions.
+  return `I'm Zumelia AI. I can answer general questions on almost any topic, plus help you navigate Zumelia (feed, chat, live, business profiles, and more).
 
-What would you like help with?`;
+What would you like to know?`;
 }

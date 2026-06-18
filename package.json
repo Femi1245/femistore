@@ -10,7 +10,7 @@
     "logo": "node scripts/make-logo-transparent.mjs",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs",
     "seed:assistant": "node scripts/seed-zumelia-ai.mjs",
-    "test:openai": "node scripts/test-openai.mjs",
+    "test:groq": "node scripts/test-groq.mjs",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",

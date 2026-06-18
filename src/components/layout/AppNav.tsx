@@ -18,7 +18,7 @@ const links = [
   { href: "/discover/businesses", label: "Businesses", icon: Briefcase },
   { href: "/games", label: "Games", icon: Gamepad2 },
   { href: null, label: "Profile", icon: User, dynamic: true as const },
-  { href: "/profile/edit", label: "Settings", icon: Settings },
+  { href: "/profile/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppNav({ user }: { user: Profile }) {
@@ -39,9 +39,12 @@ export function AppNav({ user }: { user: Profile }) {
               (link.href === "/live" && pathname.startsWith("/live")) ||
               (link.href === "/games" && pathname.startsWith("/games")) ||
               (link.href === "/discover/businesses" && pathname.startsWith("/discover")) ||
+              (link.href === "/profile/settings" && pathname.startsWith("/profile/settings")) ||
               (link.dynamic &&
                 pathname.startsWith("/profile/") &&
-                !pathname.endsWith("/edit"));
+                !pathname.endsWith("/edit") &&
+                !pathname.startsWith("/profile/settings") &&
+                !pathname.startsWith("/profile/business"));
 
             const Icon = link.icon;
             return (

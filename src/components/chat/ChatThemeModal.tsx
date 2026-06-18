@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { ImageIcon, Loader2, Palette, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { loadChatTheme, saveChatTheme, uploadChatWallpaper } from "@/lib/chat-themes";
+import { loadChatTheme, uploadChatWallpaper, upsertMemberSettings } from "@/lib/chat-themes";
+import { TRANSLATION_LANGUAGES } from "@/lib/translate";
 import type { ChatWallpaperType, ConversationMemberSettings } from "@/lib/types";
 
 const PRESET_COLORS = [
@@ -36,6 +37,8 @@ export function ChatThemeModal({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [translationEnabled, setTranslationEnabled] = useState(false);
+  const [translationLang, setTranslationLang] = useState("en");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,8 @@ export function ChatThemeModal({
         setWallpaperType(theme.wallpaper_type);
         if (theme.wallpaper_color) setColor(theme.wallpaper_color);
         if (theme.wallpaper_url) setImageUrl(theme.wallpaper_url);
+        setTranslationEnabled(theme.translation_enabled ?? false);
+        setTranslationLang(theme.translation_target_lang ?? "en");
       }
       setLoading(false);
     });
@@ -77,11 +82,15 @@ export function ChatThemeModal({
       wallpaper_url: wallpaperType === "image" ? imageUrl : null,
     };
 
-    const { error: saveError } = await saveChatTheme(
+    const { error: saveError, settings } = await upsertMemberSettings(
       createClient(),
       userId,
       conversationId,
-      payload,
+      {
+        ...payload,
+        translation_enabled: translationEnabled,
+        translation_target_lang: translationLang,
+      },
     );
 
     setSaving(false);
@@ -90,12 +99,27 @@ export function ChatThemeModal({
       return;
     }
 
-    onSaved({
-      conversation_id: conversationId,
-      user_id: userId,
-      ...payload,
-      updated_at: new Date().toISOString(),
-    });
+    if (settings) {
+      onSaved(settings);
+    } else {
+      onSaved({
+        conversation_id: conversationId,
+        user_id: userId,
+        wallpaper_type: wallpaperType,
+        wallpaper_color: wallpaperType === "color" ? color : null,
+        wallpaper_url: wallpaperType === "image" ? imageUrl : null,
+        is_pinned: false,
+        pinned_at: null,
+        is_archived: false,
+        archived_at: null,
+        translation_enabled: translationEnabled,
+        translation_target_lang: translationLang,
+        notifications_muted: false,
+        last_read_at: null,
+        folder_id: null,
+        updated_at: new Date().toISOString(),
+      });
+    }
     onClose();
   }
 
@@ -105,7 +129,7 @@ export function ChatThemeModal({
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-vintage-rust" />
-            <h2 className="font-display text-lg font-bold">Chat theme</h2>
+            <h2 className="font-display text-lg font-bold">Chat settings</h2>
           </div>
           <button type="button" onClick={onClose} className="text-vintage-ink-muted">
             <X className="h-5 w-5" />
@@ -217,6 +241,32 @@ export function ChatThemeModal({
                 }
               />
             )}
+
+            <div className="mb-4 rounded-xl border border-vintage-border bg-vintage-paper-dark/40 p-4">
+              <p className="mb-2 text-sm font-semibold text-vintage-ink">Translation</p>
+              <label className="mb-3 flex items-center gap-2 text-sm text-vintage-ink">
+                <input
+                  type="checkbox"
+                  checked={translationEnabled}
+                  onChange={(e) => setTranslationEnabled(e.target.checked)}
+                  className="rounded border-vintage-border"
+                />
+                Show incoming messages translated for me
+              </label>
+              {translationEnabled && (
+                <select
+                  value={translationLang}
+                  onChange={(e) => setTranslationLang(e.target.value)}
+                  className="vintage-input w-full px-3 py-2 text-sm"
+                >
+                  {TRANSLATION_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </>
         )}
 
@@ -233,7 +283,7 @@ export function ChatThemeModal({
             className="vintage-btn flex flex-1 items-center justify-center gap-2 py-2 text-sm disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save theme
+            Save settings
           </button>
         </div>
       </div>

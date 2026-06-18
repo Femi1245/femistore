@@ -26,6 +26,13 @@ export function hasBusinessProfile(profile: Profile): boolean {
   );
 }
 
+export function acceptsBusinessContact(profile: Profile): boolean {
+  return (
+    hasBusinessProfile(profile) &&
+    (profile.business_contact_enabled ?? true)
+  );
+}
+
 export function canSwitchAccountMode(profile: Profile): boolean {
   return profile.account_kind === "personal" && profile.business_enabled;
 }
@@ -80,6 +87,9 @@ export type BusinessProfileInput = {
   business_location?: string;
   business_services?: string;
   business_cover_url?: string | null;
+  business_contact_enabled?: boolean;
+  business_auto_reply_enabled?: boolean;
+  business_auto_reply_message?: string;
 };
 
 export async function setupBusinessProfile(
@@ -105,6 +115,9 @@ export async function setupBusinessProfile(
     business_cover_url: input.business_cover_url ?? null,
     business_enabled: true,
     active_mode: "business" as AccountMode,
+    business_contact_enabled: input.business_contact_enabled ?? true,
+    business_auto_reply_enabled: input.business_auto_reply_enabled ?? false,
+    business_auto_reply_message: (input.business_auto_reply_message ?? "").trim(),
     ...(options.fromSignup ? { account_kind: "business" as AccountKind } : {}),
   };
 
@@ -157,6 +170,23 @@ export async function loadDiscoverableBusinesses(
   }
 
   const { data } = await query;
+  return ((data as Profile[]) ?? []).filter(
+    (p) => p.business_name?.trim() && hasBusinessProfile(p),
+  );
+}
+
+export async function loadFeaturedBusinesses(
+  supabase: SupabaseClient,
+  limit = 8,
+): Promise<Profile[]> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("business_featured", true)
+    .not("business_name", "is", null)
+    .order("business_featured_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
   return ((data as Profile[]) ?? []).filter(
     (p) => p.business_name?.trim() && hasBusinessProfile(p),
   );

@@ -46,7 +46,12 @@ export default async function ProfilePage({
           initialCounts={counts}
           initialFollowing={following}
         />
-        {showBusinessShowcase && <BusinessProfileShowcase profile={typedProfile} />}
+        {showBusinessShowcase && (
+          <BusinessProfileShowcase
+            profile={typedProfile}
+            currentUserId={currentUser.id}
+          />
+        )}
         <div>
           <h2 className="font-display mb-4 text-lg font-semibold text-vintage-ink">Posts</h2>
           <ProfilePosts

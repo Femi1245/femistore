@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Profile } from "./types";
+import { normalizeProfile } from "@/lib/auth";
+import type { Profile } from "@/lib/types";
 
 export function normalizePhone(input: string): string | null {
   const trimmed = input.trim();
@@ -86,31 +87,6 @@ export async function findUserByPhone(
   if (!row) return { user: null };
 
   return {
-    user: {
-      id: row.id,
-      username: row.username,
-      display_name: row.display_name,
-      country: row.country,
-      avatar_url: row.avatar_url,
-      bio: "",
-      date_of_birth: null,
-      phone_e164: null,
-      phone_verified_at: row.phone_verified_at,
-      last_seen_at: null,
-      account_kind: "personal",
-      business_enabled: false,
-      active_mode: "personal",
-      business_name: null,
-      business_category: null,
-      business_tagline: null,
-      business_description: null,
-      business_website: null,
-      business_email: null,
-      business_phone: null,
-      business_location: null,
-      business_cover_url: null,
-      business_services: null,
-      created_at: "",
-    },
+    user: normalizeProfile(row as Record<string, unknown>),
   };
 }

@@ -6,7 +6,7 @@ export type ProfileResult = {
   error?: string;
 };
 
-function normalizeProfile(row: Record<string, unknown>): Profile {
+export function normalizeProfile(row: Record<string, unknown>): Profile {
   const p = row as Profile;
   return {
     ...p,
@@ -23,7 +23,22 @@ function normalizeProfile(row: Record<string, unknown>): Profile {
     business_location: p.business_location ?? null,
     business_cover_url: p.business_cover_url ?? null,
     business_services: p.business_services ?? null,
+    business_contact_enabled: p.business_contact_enabled ?? true,
+    business_auto_reply_enabled: p.business_auto_reply_enabled ?? false,
+    business_auto_reply_message: p.business_auto_reply_message ?? "",
+    business_featured: p.business_featured ?? false,
+    business_featured_at: p.business_featured_at ?? null,
     last_seen_at: p.last_seen_at ?? null,
+    is_private: p.is_private ?? false,
+    dm_policy: (p.dm_policy ?? "friends") as Profile["dm_policy"],
+    show_last_seen: p.show_last_seen ?? true,
+    show_read_receipts: p.show_read_receipts ?? true,
+    ai_assistant_enabled: p.ai_assistant_enabled ?? true,
+    digest_mode: p.digest_mode ?? false,
+    quiet_hours_start: p.quiet_hours_start ?? null,
+    quiet_hours_end: p.quiet_hours_end ?? null,
+    profile_theme: (p.profile_theme ?? "default") as Profile["profile_theme"],
+    profile_accent_color: p.profile_accent_color ?? null,
   };
 }
 

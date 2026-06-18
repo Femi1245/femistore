@@ -25,6 +25,12 @@ import {
   X,
   Bot,
   Briefcase,
+  Archive,
+  Pin,
+  Inbox,
+  BarChart3,
+  FolderOpen,
+  Reply,
 } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -32,6 +38,8 @@ import { createClient } from "@/lib/supabase/client";
 import {
   conversationLabel,
   editMessage,
+  enrichMessagesWithReplies,
+  attachReplyFromThread,
   findOrCreateConversation,
   formatMessageTime,
   joinChannel,
@@ -39,9 +47,16 @@ import {
   loadConversations,
   loadMutualFriends,
   loadPublicChannels,
+  searchMessages,
   secretMessageExpiry,
 } from "@/lib/chat";
-import { chatThemeBackgroundStyle, loadChatTheme } from "@/lib/chat-themes";
+import {
+  chatThemeBackgroundStyle,
+  loadChatTheme,
+  setConversationArchived,
+  setConversationPinned,
+} from "@/lib/chat-themes";
+import { hasBusinessProfile } from "@/lib/business";
 import { canEditWithinWindow } from "@/lib/edit-window";
 import { findUserByPhone } from "@/lib/phone";
 import { formatLastSeen, isOnline } from "@/lib/presence";
@@ -63,13 +78,20 @@ import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { ChatThemeModal } from "@/components/chat/ChatThemeModal";
+import { CreatePollModal } from "@/components/chat/CreatePollModal";
+import { MessageRequestsPanel } from "@/components/chat/MessageRequestsPanel";
+import { PollMessage } from "@/components/chat/PollMessage";
+import { ReplyQuote } from "@/components/chat/ReplyQuote";
+import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
+import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
+import type { ChatFolder } from "@/lib/types";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
 import {
   ASSISTANT_DISPLAY_NAME,
   isAssistantProfile,
 } from "@/lib/assistant";
 
-type Tab = "chats" | "discover" | "phone" | "channels" | "secret";
+type Tab = "chats" | "discover" | "phone" | "channels" | "secret" | "archived" | "requests" | "unread";
 
 export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const getSupabase = useCallback(() => createClient(), []);
@@ -77,6 +99,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [secretChats, setSecretChats] = useState<ConversationPreview[]>([]);
+  const [archivedChats, setArchivedChats] = useState<ConversationPreview[]>([]);
+  const [unreadChats, setUnreadChats] = useState<ConversationPreview[]>([]);
+  const [chatFolders, setChatFolders] = useState<ChatFolder[]>([]);
+  const [activeFolderId, setActiveFolderId] = useState<string | null | undefined>(undefined);
+  const [showPollModal, setShowPollModal] = useState(false);
   const [secretFriends, setSecretFriends] = useState<Profile[]>([]);
   const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -109,23 +136,89 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [savingMessageEdit, setSavingMessageEdit] = useState(false);
   const [assistantOpening, setAssistantOpening] = useState(false);
   const [assistantThinking, setAssistantThinking] = useState(false);
+  const [messageSearch, setMessageSearch] = useState("");
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [searchResults, setSearchResults] = useState<Message[] | null>(null);
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   const isAssistantChat =
     !!activeChat?.otherUser && isAssistantProfile(activeChat.otherUser);
 
   const refreshConversations = useCallback(async () => {
     const supabase = getSupabase();
-    const [regular, secret] = await Promise.all([
-      loadConversations(supabase, currentUser.id, "regular"),
+    const folderFilter = activeFolderId;
+    const [regular, secret, archived, unread, folders] = await Promise.all([
+      loadConversations(supabase, currentUser.id, "regular", folderFilter),
       loadConversations(supabase, currentUser.id, "secret"),
+      loadConversations(supabase, currentUser.id, "archived"),
+      loadConversations(supabase, currentUser.id, "unread"),
+      loadChatFolders(supabase, currentUser.id),
     ]);
     setConversations(regular);
     setSecretChats(secret);
-  }, [getSupabase, currentUser.id]);
+    setArchivedChats(archived);
+    setUnreadChats(unread);
+    setChatFolders(folders);
+  }, [getSupabase, currentUser.id, activeFolderId]);
 
   useEffect(() => {
     refreshConversations();
   }, [refreshConversations]);
+
+  useEffect(() => {
+    if (!chatTheme?.translation_enabled) return;
+    const target = chatTheme.translation_target_lang || "en";
+    const incoming = messages.filter(
+      (m) =>
+        m.sender_id !== currentUser.id &&
+        (!m.message_type || m.message_type === "text") &&
+        !translations[m.id],
+    );
+    if (!incoming.length) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const msg of incoming) {
+        if (cancelled) break;
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: msg.content, targetLang: target }),
+          });
+          if (!res.ok) continue;
+          const data = (await res.json()) as { translated?: string };
+          if (data.translated && !cancelled) {
+            setTranslations((prev) => ({ ...prev, [msg.id]: data.translated! }));
+          }
+        } catch {
+          // skip failed translation
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [messages, chatTheme?.translation_enabled, chatTheme?.translation_target_lang, currentUser.id]);
+
+  useEffect(() => {
+    if (!showMessageSearch || !messageSearch.trim() || !activeChat?.convId) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      const results = await searchMessages(
+        getSupabase(),
+        activeChat.convId,
+        messageSearch,
+        activeChat.isSecret,
+      );
+      setSearchResults(results);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [messageSearch, showMessageSearch, activeChat?.convId, activeChat?.isSecret, getSupabase]);
 
   useEffect(() => {
     async function loadDiscover() {
@@ -212,7 +305,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
       }
 
       const { data } = await query;
-      setMessages((data as Message[]) ?? []);
+      const rows = (data as Message[]) ?? [];
+      setMessages(await enrichMessagesWithReplies(getSupabase(), rows));
       setLoadingMsgs(false);
     },
     [getSupabase],
@@ -238,7 +332,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           const msg = payload.new as Message;
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            return [...prev, attachReplyFromThread(msg, prev)];
           });
           refreshConversations();
         },
@@ -305,7 +399,12 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setEditingMessageId(null);
     const theme = await loadChatTheme(getSupabase(), currentUser.id, convId);
     setChatTheme(theme);
+    setTranslations({});
+    setShowMessageSearch(false);
+    setMessageSearch("");
+    setReplyingTo(null);
     await loadMessages(convId, chat.isSecret);
+    await markConversationRead(getSupabase(), currentUser.id, convId);
     await refreshConversations();
   }
 
@@ -500,6 +599,25 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setEditMessageDraft("");
   }
 
+  async function handleTogglePin(convId: string, pinned: boolean) {
+    const { error } = await setConversationPinned(
+      getSupabase(),
+      currentUser.id,
+      convId,
+      !pinned,
+    );
+    if (error) setChatError(error);
+    await refreshConversations();
+  }
+
+  async function handleToggleArchive(convId: string, archived: boolean) {
+    await setConversationArchived(getSupabase(), currentUser.id, convId, !archived);
+    if (activeChat?.convId === convId && !archived) {
+      setActiveChat(null);
+    }
+    await refreshConversations();
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.trim() || !activeChat?.convId || sending || !activeChat.canPost) return;
@@ -507,7 +625,10 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setSending(true);
     setChatError(null);
     const content = draft.trim();
+    const replyTarget = replyingTo;
+    const replyId = replyTarget?.id ?? null;
     setDraft("");
+    setReplyingTo(null);
 
     const { data, error } = await getSupabase()
       .from("messages")
@@ -515,6 +636,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
         conversation_id: activeChat.convId,
         sender_id: currentUser.id,
         content,
+        ...(replyId ? { reply_to_id: replyId } : {}),
         ...(activeChat.isSecret ? { expires_at: secretMessageExpiry() } : {}),
       })
       .select()
@@ -532,9 +654,22 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     }
 
     if (data) {
+      const sent = data as Message;
+      const withReply =
+        replyId && replyTarget
+          ? {
+              ...sent,
+              reply_to: {
+                id: replyTarget.id,
+                content: replyTarget.content,
+                sender_id: replyTarget.sender_id,
+                sender: activeChat.members?.find((m) => m.id === replyTarget.sender_id),
+              },
+            }
+          : sent;
       setMessages((prev) => {
-        if (prev.some((m) => m.id === data.id)) return prev;
-        return [...prev, data as Message];
+        if (prev.some((m) => m.id === withReply.id)) return prev;
+        return [...prev, withReply];
       });
       await refreshConversations();
 
@@ -562,6 +697,21 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
             setChatError("Zumelia AI could not reply. Try again.");
           })
           .finally(() => setAssistantThinking(false));
+      } else if (
+        activeChat.otherUser &&
+        hasBusinessProfile(activeChat.otherUser) &&
+        activeChat.otherUser.business_auto_reply_enabled &&
+        activeChat.convId
+      ) {
+        void fetch("/api/business/auto-reply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: activeChat.convId,
+            message: content,
+            businessUserId: activeChat.otherUser.id,
+          }),
+        });
       }
     }
 
@@ -658,7 +808,10 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               {(
                 [
                   ["chats", MessageCircle, "Chats"],
+                  ["unread", Inbox, "Unread"],
+                  ["requests", UserPlus, "Requests"],
                   ["secret", Lock, "Secret"],
+                  ["archived", Archive, "Archived"],
                   ["discover", Globe, "Discover"],
                   ["phone", Phone, "Phone"],
                   ["channels", Hash, "Channels"],
@@ -688,6 +841,53 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
 
           {tab === "chats" && (
             <div className="flex-1 overflow-y-auto">
+              <div className="border-b border-vintage-border/60 px-2 py-2">
+                <div className="flex flex-wrap items-center gap-1">
+                  <FolderOpen className="h-3.5 w-3.5 text-vintage-ink-muted" />
+                  <button
+                    type="button"
+                    onClick={() => setActiveFolderId(undefined)}
+                    className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
+                      activeFolderId === undefined ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFolderId(null)}
+                    className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
+                      activeFolderId === null ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                    }`}
+                  >
+                    Unfiled
+                  </button>
+                  {chatFolders.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setActiveFolderId(f.id)}
+                      className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
+                        activeFolderId === f.id ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const name = window.prompt("Folder name");
+                      if (!name?.trim()) return;
+                      await createChatFolder(getSupabase(), currentUser.id, name);
+                      await refreshConversations();
+                    }}
+                    className="rounded-lg px-2 py-1 text-[10px] font-semibold text-vintage-rust"
+                  >
+                    + Folder
+                  </button>
+                </div>
+              </div>
               <div className="border-b border-vintage-border/60 p-2">
                 <button
                   type="button"
@@ -705,7 +905,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-vintage-ink">{ASSISTANT_DISPLAY_NAME}</p>
                     <p className="truncate text-xs text-vintage-ink-muted">
-                      Ask anything — app help, business, ideas…
+                      Ask anything — general questions, ideas, or app help
                     </p>
                   </div>
                 </button>
@@ -728,52 +928,166 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   {conversations.map((conv) => {
                     const active = activeChat?.convId === conv.id;
                     return (
-                      <button
+                      <div
                         key={conv.id}
-                        onClick={() => openConversationById(conv.id)}
-                        className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
-                          active
-                            ? "bg-vintage-rust/10"
-                            : "hover:bg-vintage-paper-dark/60"
+                        className={`relative flex items-center gap-1 rounded-xl ${
+                          active ? "bg-vintage-rust/10" : "hover:bg-vintage-paper-dark/60"
                         }`}
                       >
                         {active && (
                           <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-vintage-rust" />
                         )}
-                        <Avatar
-                          name={conversationLabel(conv)}
-                          avatarUrl={conv.other_user?.avatar_url ?? null}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p
-                              className={`truncate ${
-                                active
-                                  ? "font-semibold text-vintage-rust"
-                                  : "font-medium text-vintage-ink"
-                              }`}
-                            >
-                              {conversationLabel(conv)}
+                        <button
+                          type="button"
+                          onClick={() => openConversationById(conv.id)}
+                          className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+                        >
+                          <Avatar
+                            name={conversationLabel(conv)}
+                            avatarUrl={conv.other_user?.avatar_url ?? null}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p
+                                className={`truncate ${
+                                  active
+                                    ? "font-semibold text-vintage-rust"
+                                    : "font-medium text-vintage-ink"
+                                }`}
+                              >
+                                {conv.is_pinned ? "📌 " : ""}
+                                {conversationLabel(conv)}
+                              </p>
+                              {conv.last_message_at && (
+                                <span className="shrink-0 text-[11px] text-vintage-ink-muted">
+                                  {formatMessageTime(conv.last_message_at)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="truncate text-xs text-vintage-ink-muted">
+                              {conv.kind === "dm"
+                                ? conv.other_user?.country
+                                : conv.kind === "group"
+                                  ? `Group · ${conv.member_count ?? 0} members`
+                                  : `Channel · ${conv.member_count ?? 0} subscribers`}
+                              {conv.last_message ? ` · ${conv.last_message}` : ""}
                             </p>
-                            {conv.last_message_at && (
-                              <span className="shrink-0 text-[11px] text-vintage-ink-muted">
-                                {formatMessageTime(conv.last_message_at)}
-                              </span>
-                            )}
                           </div>
-                          <p className="truncate text-xs text-vintage-ink-muted">
-                            {conv.kind === "dm"
-                              ? conv.other_user?.country
-                              : conv.kind === "group"
-                                ? `Group · ${conv.member_count ?? 0} members`
-                                : `Channel · ${conv.member_count ?? 0} subscribers`}
-                            {conv.last_message ? ` · ${conv.last_message}` : ""}
-                          </p>
+                        </button>
+                        <div className="flex shrink-0 gap-0.5 pr-1">
+                          <button
+                            type="button"
+                            title={conv.is_pinned ? "Unpin" : "Pin"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleTogglePin(conv.id, !!conv.is_pinned);
+                            }}
+                            className="rounded-lg p-1.5 text-vintage-ink-muted hover:bg-vintage-rust/10 hover:text-vintage-rust"
+                          >
+                            <Pin className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Archive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleToggleArchive(conv.id, false);
+                            }}
+                            className="rounded-lg p-1.5 text-vintage-ink-muted hover:bg-vintage-rust/10 hover:text-vintage-rust"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
+              )}
+            </div>
+          )}
+
+          {tab === "unread" && (
+            <div className="flex-1 overflow-y-auto p-2">
+              {unreadChats.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-vintage-ink-muted">
+                  You&apos;re all caught up — no unread chats.
+                </p>
+              ) : (
+                unreadChats.map((conv) => (
+                  <button
+                    key={conv.id}
+                    type="button"
+                    onClick={() => openConversationById(conv.id)}
+                    className="mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-vintage-paper-dark/60"
+                  >
+                    <Avatar
+                      name={conversationLabel(conv)}
+                      avatarUrl={conv.other_user?.avatar_url ?? null}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{conversationLabel(conv)}</p>
+                      <p className="truncate text-xs text-vintage-ink-muted">
+                        {conv.last_message ?? "New activity"}
+                      </p>
+                    </div>
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-vintage-rust" />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {tab === "requests" && (
+            <MessageRequestsPanel
+              userId={currentUser.id}
+              onOpenConversation={(id) => void openConversationById(id)}
+              onRefresh={() => void refreshConversations()}
+            />
+          )}
+
+          {tab === "archived" && (
+            <div className="flex-1 overflow-y-auto p-2">
+              {archivedChats.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-vintage-ink-muted">
+                  No archived chats. Archive a conversation from the Chats tab.
+                </p>
+              ) : (
+                archivedChats.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="mb-1 flex items-center gap-1 rounded-xl hover:bg-vintage-paper-dark/60"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openConversationById(conv.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+                    >
+                      <Avatar
+                        name={conversationLabel(conv)}
+                        avatarUrl={conv.other_user?.avatar_url ?? null}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">
+                          {conversationLabel(conv)}
+                          {conv.is_unread && (
+                            <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-vintage-rust" />
+                          )}
+                        </p>
+                        <p className="truncate text-xs text-vintage-ink-muted">
+                          {conv.last_message ?? "Archived"}
+                        </p>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      title="Unarchive"
+                      onClick={() => void handleToggleArchive(conv.id, true)}
+                      className="mr-2 rounded-lg p-1.5 text-xs font-medium text-vintage-rust hover:bg-vintage-rust/10"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           )}
@@ -996,35 +1310,46 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                       </div>
                     </div>
                   ) : (
-                  <Link
-                    href={`/profile/${activeChat.otherUser.username}`}
-                    className="flex items-center gap-3"
-                  >
-                    <Avatar
-                      name={activeChat.avatarName}
-                      avatarUrl={activeChat.avatarUrl}
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/profile/${activeChat.otherUser.username}`}
+                      className="flex items-center gap-3"
+                    >
+                      <Avatar
+                        name={activeChat.avatarName}
+                        avatarUrl={activeChat.avatarUrl}
+                      />
+                      <div>
+                        <p className="font-semibold hover:text-vintage-rust">{activeChat.title}</p>
+                        <p className="text-xs text-vintage-ink-muted">
+                          @{activeChat.otherUser.username}
+                          {activeChat.otherUser.last_seen_at != null &&
+                            currentUser.show_last_seen !== false && (
+                            <>
+                              {" · "}
+                              <span
+                                className={
+                                  isOnline(activeChat.otherUser.last_seen_at)
+                                    ? "font-medium text-vintage-olive"
+                                    : ""
+                                }
+                              >
+                                {formatLastSeen(activeChat.otherUser.last_seen_at)}
+                              </span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </Link>
+                    <UserSafetyMenu
+                      profile={activeChat.otherUser}
+                      currentUserId={currentUser.id}
+                      onBlocked={() => {
+                        setActiveChat(null);
+                        void refreshConversations();
+                      }}
                     />
-                    <div>
-                      <p className="font-semibold hover:text-vintage-rust">{activeChat.title}</p>
-                      <p className="text-xs text-vintage-ink-muted">
-                        @{activeChat.otherUser.username}
-                        {activeChat.otherUser.last_seen_at != null && (
-                          <>
-                            {" · "}
-                            <span
-                              className={
-                                isOnline(activeChat.otherUser.last_seen_at)
-                                  ? "font-medium text-vintage-olive"
-                                  : ""
-                              }
-                            >
-                              {formatLastSeen(activeChat.otherUser.last_seen_at)}
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                  </Link>
+                  </div>
                   )
                 ) : (
                   <div className="flex flex-1 items-center gap-3">
@@ -1035,13 +1360,22 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     </div>
                     {activeChat.kind === "group" &&
                       (activeChat.myRole === "owner" || activeChat.myRole === "admin") && (
-                        <button
-                          type="button"
-                          onClick={() => setModal("add-members")}
-                          className="vintage-btn-outline flex items-center gap-1 px-2 py-1 text-xs"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Add
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setShowPollModal(true)}
+                            className="vintage-btn-outline flex items-center gap-1 px-2 py-1 text-xs"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5" /> Poll
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setModal("add-members")}
+                            className="vintage-btn-outline flex items-center gap-1 px-2 py-1 text-xs"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Add
+                          </button>
+                        </>
                       )}
                   </div>
                 )}
@@ -1049,8 +1383,16 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
+                      onClick={() => setShowMessageSearch((v) => !v)}
+                      title="Search messages"
+                      className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setShowThemeModal(true)}
-                      title="Chat theme"
+                      title="Chat settings"
                       className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
                     >
                       <Palette className="h-4 w-4" />
@@ -1090,6 +1432,34 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   </div>
                 )}
               </header>
+              {showMessageSearch && (
+                <div className="border-b border-vintage-border bg-vintage-paper px-4 py-2">
+                  <input
+                    value={messageSearch}
+                    onChange={(e) => setMessageSearch(e.target.value)}
+                    placeholder="Search in this conversation…"
+                    className="vintage-input w-full px-3 py-2 text-sm"
+                  />
+                  {searchResults && searchResults.length > 0 && (
+                    <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+                      {searchResults.map((hit) => (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          onClick={() => {
+                            document
+                              .getElementById(`msg-${hit.id}`)
+                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }}
+                          className="block w-full truncate rounded-lg px-2 py-1 text-left text-xs hover:bg-vintage-rust/10"
+                        >
+                          {hit.content}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {showGift && activeChat.kind === "dm" && activeChat.otherUser && (
                 <GiftPickerModal
                   recipient={activeChat.otherUser}
@@ -1105,6 +1475,14 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   conversationId={activeChat.convId}
                   onClose={() => setShowThemeModal(false)}
                   onSaved={setChatTheme}
+                />
+              )}
+              {showPollModal && activeChat.kind === "group" && (
+                <CreatePollModal
+                  conversationId={activeChat.convId}
+                  userId={currentUser.id}
+                  onClose={() => setShowPollModal(false)}
+                  onCreated={() => loadMessages(activeChat.convId, activeChat.isSecret)}
                 />
               )}
 
@@ -1132,6 +1510,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     return (
                       <div
                         key={msg.id}
+                        id={`msg-${msg.id}`}
                         className={`group flex ${isMine ? "justify-end" : "justify-start"}`}
                       >
                         <div
@@ -1188,10 +1567,37 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                             <p className="text-sm italic opacity-90">{msg.content}</p>
                           ) : msg.message_type === "gift" ? (
                             <p className="text-sm font-medium">{msg.content}</p>
+                          ) : msg.message_type === "poll" && msg.poll_id ? (
+                            <PollMessage pollId={msg.poll_id} userId={currentUser.id} />
                           ) : (
-                            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                              {msg.content}
-                            </p>
+                            <>
+                              {msg.reply_to && (
+                                <ReplyQuote
+                                  muted={isMine}
+                                  label={
+                                    msg.reply_to.sender?.display_name ??
+                                    (msg.reply_to.sender_id === currentUser.id ? "You" : "Message")
+                                  }
+                                  content={msg.reply_to.content}
+                                  onClick={() =>
+                                    document
+                                      .getElementById(`msg-${msg.reply_to!.id}`)
+                                      ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                                  }
+                                />
+                              )}
+                              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                {msg.content}
+                              </p>
+                              {!isMine &&
+                                chatTheme?.translation_enabled &&
+                                translations[msg.id] &&
+                                translations[msg.id] !== msg.content && (
+                                  <p className="mt-2 border-t border-vintage-border/40 pt-2 text-xs italic text-vintage-ink-muted">
+                                    {translations[msg.id]}
+                                  </p>
+                                )}
+                            </>
                           )}
                           <div
                             className={`mt-1 flex items-center gap-2 text-[10px] ${
@@ -1215,6 +1621,17 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                                 }`}
                               >
                                 <Pencil className="h-3 w-3" /> Edit
+                              </button>
+                            )}
+                            {isText && !isEditing && (
+                              <button
+                                type="button"
+                                onClick={() => setReplyingTo(msg)}
+                                className={`flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 ${
+                                  isMine ? "hover:text-white" : "hover:text-vintage-rust"
+                                }`}
+                              >
+                                <Reply className="h-3 w-3" /> Reply
                               </button>
                             )}
                           </div>
@@ -1247,6 +1664,30 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                       onCancel={() => setRecordingVoice(false)}
                     />
                   ) : (
+                    <>
+                      {replyingTo && (
+                        <div className="mb-2 flex items-center justify-between gap-2 rounded-lg vintage-card-inset px-3 py-2 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-vintage-rust">
+                              Replying to{" "}
+                              {replyingTo.sender_id === currentUser.id
+                                ? "yourself"
+                                : activeChat.members?.find((m) => m.id === replyingTo.sender_id)
+                                    ?.display_name ?? "message"}
+                            </p>
+                            <p className="truncate text-xs text-vintage-ink-muted">
+                              {replyingTo.content}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setReplyingTo(null)}
+                            className="text-vintage-ink-muted hover:text-vintage-rust"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     <form onSubmit={sendMessage} className="flex gap-2">
                       <button
                         type="button"
@@ -1261,9 +1702,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
                         placeholder={
-                          activeChat.kind === "channel"
-                            ? "Post an update…"
-                            : "Type a message…"
+                          replyingTo
+                            ? "Write a reply…"
+                            : activeChat.kind === "channel"
+                              ? "Post an update…"
+                              : "Type a message…"
                         }
                         className="vintage-input min-w-0 flex-1 px-4 py-3"
                       />
@@ -1275,6 +1718,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         <Send className="h-5 w-5" />
                       </button>
                     </form>
+                    </>
                   )}
                   <p className="mt-1 text-[10px] text-vintage-ink-muted">
                     Mic button = voicemail · Header icons = live voice/video call

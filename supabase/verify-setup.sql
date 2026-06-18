@@ -22,6 +22,9 @@
 -- ║   13. business-accounts-schema.sql                                         ║
 -- ║   14. assistant-bot-schema.sql (after messaging / phone-groups schemas)    ║
 -- ║   15. seed-zumelia-ai.sql (creates @zumelia-ai profile — run once)       ║
+-- ║   16. opportunities-schema.sql                                           ║
+-- ║   17. trust-safety-schema.sql                                            ║
+-- ║   18. replies-schema.sql                                               ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 drop table if exists __zumelia_diag;
@@ -37,16 +40,37 @@ from unnest(array[
   'notifications','status_updates','status_views',
   'live_streams','live_chat_messages',
   'watch_history','playlists','playlist_items','user_videos',
-  'gift_catalog','sent_gifts','call_sessions','conversation_member_settings'
+  'gift_catalog','sent_gifts','call_sessions','conversation_member_settings',
+  'user_blocks','user_mutes','content_reports','account_appeals','dm_requests',
+  'chat_folders','keyword_mutes','notification_preferences','group_polls'
 ]) as t;
 
 -- ── Columns added by feature migrations ──────────────────────────────────────
 insert into __zumelia_diag
 select 'column', c.tbl || '.' || c.col,
-  case when exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = c.tbl and column_name = c.col
-  ) then 'OK' else 'MISSING' end
+  case
+    when exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = c.tbl and column_name = c.col
+    ) then 'OK'
+    when c.tbl = 'conversation_member_settings'
+      and c.col in ('is_pinned', 'translation_enabled')
+      then 'MISSING (run supabase/opportunities-schema.sql)'
+    when c.tbl = 'profiles'
+      and c.col in ('business_contact_enabled', 'business_auto_reply_enabled', 'business_featured')
+      then 'MISSING (run supabase/opportunities-schema.sql)'
+    when c.tbl = 'profiles'
+      and c.col in ('is_private', 'dm_policy', 'ai_assistant_enabled', 'profile_theme')
+      then 'MISSING (run supabase/trust-safety-schema.sql)'
+    when c.tbl = 'conversation_member_settings'
+      and c.col in ('notifications_muted', 'last_read_at', 'folder_id')
+      then 'MISSING (run supabase/trust-safety-schema.sql)'
+    when c.tbl = 'messages' and c.col = 'reply_to_id'
+      then 'MISSING (run supabase/replies-schema.sql)'
+    when c.tbl = 'comments' and c.col = 'reply_to_id'
+      then 'MISSING (run supabase/replies-schema.sql)'
+    else 'MISSING'
+  end
 from (values
   ('profiles','phone_e164'),
   ('profiles','phone_verified_at'),
@@ -78,7 +102,21 @@ from (values
   ('profiles','business_phone'),
   ('profiles','business_location'),
   ('profiles','business_cover_url'),
-  ('profiles','business_services')
+  ('profiles','business_services'),
+  ('profiles','business_contact_enabled'),
+  ('profiles','business_auto_reply_enabled'),
+  ('profiles','business_featured'),
+  ('conversation_member_settings','is_pinned'),
+  ('conversation_member_settings','translation_enabled'),
+  ('profiles','is_private'),
+  ('profiles','dm_policy'),
+  ('profiles','ai_assistant_enabled'),
+  ('profiles','profile_theme'),
+  ('conversation_member_settings','notifications_muted'),
+  ('conversation_member_settings','last_read_at'),
+  ('messages','poll_id'),
+  ('messages','reply_to_id'),
+  ('comments','reply_to_id')
 ) as c(tbl, col);
 
 -- ── Functions ────────────────────────────────────────────────────────────────
@@ -88,11 +126,22 @@ select 'function', f,
     select 1 from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname = f
+  ) then 'OK' else 'MISSING (run supabase/opportunities-schema.sql)' end
+from unnest(array[
+  'zumelia_assistant_id','is_zumelia_assistant','can_dm_without_mutual_friends'
+]) as f;
+
+-- Other functions (not from opportunities-schema)
+insert into __zumelia_diag
+select 'function', f,
+  case when exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = f
   ) then 'OK' else 'MISSING' end
 from unnest(array[
   'normalize_phone_e164','sync_my_verified_phone','find_user_by_phone',
-  'is_conversation_admin','is_conversation_member','are_mutual_friends',
-  'zumelia_assistant_id','is_zumelia_assistant'
+  'is_conversation_admin','is_conversation_member','are_mutual_friends'
 ]) as f;
 
 -- ── Check constraints that must allow new enum values ────────────────────────
@@ -103,6 +152,14 @@ select 'constraint', 'messages.message_type allows ''gift''',
     where conname = 'messages_message_type_check'
       and pg_get_constraintdef(oid) like '%gift%'
   ) then 'OK' else 'MISSING (re-run gifts-schema.sql)' end;
+
+insert into __zumelia_diag
+select 'constraint', 'messages.message_type allows ''poll''',
+  case when exists (
+    select 1 from pg_constraint
+    where conname = 'messages_message_type_check'
+      and pg_get_constraintdef(oid) like '%poll%'
+  ) then 'OK' else 'MISSING (run supabase/trust-safety-schema.sql)' end;
 
 insert into __zumelia_diag
 select 'constraint', 'notifications.type allows ''gift''',

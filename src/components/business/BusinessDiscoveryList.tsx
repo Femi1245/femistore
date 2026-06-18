@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Briefcase, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { BUSINESS_CATEGORIES, loadDiscoverableBusinesses } from "@/lib/business";
+import { BUSINESS_CATEGORIES, loadDiscoverableBusinesses, loadFeaturedBusinesses } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 import { BusinessDiscoveryCard } from "@/components/business/BusinessDiscoveryCard";
 
 export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string }) {
   const [businesses, setBusinesses] = useState<Profile[]>([]);
+  const [featured, setFeatured] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -16,12 +17,17 @@ export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await loadDiscoverableBusinesses(createClient(), {
-      search: search.trim() || undefined,
-      category: category || undefined,
-      location: location.trim() || undefined,
-    });
+    const supabase = createClient();
+    const [data, featuredData] = await Promise.all([
+      loadDiscoverableBusinesses(supabase, {
+        search: search.trim() || undefined,
+        category: category || undefined,
+        location: location.trim() || undefined,
+      }),
+      loadFeaturedBusinesses(supabase, 6),
+    ]);
     setBusinesses(data.filter((b) => b.id !== currentUserId));
+    setFeatured(featuredData.filter((b) => b.id !== currentUserId));
     setLoading(false);
   }, [search, category, location, currentUserId]);
 
@@ -70,6 +76,19 @@ export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string
           />
         </div>
       </div>
+
+      {!loading && featured.length > 0 && !search && !category && !location && (
+        <div>
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-vintage-ink-muted">
+            Featured businesses
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((profile) => (
+              <BusinessDiscoveryCard key={`featured-${profile.id}`} profile={profile} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

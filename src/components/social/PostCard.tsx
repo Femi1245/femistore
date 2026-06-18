@@ -10,7 +10,9 @@ import {
   Pencil,
   Check,
   X,
+  Reply,
 } from "lucide-react";
+import { ReplyQuote } from "@/components/chat/ReplyQuote";
 import { createClient } from "@/lib/supabase/client";
 import { canEditWithinWindow } from "@/lib/edit-window";
 import {
@@ -77,6 +79,7 @@ export function PostCard({
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
+  const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
   const [reshareOpen, setReshareOpen] = useState(false);
   const [reshareCaption, setReshareCaption] = useState("");
@@ -113,8 +116,16 @@ export function PostCard({
   async function handleComment(e: React.FormEvent) {
     e.preventDefault();
     if (!commentDraft.trim()) return;
-    await addComment(createClient(), rootId, currentUser.id, commentDraft.trim());
+    const replyId = replyingToComment?.id ?? null;
+    await addComment(
+      createClient(),
+      rootId,
+      currentUser.id,
+      commentDraft.trim(),
+      replyId,
+    );
     setCommentDraft("");
+    setReplyingToComment(null);
     setEngagement((e) => ({ ...e, comments: e.comments + 1 }));
     await loadCommentsList();
   }
@@ -318,16 +329,50 @@ export function PostCard({
                     <p className="font-medium text-vintage-rust">
                       {c.author?.display_name}
                     </p>
+                    {c.reply_to && (
+                      <ReplyQuote
+                        label={c.reply_to.author?.display_name ?? "Comment"}
+                        content={c.reply_to.content}
+                      />
+                    )}
                     <p>{c.content}</p>
+                    <button
+                      type="button"
+                      onClick={() => setReplyingToComment(c)}
+                      className="mt-1 flex items-center gap-1 text-xs font-semibold text-vintage-ink-muted hover:text-vintage-rust"
+                    >
+                      <Reply className="h-3 w-3" /> Reply
+                    </button>
                   </div>
                 </div>
               ))
+            )}
+            {replyingToComment && (
+              <div className="flex items-center justify-between gap-2 rounded-lg vintage-card-inset px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-vintage-rust">
+                    Replying to {replyingToComment.author?.display_name}
+                  </p>
+                  <p className="truncate text-xs text-vintage-ink-muted">
+                    {replyingToComment.content}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReplyingToComment(null)}
+                  className="text-vintage-ink-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             )}
             <form onSubmit={handleComment} className="flex gap-2">
               <input
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
-                placeholder="Write a comment…"
+                placeholder={
+                  replyingToComment ? "Write a reply…" : "Write a comment…"
+                }
                 className="vintage-input flex-1 px-3 py-2 text-sm"
               />
               <button

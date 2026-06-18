@@ -1,7 +1,15 @@
 import { Briefcase, Globe, Mail, MapPin, Phone } from "lucide-react";
 import type { Profile } from "@/lib/types";
 
-export function BusinessProfileShowcase({ profile }: { profile: Profile }) {
+import { BusinessContactButton } from "@/components/business/BusinessContactButton";
+
+export function BusinessProfileShowcase({
+  profile,
+  currentUserId,
+}: {
+  profile: Profile;
+  currentUserId?: string;
+}) {
   if (!profile.business_name) return null;
 
   return (
@@ -90,6 +98,12 @@ export function BusinessProfileShowcase({ profile }: { profile: Profile }) {
           >
             Visit business
           </a>
+        )}
+
+        {currentUserId && (
+          <div className="mt-4">
+            <BusinessContactButton business={profile} currentUserId={currentUserId} />
+          </div>
         )}
       </div>
     </section>

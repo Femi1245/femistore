@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Compass, Newspaper } from "lucide-react";
+import { Compass, Newspaper, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { loadFeed } from "@/lib/social";
+import { loadFeed, type FeedMode } from "@/lib/social";
 import type { PostWithMeta, Profile } from "@/lib/types";
 import { CreatePost } from "@/components/social/CreatePost";
 import { PostCard } from "@/components/social/PostCard";
@@ -13,13 +13,14 @@ import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 export function FeedView({ currentUser }: { currentUser: Profile }) {
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<FeedMode>("friends");
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const data = await loadFeed(createClient(), currentUser.id);
+    const data = await loadFeed(createClient(), currentUser.id, mode);
     setPosts(data);
     setLoading(false);
-  }, [currentUser.id]);
+  }, [currentUser.id, mode]);
 
   useEffect(() => {
     refresh();
@@ -27,17 +28,45 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
-          <Newspaper className="h-5 w-5" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
+            <Newspaper className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
+              Your Feed
+            </h1>
+            <p className="text-sm text-vintage-ink-muted">
+              {mode === "friends"
+                ? "Friends first — newest posts, no algorithm"
+                : "Everyone you follow, newest first"}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
-            Your Feed
-          </h1>
-          <p className="text-sm text-vintage-ink-muted">
-            Updates from people you follow
-          </p>
+        <div className="flex gap-1 vintage-card-inset p-1">
+          <button
+            type="button"
+            onClick={() => setMode("friends")}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              mode === "friends"
+                ? "bg-vintage-rust text-[#fff8f0]"
+                : "text-vintage-ink-muted hover:text-vintage-ink"
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" /> Friends
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("following")}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+              mode === "following"
+                ? "bg-vintage-rust text-[#fff8f0]"
+                : "text-vintage-ink-muted hover:text-vintage-ink"
+            }`}
+          >
+            Following
+          </button>
         </div>
       </div>
 
@@ -55,10 +84,12 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
             <Newspaper className="h-7 w-7" />
           </div>
           <p className="font-display text-lg font-bold text-vintage-ink">
-            Your feed is quiet
+            {mode === "friends" ? "No friend posts yet" : "Your feed is quiet"}
           </p>
           <p className="mt-1 max-w-sm text-sm text-vintage-ink-muted">
-            Share your first post above, or follow people to see their updates here.
+            {mode === "friends"
+              ? "Connect with people (mutual follow) to see their posts here chronologically."
+              : "Share your first post above, or follow people to see their updates here."}
           </p>
           <Link
             href="/chat"

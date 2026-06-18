@@ -1,11 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canEditWithinWindow } from "@/lib/edit-window";
 import { ASSISTANT_USERNAME } from "@/lib/assistant";
+import { acceptsBusinessContact } from "@/lib/business";
+import { createDmRequest } from "@/lib/message-requests";
+import { isBlocked } from "@/lib/safety";
 import type {
   ActiveChat,
   ConversationKind,
   ConversationPreview,
   MemberRole,
+  Message,
+  MessageReplyPreview,
   Profile,
 } from "./types";
 
@@ -67,23 +72,43 @@ export async function canMessageUser(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
-): Promise<{ allowed: boolean; reason?: string }> {
+): Promise<{ allowed: boolean; requiresRequest?: boolean; reason?: string }> {
   if (userId === otherUserId) {
     return { allowed: false, reason: "You cannot message yourself." };
   }
 
+  if (await isBlocked(supabase, userId, otherUserId)) {
+    return { allowed: false, reason: "Messaging is not available." };
+  }
+
   const { data: otherProfile } = await supabase
     .from("profiles")
-    .select("username")
+    .select("*")
     .eq("id", otherUserId)
     .maybeSingle();
 
-  if (otherProfile?.username === ASSISTANT_USERNAME) {
+  if (!otherProfile) {
+    return { allowed: false, reason: "User not found." };
+  }
+
+  const other = otherProfile as Profile;
+
+  if (other.username === ASSISTANT_USERNAME) {
     return { allowed: true };
   }
 
   const friends = await areMutualFriends(supabase, userId, otherUserId);
-  if (!friends) {
+  const business = acceptsBusinessContact(other);
+  const policy = other.dm_policy ?? "friends";
+
+  if (policy === "nobody") {
+    return { allowed: false, reason: "This user is not accepting messages." };
+  }
+
+  if (friends) return { allowed: true };
+
+  if (policy === "friends") {
+    if (business) return { allowed: true };
     return {
       allowed: false,
       reason:
@@ -91,7 +116,13 @@ export async function canMessageUser(
     };
   }
 
-  return { allowed: true };
+  if (policy === "business_only") {
+    if (business) return { allowed: true };
+    return { allowed: false, reason: "This user only accepts business inquiries." };
+  }
+
+  // everyone — strangers use message requests
+  return { allowed: true, requiresRequest: !friends && !business };
 }
 
 async function addConversationMember(
@@ -112,8 +143,8 @@ export async function findOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
-  options?: { secret?: boolean },
-): Promise<{ convId: string | null; error?: string }> {
+  options?: { secret?: boolean; requestPreview?: string },
+): Promise<{ convId: string | null; requiresRequest?: boolean; error?: string }> {
   const secret = options?.secret ?? false;
   const access = await canMessageUser(supabase, userId, otherUserId);
   if (!access.allowed) {
@@ -166,7 +197,17 @@ export async function findOrCreateConversation(
   const otherError = await addConversationMember(supabase, conv.id, otherUserId, "member");
   if (otherError) return { convId: null, error: otherError };
 
-  return { convId: conv.id };
+  if (access.requiresRequest) {
+    await createDmRequest(
+      supabase,
+      conv.id,
+      userId,
+      otherUserId,
+      options?.requestPreview ?? "New message request",
+    );
+  }
+
+  return { convId: conv.id, requiresRequest: access.requiresRequest };
 }
 
 export async function createGroup(
@@ -340,13 +381,61 @@ async function getLastMessage(
   };
 }
 
-export type ConversationFilter = "all" | "regular" | "secret";
+export type ConversationFilter = "all" | "regular" | "secret" | "archived" | "unread" | "requests";
+
+export async function loadMemberSettingsMap(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<Map<string, import("./types").ConversationMemberSettings>> {
+  const { data } = await supabase
+    .from("conversation_member_settings")
+    .select("*")
+    .eq("user_id", userId);
+
+  const map = new Map<string, import("./types").ConversationMemberSettings>();
+  for (const row of data ?? []) {
+    map.set(row.conversation_id, row as import("./types").ConversationMemberSettings);
+  }
+  return map;
+}
+
+export async function searchMessages(
+  supabase: SupabaseClient,
+  convId: string,
+  term: string,
+  isSecret?: boolean,
+): Promise<import("./types").Message[]> {
+  const trimmed = term.trim();
+  if (!trimmed) return [];
+
+  let query = supabase
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", convId)
+    .ilike("content", `%${trimmed}%`)
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  if (isSecret) {
+    query = query.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+  }
+
+  const { data } = await query;
+  return (data as import("./types").Message[]) ?? [];
+}
 
 export async function loadConversations(
   supabase: SupabaseClient,
   userId: string,
   filter: ConversationFilter = "regular",
+  folderId?: string | null,
 ): Promise<ConversationPreview[]> {
+  const { loadPendingRequestConvIds } = await import("@/lib/message-requests");
+  const { loadBlockedIds } = await import("@/lib/safety");
+
+  const pendingRequestIds = await loadPendingRequestConvIds(supabase, userId);
+  const blockedIds = await loadBlockedIds(supabase, userId);
+
   const { data: memberships } = await supabase
     .from("conversation_members")
     .select("conversation_id, role")
@@ -354,6 +443,7 @@ export async function loadConversations(
 
   if (!memberships?.length) return [];
 
+  const settingsMap = await loadMemberSettingsMap(supabase, userId);
   const previews: ConversationPreview[] = [];
 
   for (const membership of memberships) {
@@ -367,10 +457,41 @@ export async function loadConversations(
     if (!conv) continue;
 
     const isSecret = !!conv.is_secret;
+    const settings = settingsMap.get(convId);
+    const isArchived = settings?.is_archived ?? false;
+
+    if (filter === "requests") {
+      if (!pendingRequestIds.has(convId)) continue;
+    } else if (pendingRequestIds.has(convId)) {
+      continue;
+    }
+
+    if (folderId !== undefined) {
+      const itemFolder = settings?.folder_id ?? null;
+      if (folderId === null) {
+        if (itemFolder !== null) continue;
+      } else if (itemFolder !== folderId) {
+        continue;
+      }
+    }
+
+    if (filter === "archived") {
+      if (!isArchived) continue;
+    } else if (isArchived) {
+      continue;
+    }
+
     if (filter === "regular" && isSecret) continue;
     if (filter === "secret" && !isSecret) continue;
 
     const lastMsg = await getLastMessage(supabase, convId);
+    const lastRead = settings?.last_read_at;
+    const isUnread =
+      !!lastMsg.created_at &&
+      (!lastRead || new Date(lastMsg.created_at) > new Date(lastRead));
+
+    if (filter === "unread" && !isUnread) continue;
+
     const kind = (conv.kind ?? "dm") as ConversationKind;
 
     if (kind === "dm") {
@@ -389,6 +510,7 @@ export async function loadConversations(
         .single();
 
       if (!profile) continue;
+      if (blockedIds.has(otherId)) continue;
 
       previews.push({
         id: convId,
@@ -399,6 +521,11 @@ export async function loadConversations(
         my_role: membership.role as MemberRole,
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
+        is_pinned: settings?.is_pinned ?? false,
+        is_archived: isArchived,
+        is_unread: isUnread,
+        folder_id: settings?.folder_id ?? null,
+        is_pending_request: pendingRequestIds.has(convId),
       });
     } else {
       if (filter === "secret") continue;
@@ -417,11 +544,16 @@ export async function loadConversations(
         my_role: membership.role as MemberRole,
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
+        is_pinned: settings?.is_pinned ?? false,
+        is_archived: isArchived,
+        is_unread: isUnread,
+        folder_id: settings?.folder_id ?? null,
       });
     }
   }
 
   previews.sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
     const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
     const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
     return tb - ta;
@@ -563,6 +695,61 @@ export async function editMessage(
 
   if (error) return { error: error.message };
   return {};
+}
+
+export async function enrichMessagesWithReplies(
+  supabase: SupabaseClient,
+  messages: Message[],
+): Promise<Message[]> {
+  const replyIds = [
+    ...new Set(
+      messages.map((m) => m.reply_to_id).filter((id): id is string => !!id),
+    ),
+  ];
+  if (!replyIds.length) return messages;
+
+  const { data: parents } = await supabase
+    .from("messages")
+    .select("id, content, sender_id")
+    .in("id", replyIds);
+
+  if (!parents?.length) return messages;
+
+  const senderIds = [...new Set(parents.map((p) => p.sender_id as string))];
+  const { data: profiles } = await supabase.from("profiles").select("*").in("id", senderIds);
+  const profileMap = new Map((profiles as Profile[])?.map((p) => [p.id, p]));
+
+  const parentMap = new Map(
+    parents.map((p) => [
+      p.id as string,
+      {
+        id: p.id as string,
+        content: p.content as string,
+        sender_id: p.sender_id as string,
+        sender: profileMap.get(p.sender_id as string),
+      } satisfies MessageReplyPreview,
+    ]),
+  );
+
+  return messages.map((m) => {
+    if (!m.reply_to_id) return m;
+    const reply_to = parentMap.get(m.reply_to_id) ?? null;
+    return reply_to ? { ...m, reply_to } : m;
+  });
+}
+
+export function attachReplyFromThread(message: Message, thread: Message[]): Message {
+  if (!message.reply_to_id || message.reply_to) return message;
+  const parent = thread.find((m) => m.id === message.reply_to_id);
+  if (!parent) return message;
+  return {
+    ...message,
+    reply_to: {
+      id: parent.id,
+      content: parent.content,
+      sender_id: parent.sender_id,
+    },
+  };
 }
 
 export function conversationLabel(conv: ConversationPreview): string {
