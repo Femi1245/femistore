@@ -1,14 +1,18 @@
+/** Editorial luxury palette — aligned with web PWA (Option A) */
 export const colors = {
-  cream: "#f4e8d4",
-  paper: "#ebe0ca",
-  paperDark: "#ddd0b4",
-  ink: "#3d2e24",
-  inkMuted: "#6b5344",
-  rust: "#b85c38",
-  rustDark: "#8f4528",
-  border: "#a68b6a",
-  btnText: "#fff8f0",
-  white: "#fffaf2",
+  cream: "#faf8f5",
+  paper: "#ffffff",
+  paperDark: "#f3f0eb",
+  ink: "#1a1a1a",
+  inkMuted: "#6b6b6b",
+  gold: "#c9a962",
+  goldDark: "#a88b4a",
+  /** @deprecated use gold — kept for existing screens */
+  rust: "#c9a962",
+  rustDark: "#a88b4a",
+  border: "#e8e4dd",
+  btnText: "#1a1a1a",
+  white: "#ffffff",
 };
 
 export const spacing = {
@@ -17,4 +21,9 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+};
+
+export const typography = {
+  display: "PlayfairDisplay_600SemiBold",
+  body: "DMSans_400Regular",
 };

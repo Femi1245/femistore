@@ -9,9 +9,9 @@ import type { Profile } from "@/lib/types";
 
 export function MobileTopBar({ user }: { user: Profile }) {
   return (
-    <header className="mobile-top-bar vintage-nav sticky top-0 z-50 md:hidden">
-      <div className="flex h-12 items-center justify-between gap-2 px-3">
-        <Logo size="sm" compact />
+    <header className="mobile-top-bar vintage-nav sticky top-0 z-50 border-b border-vintage-border-strong/60 md:hidden">
+      <div className="flex h-14 items-center justify-between gap-2 px-4">
+        <Logo size="sm" showWordmark />
         <div className="flex items-center gap-0.5">
           <MessageBell userId={user.id} />
           <ThemeToggle />

@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { DM_Sans, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
 import "./globals.css";
 
-const display = Plus_Jakarta_Sans({
+const display = Playfair_Display({
   variable: "--font-heading",
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
 });
 
-const body = Inter({
+const body = DM_Sans({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -38,8 +38,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f6f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0d" },
+    { media: "(prefers-color-scheme: light)", color: "#FAF8F5" },
+    { media: "(prefers-color-scheme: dark)", color: "#141414" },
   ],
 };
 

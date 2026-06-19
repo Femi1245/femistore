@@ -10,9 +10,11 @@ const imageSizes = {
 export function Logo({
   size = "md",
   compact = false,
+  showWordmark = false,
 }: {
   size?: "sm" | "md" | "lg";
   compact?: boolean;
+  showWordmark?: boolean;
 }) {
   const px = imageSizes[size];
 
@@ -30,9 +32,9 @@ export function Logo({
         priority={size === "lg"}
       />
       <span
-        className={`text-vintage-gradient ${
-          size === "sm" ? "text-lg" : size === "lg" ? "text-4xl" : "text-2xl"
-        } ${compact ? "hidden xl:inline" : ""}`}
+        className={`font-display font-semibold tracking-wide text-vintage-gradient ${
+          size === "sm" ? "text-base" : size === "lg" ? "text-4xl" : "text-2xl"
+        } ${showWordmark ? "inline" : compact ? "hidden xl:inline" : ""}`}
       >
         Zumelia
       </span>

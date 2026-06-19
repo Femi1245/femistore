@@ -5,46 +5,46 @@
    so the whole app restyles without touching every component.
    ────────────────────────────────────────────────────────────────────────── */
 
-/* Light mode (default) */
+/* Light mode — editorial luxury */
 :root {
   color-scheme: light;
-  --vintage-cream: #f7f6f3;
+  --vintage-cream: #faf8f5;
   --vintage-paper: #ffffff;
-  --vintage-paper-dark: #f1efea;
-  --vintage-ink: #1c1917;
-  --vintage-ink-muted: #78716c;
-  --vintage-rust: #e0613a;
-  --vintage-rust-dark: #c24e2c;
-  --vintage-magenta: #db2777;
-  --vintage-violet: #7c3aed;
-  --vintage-cyan: #0891b2;
-  --vintage-mustard: #e8a838;
-  --vintage-olive: #5f8a5a;
-  --vintage-glow: color-mix(in srgb, var(--vintage-rust) 35%, transparent);
-  --vintage-border: #e7e3dd;
-  --vintage-border-strong: #d8d2c8;
-  --vintage-shadow: rgba(28, 25, 23, 0.10);
-  --vintage-shadow-soft: rgba(28, 25, 23, 0.06);
-  --vintage-ring: color-mix(in srgb, var(--vintage-rust) 30%, transparent);
+  --vintage-paper-dark: #f3f0eb;
+  --vintage-ink: #1a1a1a;
+  --vintage-ink-muted: #6b6b6b;
+  --vintage-rust: #c9a962;
+  --vintage-rust-dark: #a88b4a;
+  --vintage-magenta: #9d174d;
+  --vintage-violet: #5c4d7a;
+  --vintage-cyan: #4a6670;
+  --vintage-mustard: #d4b876;
+  --vintage-olive: #5a6b52;
+  --vintage-glow: color-mix(in srgb, var(--vintage-rust) 28%, transparent);
+  --vintage-border: #e8e4dd;
+  --vintage-border-strong: #d4cec4;
+  --vintage-shadow: rgba(26, 26, 26, 0.08);
+  --vintage-shadow-soft: rgba(26, 26, 26, 0.04);
+  --vintage-ring: color-mix(in srgb, var(--vintage-rust) 35%, transparent);
   --vintage-input-bg: #ffffff;
-  --vintage-card-inset-bg: #f5f3ef;
-  --vintage-btn-text: #ffffff;
-  --vintage-skeleton-mid: #efece6;
+  --vintage-card-inset-bg: #f7f4ef;
+  --vintage-btn-text: #1a1a1a;
+  --vintage-skeleton-mid: #efeae3;
 
   --background: var(--vintage-cream);
   --foreground: var(--vintage-ink);
 }
 
-/* Dark mode — dark-first neon (default theme) */
+/* Dark mode — charcoal + gold */
 .dark {
   color-scheme: dark;
-  --vintage-cream: #0b0b0d;
-  --vintage-paper: #141417;
-  --vintage-paper-dark: #1c1c20;
-  --vintage-ink: #f4f4f5;
-  --vintage-ink-muted: #9b9ba4;
-  --vintage-rust: #f0764e;
-  --vintage-rust-dark: #d65f38;
+  --vintage-cream: #141414;
+  --vintage-paper: #1c1c1c;
+  --vintage-paper-dark: #242424;
+  --vintage-ink: #f5f3ef;
+  --vintage-ink-muted: #a3a3a3;
+  --vintage-rust: #d4b876;
+  --vintage-rust-dark: #c9a962;
   --vintage-magenta: #ec4899;
   --vintage-violet: #8b5cf6;
   --vintage-cyan: #22d3ee;
@@ -57,7 +57,7 @@
   --vintage-ring: color-mix(in srgb, var(--vintage-rust) 55%, transparent);
   --vintage-input-bg: rgba(255, 255, 255, 0.05);
   --vintage-card-inset-bg: rgba(255, 255, 255, 0.04);
-  --vintage-btn-text: #ffffff;
+  --vintage-btn-text: #141414;
   --vintage-skeleton-mid: #232327;
   --vintage-glow: color-mix(in srgb, var(--vintage-rust) 55%, transparent);
 
@@ -103,8 +103,7 @@ html {
 body {
   background-color: var(--vintage-cream);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(224, 97, 58, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(232, 168, 56, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse 70% 45% at 50% -15%, rgba(201, 169, 98, 0.07) 0%, transparent 55%);
   background-attachment: fixed;
   color: var(--vintage-ink);
   font-family: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -113,11 +112,9 @@ body {
 }
 
 .dark body {
-  background-color: #0b0b0d;
+  background-color: #141414;
   background-image:
-    radial-gradient(ellipse 55% 40% at 12% 0%, rgba(240, 118, 78, 0.16) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 92% 8%, rgba(139, 92, 246, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 80% 100%, rgba(34, 211, 238, 0.08) 0%, transparent 55%);
+    radial-gradient(ellipse 55% 40% at 50% 0%, rgba(212, 184, 118, 0.1) 0%, transparent 60%);
 }
 
 ::selection {
@@ -138,7 +135,7 @@ body {
 /* ── Cards ─────────────────────────────────────────────────────────────── */
 .vintage-card {
   border: 1px solid var(--vintage-border);
-  border-radius: 16px;
+  border-radius: 4px;
   background: var(--vintage-paper);
   box-shadow:
     0 1px 2px var(--vintage-shadow-soft),
@@ -155,10 +152,13 @@ body {
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 .vintage-btn {
   border: 1px solid var(--vintage-rust-dark);
-  border-radius: 10px;
+  border-radius: 2px;
   background: linear-gradient(180deg, var(--vintage-rust) 0%, var(--vintage-rust-dark) 100%);
   color: var(--vintage-btn-text);
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.8125rem;
   box-shadow:
     0 1px 2px var(--vintage-shadow-soft),
     0 6px 16px -8px color-mix(in srgb, var(--vintage-rust) 60%, transparent);
@@ -187,7 +187,7 @@ body {
 
 .vintage-btn-outline {
   border: 1px solid var(--vintage-border-strong);
-  border-radius: 10px;
+  border-radius: 2px;
   background: var(--vintage-paper);
   color: var(--vintage-ink);
   font-weight: 600;
@@ -277,12 +277,12 @@ body {
 
 /* ── Type ──────────────────────────────────────────────────────────────── */
 .font-display {
-  font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-heading), ui-serif, Georgia, serif;
+  letter-spacing: 0.01em;
 }
 
 .text-vintage-gradient {
-  background: linear-gradient(135deg, var(--vintage-rust) 0%, var(--vintage-mustard) 100%);
+  background: linear-gradient(135deg, var(--vintage-ink) 0%, var(--vintage-rust) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -388,25 +388,45 @@ body {
   box-shadow: 0 0 16px -6px var(--vintage-glow);
 }
 
-/* ── Mobile app shell ─────────────────────────────────────────────────────── */
+/* ── Mobile app shell — editorial luxury ─────────────────────────────────── */
 .mobile-top-bar {
   padding-top: env(safe-area-inset-top);
 }
 
 .mobile-tab-bar {
-  border-top: 1px solid var(--vintage-border);
-  background: color-mix(in srgb, var(--vintage-paper) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(16px);
-  -webkit-backdrop-filter: saturate(180%) blur(16px);
-  box-shadow: 0 -8px 32px -12px var(--vintage-shadow);
+  border-top: 1px solid var(--vintage-border-strong);
+  background: color-mix(in srgb, var(--vintage-cream) 94%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: none;
 }
 
 .mobile-tab-active-pill {
-  background: color-mix(in srgb, var(--vintage-rust) 14%, transparent);
+  background: transparent;
 }
 
 .mobile-tab-item-active .mobile-tab-active-pill {
-  background: color-mix(in srgb, var(--vintage-rust) 16%, transparent);
+  background: transparent;
+  color: var(--vintage-rust);
+}
+
+.mobile-tab-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mobile-tab-center-btn {
+  border-radius: 9999px;
+  border: 1px solid var(--vintage-border-strong);
+  box-shadow: 0 4px 20px -8px var(--vintage-shadow);
+}
+
+.mobile-tab-center-btn-active {
+  background: var(--vintage-ink);
+  border-color: var(--vintage-ink);
+  color: var(--vintage-cream);
 }
 
 .mobile-tab-bar-preview {
@@ -425,18 +445,18 @@ body {
 
 @media (max-width: 767px) {
   .vintage-card {
-    border-radius: 14px;
+    border-radius: 2px;
   }
 
   .mobile-compact-main .vintage-card {
-    border-radius: 12px;
+    border-radius: 2px;
   }
 }
 
 .dark .mobile-tab-bar {
-  background: rgba(11, 11, 13, 0.82);
-  border-color: var(--vintage-border);
-  box-shadow: 0 -12px 40px -16px rgba(0, 0, 0, 0.85);
+  background: rgba(20, 20, 20, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
 }
 
 .dark .mobile-tab-bar-preview {

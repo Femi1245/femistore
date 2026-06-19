@@ -98,7 +98,7 @@ export function MobileBottomNav({
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Main navigation"
     >
-      <div className="mx-auto flex max-w-lg items-end justify-around px-2 pt-1.5 pb-1">
+      <div className="mx-auto flex max-w-lg items-end justify-around px-3 pt-2 pb-1.5">
         {tabs.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
@@ -114,24 +114,24 @@ export function MobileBottomNav({
               <Link
                 key={tab.href}
                 href={tab.href}
-                className="mobile-tab-center -mt-4 flex flex-col items-center gap-0.5"
+                className="mobile-tab-center -mt-5 flex flex-col items-center gap-1"
                 aria-label={tab.label}
                 aria-current={active ? "page" : undefined}
               >
                 <span
-                  className={`relative flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg transition-transform active:scale-95 ${
+                  className={`mobile-tab-center-btn relative flex h-12 w-12 items-center justify-center transition-transform active:scale-95 ${
                     active
-                      ? "bg-gradient-to-br from-vintage-rust to-vintage-rust-dark text-white"
-                      : "bg-vintage-paper text-vintage-rust ring-1 ring-vintage-border"
+                      ? "mobile-tab-center-btn-active"
+                      : "bg-vintage-paper text-vintage-ink"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5" strokeWidth={1.75} />
                   <UnreadChatBadge count={badgeCount} />
                 </span>
                 {appearance.showTabLabels && (
                   <span
-                    className={`text-[10px] font-semibold ${
-                      active ? "text-vintage-rust" : "text-vintage-ink-muted"
+                    className={`mobile-tab-label ${
+                      active ? "text-vintage-ink" : "text-vintage-ink-muted"
                     }`}
                   >
                     {tab.label}
@@ -147,7 +147,7 @@ export function MobileBottomNav({
             <Link
               key={tab.href}
               href={tab.href}
-              className={`mobile-tab-item flex min-w-[3rem] flex-1 flex-col items-center gap-0.5 py-1 ${
+              className={`mobile-tab-item flex min-w-[3rem] flex-1 flex-col items-center gap-1 py-1 ${
                 active ? "mobile-tab-item-active" : ""
               }`}
               aria-label={tab.label}
@@ -156,31 +156,31 @@ export function MobileBottomNav({
               <span className="relative flex h-8 w-8 items-center justify-center">
                 {isProfile ? (
                   <span
-                    className={`rounded-full ring-2 transition ${
-                      active ? "ring-vintage-rust" : "ring-transparent"
+                    className={`rounded-full ring-1 transition ${
+                      active ? "ring-vintage-rust" : "ring-vintage-border"
                     }`}
                   >
                     <Avatar name={displayName} avatarUrl={avatarUrl} size="sm" />
                   </span>
                 ) : (
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
-                      active ? "mobile-tab-active-pill text-vintage-rust" : "text-vintage-ink-muted"
+                    className={`mobile-tab-active-pill flex h-8 w-8 items-center justify-center transition ${
+                      active ? "text-vintage-rust" : "text-vintage-ink-muted"
                     }`}
                   >
-                    <Icon className="h-[18px] w-[18px]" />
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2 : 1.5} />
                   </span>
                 )}
                 {badgeCount > 0 && !isProfile && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-vintage-rust px-1 text-[10px] font-bold text-[var(--vintage-btn-text)]">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-vintage-ink px-1 text-[10px] font-bold text-vintage-cream">
                     {badgeCount > 99 ? "99+" : badgeCount}
                   </span>
                 )}
               </span>
               {appearance.showTabLabels && (
                 <span
-                  className={`text-[10px] font-semibold leading-none ${
-                    active ? "text-vintage-rust" : "text-vintage-ink-muted"
+                  className={`mobile-tab-label ${
+                    active ? "text-vintage-ink" : "text-vintage-ink-muted"
                   }`}
                 >
                   {tab.label}
