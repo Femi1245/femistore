@@ -15,8 +15,9 @@ import {
   validatePassword,
   validateUsername,
 } from "@/lib/auth-validation";
-import { COUNTRIES } from "@/lib/countries";
+import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } from "@/lib/birthday";
 import { BUSINESS_CATEGORIES } from "@/lib/business";
+import { COUNTRIES } from "@/lib/countries";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
 import { SetupNotice } from "@/components/auth/SetupNotice";
@@ -34,6 +35,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [country, setCountry] = useState("Global");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<"personal" | "business">("personal");
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState("Other");
@@ -164,6 +167,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
           return;
         }
 
+        const dobError = dateOfBirth ? validateDateOfBirth(dateOfBirth) : undefined;
+        if (dobError) {
+          setDateOfBirthError(dobError);
+          setLoading(false);
+          return;
+        }
+        setDateOfBirthError(null);
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -173,6 +184,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               display_name: displayName.trim(),
               username: cleanUsernameValue,
               country,
+              ...(dateOfBirth ? { date_of_birth: dateOfBirth } : {}),
               account_kind: accountType,
               ...(accountType === "business"
                 ? {
@@ -203,6 +215,24 @@ export function AuthForm({ mode }: { mode: Mode }) {
             setError(profileError ?? "Could not create your profile.");
             return;
           }
+
+          if (!profile.date_of_birth && !dateOfBirth) {
+            router.push(
+              `/profile/birthday?next=${encodeURIComponent(
+                accountType === "business" ? "/profile/business/setup" : "/chat",
+              )}`,
+            );
+            router.refresh();
+            return;
+          }
+
+          if (dateOfBirth && !profile.date_of_birth) {
+            await supabase
+              .from("profiles")
+              .update({ date_of_birth: dateOfBirth })
+              .eq("id", profile.id);
+          }
+
           router.push(
             accountType === "business" ? "/profile/business/setup" : "/chat",
           );
@@ -404,6 +434,33 @@ export function AuthForm({ mode }: { mode: Mode }) {
                   placeholder="unique_handle"
                   autoComplete="username"
                 />
+                <div>
+                  <label
+                    htmlFor="dateOfBirth"
+                    className="mb-1 block text-xs font-medium text-vintage-ink-muted"
+                  >
+                    Date of birth
+                  </label>
+                  <input
+                    id="dateOfBirth"
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => {
+                      setDateOfBirth(e.target.value);
+                      setDateOfBirthError(null);
+                    }}
+                    min={minBirthdayInputValue()}
+                    max={maxBirthdayInputValue()}
+                    className="vintage-input w-full px-4 py-2.5"
+                  />
+                  {dateOfBirthError ? (
+                    <p className="mt-1 text-xs text-vintage-rust">{dateOfBirthError}</p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-vintage-ink-muted">
+                      Optional now — you can add it later. Must be 13+.
+                    </p>
+                  )}
+                </div>
                 <div>
                   <label
                     htmlFor="country"

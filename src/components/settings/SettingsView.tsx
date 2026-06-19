@@ -136,6 +136,19 @@ export function SettingsView({ profile }: { profile: Profile }) {
 
       <MobileAppearanceSection />
 
+      <section className="vintage-card p-5 space-y-3">
+        <h2 className="font-display font-bold text-vintage-ink">Profile</h2>
+        <p className="text-sm text-vintage-ink-muted">
+          Set your birthday so friends can celebrate with you on your profile.
+        </p>
+        <Link
+          href="/profile/birthday"
+          className="vintage-btn-outline inline-flex px-4 py-2 text-sm font-semibold"
+        >
+          🎂 Birthday settings
+        </Link>
+      </section>
+
       <section className="vintage-card p-5 space-y-4">
         <h2 className="font-display font-bold text-vintage-ink">Privacy</h2>
         <label className="flex items-center justify-between gap-4">

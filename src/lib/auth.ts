@@ -118,6 +118,9 @@ export async function ensureProfile(
         username,
         display_name: displayName,
         country: String(meta.country ?? "Global"),
+        ...(meta.date_of_birth
+          ? { date_of_birth: String(meta.date_of_birth).slice(0, 10) }
+          : {}),
         account_kind: accountKind,
         active_mode: isBusinessSignup ? "business" : "personal",
         business_enabled: isBusinessSignup,

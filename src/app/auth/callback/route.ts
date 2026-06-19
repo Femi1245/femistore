@@ -50,7 +50,13 @@ export async function GET(request: Request) {
       );
     }
 
-    return pending;
+    const dest = profile.date_of_birth
+      ? next.startsWith("/")
+        ? next
+        : "/chat"
+      : `/profile/birthday?next=${encodeURIComponent(next.startsWith("/") ? next : "/chat")}`;
+
+    return redirectWithCookies(`${origin}${dest}`, applied);
   } catch {
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent("Authentication service is not configured")}`,

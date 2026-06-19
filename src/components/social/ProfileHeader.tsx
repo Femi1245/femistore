@@ -9,6 +9,7 @@ import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { areMutualFriends, canMessageUser, findOrCreateConversation } from "@/lib/chat";
 import { acceptsBusinessContact, hasBusinessProfile } from "@/lib/business";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
+import { isBirthdayToday } from "@/lib/birthday";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
@@ -67,6 +68,7 @@ export function ProfileHeader({
   }
 
   const birthdate = formatBirthdate(profile.date_of_birth);
+  const birthdayToday = isBirthdayToday(profile.date_of_birth);
   const isBusinessAccount = profile.account_kind === "business";
   const showBusiness = hasBusinessProfile(profile);
   const showCover = showBusiness && !!profile.business_cover_url;
@@ -206,6 +208,21 @@ export function ProfileHeader({
                   .filter(Boolean)
                   .join(" · ")}
               </p>
+            )}
+
+            {birthdayToday && (
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-vintage-rust/15 px-3 py-1 text-sm font-semibold text-vintage-rust">
+                🎂 Birthday today!
+              </p>
+            )}
+
+            {isOwn && !profile.date_of_birth && (
+              <Link
+                href="/profile/birthday"
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-vintage-mustard/20 px-3 py-2 text-sm font-medium text-vintage-ink hover:bg-vintage-mustard/30"
+              >
+                🎂 Add your birthday
+              </Link>
             )}
 
             {profile.bio && (

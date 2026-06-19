@@ -177,7 +177,15 @@ export async function markGiftPaidAndFulfill(
     .maybeSingle();
 
   if (!gift) return; // already processed, failed, or not found
-  await fulfillGift(supabase, gift as SentGift);
+  const fulfilled = gift as SentGift;
+  await fulfillGift(supabase, fulfilled);
+
+  try {
+    const { sendPurchaseConfirmationEmail } = await import("./email-notifications");
+    await sendPurchaseConfirmationEmail(fulfilled);
+  } catch {
+    // Email failure must not block gift delivery.
+  }
 }
 
 /** Demo flow: insert as "mock" and fulfil immediately (no real charge). */
@@ -191,5 +199,13 @@ export async function sendGiftDemo(
   });
   if (error || !gift) return { gift: null, error };
   await fulfillGift(supabase, gift);
+
+  try {
+    const { sendPurchaseConfirmationEmail } = await import("./email-notifications");
+    await sendPurchaseConfirmationEmail(gift);
+  } catch {
+    // Email failure must not block gift delivery.
+  }
+
   return { gift };
 }

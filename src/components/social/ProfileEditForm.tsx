@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadMedia } from "@/lib/storage";
+import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } from "@/lib/birthday";
 import { COUNTRIES } from "@/lib/countries";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -35,6 +36,13 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
     setLoading(true);
     setError(null);
     setSuccess(false);
+
+    const dobError = dateOfBirth ? validateDateOfBirth(dateOfBirth) : undefined;
+    if (dobError) {
+      setError(dobError);
+      setLoading(false);
+      return;
+    }
 
     const supabase = createClient();
     let newAvatarUrl = avatarUrl;
@@ -151,15 +159,28 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-vintage-ink-muted">
-          Date of birth
-        </label>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <label className="block text-xs font-medium text-vintage-ink-muted">
+            Date of birth
+          </label>
+          <a
+            href="/profile/birthday"
+            className="text-xs font-semibold text-vintage-rust hover:underline"
+          >
+            Birthday page →
+          </a>
+        </div>
         <input
           type="date"
           value={dateOfBirth}
           onChange={(e) => setDateOfBirth(e.target.value)}
+          min={minBirthdayInputValue()}
+          max={maxBirthdayInputValue()}
           className="vintage-input w-full px-4 py-2.5"
         />
+        <p className="mt-1 text-[11px] text-vintage-ink-muted">
+          Shown on your profile so friends can celebrate with you.
+        </p>
       </div>
 
       <PhoneVerification profile={profile} onVerified={() => router.refresh()} />
