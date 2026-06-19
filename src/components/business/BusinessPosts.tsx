@@ -8,7 +8,7 @@ import { CreatePost } from "@/components/social/CreatePost";
 import { PostCard } from "@/components/social/PostCard";
 import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 
-export function ProfilePosts({
+export function BusinessPosts({
   profileUserId,
   currentUser,
 }: {
@@ -25,7 +25,7 @@ export function ProfilePosts({
       createClient(),
       profileUserId,
       currentUser.id,
-      "personal",
+      "business",
     );
     setPosts(data);
     setLoading(false);
@@ -38,7 +38,11 @@ export function ProfilePosts({
   return (
     <div className="space-y-4">
       {isOwn && (
-        <CreatePost user={currentUser} onPosted={refresh} postContext="personal" />
+        <CreatePost
+          user={currentUser}
+          onPosted={refresh}
+          postContext="business"
+        />
       )}
 
       {loading ? (
@@ -47,8 +51,10 @@ export function ProfilePosts({
           <PostCardSkeleton />
         </>
       ) : posts.length === 0 ? (
-        <p className="vintage-card py-8 text-center text-vintage-ink-muted">
-          {isOwn ? "You haven't posted yet." : "No posts yet."}
+        <p className="vintage-card py-10 text-center text-vintage-ink-muted">
+          {isOwn
+            ? "No business posts yet. Share your first product, offer, or update above."
+            : "This business hasn't posted yet."}
         </p>
       ) : (
         posts.map((post) => (

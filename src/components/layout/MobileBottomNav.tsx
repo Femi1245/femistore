@@ -13,6 +13,8 @@ import {
   MOBILE_APPEARANCE_EVENT,
   type MobileAppearance,
 } from "@/lib/mobile-appearance";
+import { getDefaultProfileUrl } from "@/lib/business";
+import type { Profile } from "@/lib/types";
 
 type Tab = {
   href: string;
@@ -23,8 +25,8 @@ type Tab = {
   badge?: "chat" | "notifications";
 };
 
-function buildTabs(username: string): Tab[] {
-  const profileHref = `/profile/${username}`;
+function buildTabs(user: Profile): Tab[] {
+  const profileHref = getDefaultProfileUrl(user);
   return [
     {
       href: "/feed",
@@ -58,28 +60,19 @@ function buildTabs(username: string): Tab[] {
       label: "You",
       icon: User,
       match: (p) =>
-        p.startsWith("/profile/") &&
-        !p.endsWith("/edit") &&
-        !p.startsWith("/profile/settings") &&
-        !p.startsWith("/profile/business"),
+        (p.startsWith("/profile/") &&
+          !p.endsWith("/edit") &&
+          !p.startsWith("/profile/settings") &&
+          !p.startsWith("/profile/business")) ||
+        p.startsWith("/business/"),
     },
   ];
 }
 
-export function MobileBottomNav({
-  userId,
-  username,
-  displayName,
-  avatarUrl,
-}: {
-  userId: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string | null;
-}) {
+export function MobileBottomNav({ user }: { user: Profile }) {
   const pathname = usePathname();
-  const unreadChats = useUnreadChatCount(userId);
-  const unreadNotifications = useUnreadNotificationCount(userId);
+  const unreadChats = useUnreadChatCount(user.id);
+  const unreadNotifications = useUnreadNotificationCount(user.id);
   const [appearance, setAppearance] = useState<MobileAppearance>(() =>
     getMobileAppearance(),
   );
@@ -90,7 +83,7 @@ export function MobileBottomNav({
     return () => window.removeEventListener(MOBILE_APPEARANCE_EVENT, sync);
   }, []);
 
-  const tabs = buildTabs(username);
+  const tabs = buildTabs(user);
 
   return (
     <nav
@@ -160,7 +153,7 @@ export function MobileBottomNav({
                       active ? "ring-vintage-rust" : "ring-vintage-border"
                     }`}
                   >
-                    <Avatar name={displayName} avatarUrl={avatarUrl} size="sm" />
+                    <Avatar name={user.display_name} avatarUrl={user.avatar_url} size="sm" />
                   </span>
                 ) : (
                   <span

@@ -91,6 +91,7 @@ from (values
   ('messages','sent_gift_id'),
   ('profiles','last_seen_at'),
   ('posts','edited_at'),
+  ('posts','post_context'),
   ('messages','edited_at'),
   ('profiles','account_kind'),
   ('profiles','business_enabled'),

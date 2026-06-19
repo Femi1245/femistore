@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Compass, Newspaper, Users } from "lucide-react";
+import { Briefcase, Compass, Newspaper, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getActiveMode } from "@/lib/business";
 import { loadFeed, type FeedMode } from "@/lib/social";
 import type { PostWithMeta, Profile } from "@/lib/types";
 import { CreatePost } from "@/components/social/CreatePost";
@@ -14,6 +15,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<FeedMode>("friends");
+  const inBusinessMode = getActiveMode(currentUser) === "business";
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -35,12 +37,12 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
           </div>
           <div className="min-w-0">
             <h1 className="font-display text-xl font-bold tracking-tight text-vintage-ink md:text-2xl">
-              Your Feed
+              Personal feed
             </h1>
             <p className="text-sm text-vintage-ink-muted">
               {mode === "friends"
-                ? "Friends first — newest posts, no algorithm"
-                : "Everyone you follow, newest first"}
+                ? "Friends only — personal posts, not business listings"
+                : "People you follow — personal posts only"}
             </p>
           </div>
         </div>
@@ -70,7 +72,24 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
         </div>
       </div>
 
-      <CreatePost user={currentUser} onPosted={refresh} />
+      {inBusinessMode ? (
+        <div className="vintage-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-vintage-ink">You are in business mode</p>
+            <p className="text-xs text-vintage-ink-muted">
+              Personal feed is for friends. Post products and offers on your storefront.
+            </p>
+          </div>
+          <Link
+            href={`/business/${currentUser.username}`}
+            className="vintage-btn inline-flex items-center gap-2 px-4 py-2 text-sm"
+          >
+            <Briefcase className="h-4 w-4" /> My storefront
+          </Link>
+        </div>
+      ) : (
+        <CreatePost user={currentUser} onPosted={refresh} postContext="personal" />
+      )}
 
       {loading ? (
         <div className="space-y-4">

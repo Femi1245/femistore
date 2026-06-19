@@ -23,6 +23,7 @@ import {
 } from "@/lib/content-filters";
 import { loadMyAppeals, submitAppeal } from "@/lib/safety";
 import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceSection";
+import { canAccessPersonalProfile } from "@/lib/business";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
 
 export function SettingsView({ profile }: { profile: Profile }) {
@@ -136,18 +137,20 @@ export function SettingsView({ profile }: { profile: Profile }) {
 
       <MobileAppearanceSection />
 
-      <section className="vintage-card p-5 space-y-3">
-        <h2 className="font-display font-bold text-vintage-ink">Profile</h2>
-        <p className="text-sm text-vintage-ink-muted">
-          Set your birthday so friends can celebrate with you on your profile.
-        </p>
-        <Link
-          href="/profile/birthday"
-          className="vintage-btn-outline inline-flex px-4 py-2 text-sm font-semibold"
-        >
-          🎂 Birthday settings
-        </Link>
-      </section>
+      {canAccessPersonalProfile(profile) && (
+        <section className="vintage-card p-5 space-y-3">
+          <h2 className="font-display font-bold text-vintage-ink">Personal profile</h2>
+          <p className="text-sm text-vintage-ink-muted">
+            Birthday and personal details — not shown on your business storefront.
+          </p>
+          <Link
+            href="/profile/birthday"
+            className="vintage-btn-outline inline-flex px-4 py-2 text-sm font-semibold"
+          >
+            🎂 Birthday settings
+          </Link>
+        </section>
+      )}
 
       <section className="vintage-card p-5 space-y-4">
         <h2 className="font-display font-bold text-vintage-ink">Privacy</h2>

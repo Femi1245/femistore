@@ -23,6 +23,11 @@ import {
   resharePost,
   toggleLike,
 } from "@/lib/social";
+import {
+  getBusinessProfileUrl,
+  getPersonalProfileUrl,
+  hasBusinessProfile,
+} from "@/lib/business";
 import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
@@ -178,23 +183,33 @@ export function PostCard({
 
   if (!author) return null;
 
+  const isBusinessPost = (post.post_context ?? "personal") === "business";
+  const authorHref =
+    isBusinessPost && hasBusinessProfile(author)
+      ? getBusinessProfileUrl(author.username)
+      : getPersonalProfileUrl(author.username);
+  const authorLabel =
+    isBusinessPost && author.business_name ? author.business_name : author.display_name;
+
   return (
     <article className="vintage-card p-4">
       <div className="flex items-start gap-3">
-        <Link href={`/profile/${author.username}`}>
-          <Avatar
-            name={author.display_name}
-            avatarUrl={author.avatar_url}
-          />
+        <Link href={authorHref}>
+          <Avatar name={authorLabel} avatarUrl={author.avatar_url} />
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <Link
-              href={`/profile/${author.username}`}
+              href={authorHref}
               className="font-semibold hover:text-vintage-rust"
             >
-              {author.display_name}
+              {authorLabel}
             </Link>
+            {isBusinessPost && (
+              <span className="rounded-sm bg-vintage-rust/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vintage-rust">
+                Listing
+              </span>
+            )}
             <span className="text-vintage-ink-muted">@{author.username}</span>
             <span className="text-xs text-vintage-ink-muted/70">
               · {formatPostDate(post.created_at)}

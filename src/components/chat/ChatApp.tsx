@@ -1763,12 +1763,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           )}
         </main>
       </div>
-      <MobileBottomNav
-        userId={currentUser.id}
-        username={currentUser.username}
-        displayName={currentUser.display_name}
-        avatarUrl={currentUser.avatar_url}
-      />
+      <MobileBottomNav user={currentUser} />
     </div>
   );
 }

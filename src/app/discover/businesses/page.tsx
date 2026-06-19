@@ -14,7 +14,7 @@ export default async function DiscoverBusinessesPage() {
 
   return (
     <AppShell user={user} wide>
-      <BusinessDiscoveryList currentUserId={user.id} />
+      <BusinessDiscoveryList currentUser={user} />
     </AppShell>
   );
 }

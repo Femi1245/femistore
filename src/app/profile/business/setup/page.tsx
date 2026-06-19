@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { BusinessSetupForm } from "@/components/business/BusinessSetupForm";
+import { getBusinessProfileUrl, hasBusinessProfile } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -13,7 +14,7 @@ export default async function BusinessSetupPage() {
   const user = await requireUser();
 
   if (user.business_enabled && user.business_name && user.business_description?.trim()) {
-    redirect("/profile/business/edit");
+    redirect(getBusinessProfileUrl(user.username));
   }
 
   return (

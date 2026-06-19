@@ -4,7 +4,12 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { BUSINESS_CATEGORIES, setupBusinessProfile, updateBusinessProfile } from "@/lib/business";
+import {
+  BUSINESS_CATEGORIES,
+  getBusinessProfileUrl,
+  setupBusinessProfile,
+  updateBusinessProfile,
+} from "@/lib/business";
 import { uploadMedia } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 
@@ -99,7 +104,7 @@ export function BusinessSetupForm({
       return;
     }
 
-    router.push(`/profile/${profile.username}`);
+    router.push(getBusinessProfileUrl(profile.username));
     router.refresh();
   }
 

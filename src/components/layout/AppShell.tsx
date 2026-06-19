@@ -25,12 +25,7 @@ export function AppShell({
       <AppNav user={user} />
       {showStatus && <StatusBar user={user} />}
       <AppShellMain maxWidth={maxWidth}>{children}</AppShellMain>
-      <MobileBottomNav
-        userId={user.id}
-        username={user.username}
-        displayName={user.display_name}
-        avatarUrl={user.avatar_url}
-      />
+      <MobileBottomNav user={user} />
     </div>
   );
 }

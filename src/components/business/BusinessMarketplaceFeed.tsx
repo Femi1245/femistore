@@ -2,44 +2,43 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { loadUserPosts } from "@/lib/social";
+import { loadBusinessMarketplacePosts } from "@/lib/social";
 import type { PostWithMeta, Profile } from "@/lib/types";
-import { CreatePost } from "@/components/social/CreatePost";
 import { PostCard } from "@/components/social/PostCard";
 import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 
-export function ProfilePosts({
-  profileUserId,
+export function BusinessMarketplaceFeed({
   currentUser,
+  title = "Marketplace",
+  description = "Latest products, offers, and listings from businesses.",
 }: {
-  profileUserId: string;
   currentUser: Profile;
+  title?: string;
+  description?: string;
 }) {
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
-  const isOwn = profileUserId === currentUser.id;
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const data = await loadUserPosts(
-      createClient(),
-      profileUserId,
-      currentUser.id,
-      "personal",
-    );
+    const data = await loadBusinessMarketplacePosts(createClient(), currentUser.id);
     setPosts(data);
     setLoading(false);
-  }, [profileUserId, currentUser.id]);
+  }, [currentUser.id]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   return (
-    <div className="space-y-4">
-      {isOwn && (
-        <CreatePost user={currentUser} onPosted={refresh} postContext="personal" />
-      )}
+    <section className="space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-vintage-ink-muted">
+          Buy & sell
+        </p>
+        <h2 className="font-display text-xl font-semibold text-vintage-ink">{title}</h2>
+        <p className="mt-1 text-sm text-vintage-ink-muted">{description}</p>
+      </div>
 
       {loading ? (
         <>
@@ -47,8 +46,8 @@ export function ProfilePosts({
           <PostCardSkeleton />
         </>
       ) : posts.length === 0 ? (
-        <p className="vintage-card py-8 text-center text-vintage-ink-muted">
-          {isOwn ? "You haven't posted yet." : "No posts yet."}
+        <p className="vintage-card py-10 text-center text-sm text-vintage-ink-muted">
+          No business listings yet. Businesses can post products and offers on their storefront.
         </p>
       ) : (
         posts.map((post) => (
@@ -60,6 +59,6 @@ export function ProfilePosts({
           />
         ))
       )}
-    </div>
+    </section>
   );
 }

@@ -58,6 +58,7 @@ export async function updateSession(request: NextRequest) {
     "/chat",
     "/feed",
     "/profile",
+    "/business",
     "/live",
     "/watch",
     "/notifications",

@@ -219,6 +219,8 @@ export type ActiveChat = {
   myRole?: MemberRole;
 };
 
+export type PostContext = "personal" | "business";
+
 export type Post = {
   id: string;
   user_id: string;
@@ -226,6 +228,7 @@ export type Post = {
   media_url: string | null;
   media_type: "image" | "video" | null;
   reshare_of: string | null;
+  post_context?: PostContext;
   created_at: string;
   edited_at: string | null;
   author?: Profile;

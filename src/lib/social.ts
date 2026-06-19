@@ -254,6 +254,41 @@ export async function loadFeed(
     .limit(50);
 
   const enriched = await enrichPosts(supabase, (posts as Post[]) ?? [], userId);
+  const personalOnly = enriched.filter(
+    (p) => (p.post_context ?? "personal") === "personal",
+  );
+  const filtered = personalOnly.filter(
+    (p) => !blockedIds.has(p.user_id) && !mutedIds.has(p.user_id),
+  );
+  return filterPostsByKeywords(filtered, keywords);
+}
+
+export async function loadBusinessMarketplacePosts(
+  supabase: SupabaseClient,
+  currentUserId: string,
+  limit = 40,
+): Promise<PostWithMeta[]> {
+  const { loadBlockedIds, loadMutedIds } = await import("@/lib/safety");
+  const { loadKeywordMutes, filterPostsByKeywords } = await import("@/lib/content-filters");
+
+  const [blockedIds, mutedIds, keywordRows] = await Promise.all([
+    loadBlockedIds(supabase, currentUserId),
+    loadMutedIds(supabase, currentUserId),
+    loadKeywordMutes(supabase, currentUserId),
+  ]);
+  const keywords = keywordRows.map((k) => k.keyword);
+
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("post_context", "business")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const rows = ((posts as Post[]) ?? []).filter(
+    (p) => (p.post_context ?? "personal") === "business",
+  );
+  const enriched = await enrichPosts(supabase, rows, currentUserId);
   const filtered = enriched.filter(
     (p) => !blockedIds.has(p.user_id) && !mutedIds.has(p.user_id),
   );
@@ -264,15 +299,27 @@ export async function loadUserPosts(
   supabase: SupabaseClient,
   profileUserId: string,
   currentUserId: string,
+  postContext?: import("./types").PostContext,
 ): Promise<PostWithMeta[]> {
-  const { data: posts } = await supabase
+  let query = supabase
     .from("posts")
     .select("*")
     .eq("user_id", profileUserId)
     .order("created_at", { ascending: false })
     .limit(50);
 
-  return enrichPosts(supabase, (posts as Post[]) ?? [], currentUserId);
+  if (postContext) {
+    query = query.eq("post_context", postContext);
+  }
+
+  const { data: posts } = await query;
+
+  const rows = ((posts as Post[]) ?? []).filter((p) => {
+    if (!postContext) return true;
+    return (p.post_context ?? "personal") === postContext;
+  });
+
+  return enrichPosts(supabase, rows, currentUserId);
 }
 
 export async function loadComments(

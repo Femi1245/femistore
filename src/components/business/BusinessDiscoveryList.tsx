@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_CATEGORIES, loadDiscoverableBusinesses, loadFeaturedBusinesses } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 import { BusinessDiscoveryCard } from "@/components/business/BusinessDiscoveryCard";
+import { BusinessMarketplaceFeed } from "@/components/business/BusinessMarketplaceFeed";
 
-export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string }) {
+export function BusinessDiscoveryList({ currentUser }: { currentUser: Profile }) {
   const [businesses, setBusinesses] = useState<Profile[]>([]);
   const [featured, setFeatured] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,10 +27,10 @@ export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string
       }),
       loadFeaturedBusinesses(supabase, 6),
     ]);
-    setBusinesses(data.filter((b) => b.id !== currentUserId));
-    setFeatured(featuredData.filter((b) => b.id !== currentUserId));
+    setBusinesses(data.filter((b) => b.id !== currentUser.id));
+    setFeatured(featuredData.filter((b) => b.id !== currentUser.id));
     setLoading(false);
-  }, [search, category, location, currentUserId]);
+  }, [search, category, location, currentUser.id]);
 
   useEffect(() => {
     const timer = window.setTimeout(load, 250);
@@ -37,14 +38,21 @@ export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string
   }, [load]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <BusinessMarketplaceFeed
+        currentUser={currentUser}
+        title="Latest listings"
+        description="Products and offers posted by businesses — tap a listing to visit the storefront."
+      />
+
+      <div className="space-y-6">
       <div className="vintage-card p-4 sm:p-5">
         <div className="mb-4 flex items-center gap-2">
           <Briefcase className="h-5 w-5 text-vintage-rust" />
           <h1 className="font-display text-xl font-bold text-vintage-ink">Discover businesses</h1>
         </div>
         <p className="mb-4 text-sm text-vintage-ink-muted">
-          Browse businesses on Zumelia — find services, shops, creators, and professionals near you or worldwide.
+          Shop from businesses on Zumelia — browse listings, offers, and storefronts.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="relative sm:col-span-1">
@@ -113,6 +121,7 @@ export function BusinessDiscoveryList({ currentUserId }: { currentUserId: string
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

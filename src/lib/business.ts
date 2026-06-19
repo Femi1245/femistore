@@ -19,6 +19,14 @@ export const BUSINESS_CATEGORIES = [
 
 export type BusinessCategory = (typeof BUSINESS_CATEGORIES)[number];
 
+export function getBusinessProfileUrl(username: string): string {
+  return `/business/${username.toLowerCase()}`;
+}
+
+export function getPersonalProfileUrl(username: string): string {
+  return `/profile/${username.toLowerCase()}`;
+}
+
 export function hasBusinessProfile(profile: Profile): boolean {
   return (
     profile.account_kind === "business" ||
@@ -26,21 +34,63 @@ export function hasBusinessProfile(profile: Profile): boolean {
   );
 }
 
+export function isBusinessPrimaryAccount(profile: Profile): boolean {
+  return profile.account_kind === "business";
+}
+
+export function canSwitchAccountMode(profile: Profile): boolean {
+  return hasBusinessProfile(profile);
+}
+
+export function getActiveMode(profile: Profile): AccountMode {
+  if (profile.account_kind === "business") {
+    return profile.active_mode === "personal" ? "personal" : "business";
+  }
+  if (profile.business_enabled && profile.active_mode === "business") {
+    return "business";
+  }
+  return "personal";
+}
+
+export function getProfileUrlForMode(profile: Profile, mode?: AccountMode): string {
+  const resolved = mode ?? getActiveMode(profile);
+  if (resolved === "business" && hasBusinessProfile(profile)) {
+    return getBusinessProfileUrl(profile.username);
+  }
+  return getPersonalProfileUrl(profile.username);
+}
+
+/** Where the "You" tab and post-login home should land. */
+export function getDefaultProfileUrl(profile: Profile): string {
+  return getProfileUrlForMode(profile);
+}
+
+/** Personal area (bio, birthday, friend posts) — not the business storefront. */
+export function canAccessPersonalProfile(profile: Profile): boolean {
+  if (!isBusinessPrimaryAccount(profile)) return true;
+  return getActiveMode(profile) === "personal";
+}
+
+/** Business storefront — sell/buy posts and business tools. */
+export function canAccessBusinessProfile(profile: Profile): boolean {
+  return hasBusinessProfile(profile);
+}
+
+export function shouldRedirectPersonalToBusiness(
+  profile: Profile,
+  viewer: Profile,
+): boolean {
+  if (!isBusinessPrimaryAccount(profile)) return false;
+  const isOwner = profile.id === viewer.id;
+  if (!isOwner) return true;
+  return getActiveMode(viewer) === "business";
+}
+
 export function acceptsBusinessContact(profile: Profile): boolean {
   return (
     hasBusinessProfile(profile) &&
     (profile.business_contact_enabled ?? true)
   );
-}
-
-export function canSwitchAccountMode(profile: Profile): boolean {
-  return profile.account_kind === "personal" && profile.business_enabled;
-}
-
-export function getActiveMode(profile: Profile): AccountMode {
-  if (profile.account_kind === "business") return "business";
-  if (profile.business_enabled && profile.active_mode === "business") return "business";
-  return "personal";
 }
 
 export function getPublicDisplayName(profile: Profile): string {
@@ -69,8 +119,7 @@ export async function switchAccountMode(
   const { error } = await supabase
     .from("profiles")
     .update({ active_mode: mode })
-    .eq("id", userId)
-    .eq("business_enabled", true);
+    .eq("id", userId);
 
   if (error) return { error: error.message };
   return {};

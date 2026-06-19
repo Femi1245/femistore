@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { Briefcase, Globe, MapPin } from "lucide-react";
+import { getBusinessProfileUrl, getPublicDisplayName } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
-import { getPublicDisplayName } from "@/lib/business";
 
 export function BusinessDiscoveryCard({ profile }: { profile: Profile }) {
   const name = profile.business_name ?? getPublicDisplayName(profile);
 
   return (
     <Link
-      href={`/profile/${profile.username}`}
+      href={getBusinessProfileUrl(profile.username)}
       className="vintage-card group block overflow-hidden transition hover:ring-2 hover:ring-vintage-rust/30"
     >
       {profile.business_cover_url ? (

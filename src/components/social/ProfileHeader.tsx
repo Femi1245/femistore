@@ -7,7 +7,7 @@ import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { areMutualFriends, canMessageUser, findOrCreateConversation } from "@/lib/chat";
-import { acceptsBusinessContact, hasBusinessProfile } from "@/lib/business";
+import { acceptsBusinessContact, getBusinessProfileUrl, hasBusinessProfile, isBusinessPrimaryAccount } from "@/lib/business";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
 import { isBirthdayToday } from "@/lib/birthday";
 import type { FollowCounts, Profile } from "@/lib/types";
@@ -18,11 +18,13 @@ export function ProfileHeader({
   currentUser,
   initialCounts,
   initialFollowing,
+  variant = "personal",
 }: {
   profile: Profile;
   currentUser: Profile;
   initialCounts: FollowCounts;
   initialFollowing: boolean;
+  variant?: "personal" | "business";
 }) {
   const isOwn = profile.id === currentUser.id;
   const [counts, setCounts] = useState(initialCounts);
@@ -69,9 +71,9 @@ export function ProfileHeader({
 
   const birthdate = formatBirthdate(profile.date_of_birth);
   const birthdayToday = isBirthdayToday(profile.date_of_birth);
-  const isBusinessAccount = profile.account_kind === "business";
   const showBusiness = hasBusinessProfile(profile);
-  const showCover = showBusiness && !!profile.business_cover_url;
+  const personalView = variant === "personal";
+  const showCover = !personalView && showBusiness && !!profile.business_cover_url;
   const coverStyle =
     showCover
       ? {
@@ -93,7 +95,7 @@ export function ProfileHeader({
           {!showCover && (
             <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5)_0,transparent_40%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.35)_0,transparent_45%)]" />
           )}
-          {isOwn && showBusiness && (
+          {isOwn && showBusiness && !personalView && (
             <Link
               href="/profile/business/edit"
               className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-lg bg-black/50 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-black/65"
@@ -123,19 +125,19 @@ export function ProfileHeader({
                   </Link>
                   {showBusiness ? (
                     <Link
-                      href="/profile/business/edit"
+                      href={getBusinessProfileUrl(profile.username)}
                       className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm"
                     >
-                      <Briefcase className="h-4 w-4" /> Business
+                      <Briefcase className="h-4 w-4" /> Business page
                     </Link>
-                  ) : (
+                  ) : !isBusinessPrimaryAccount(profile) ? (
                     <Link
                       href="/profile/business/setup"
                       className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm"
                     >
                       <Briefcase className="h-4 w-4" /> Add business
                     </Link>
-                  )}
+                  ) : null}
                 </>
               ) : (
                 <>
@@ -184,23 +186,16 @@ export function ProfileHeader({
 
           <div className="mt-4">
             <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
-              {isBusinessAccount && profile.business_name
-                ? profile.business_name
-                : profile.display_name}
+              {profile.display_name}
             </h1>
             <p className="text-sm font-medium text-vintage-rust">
               @{profile.username}
-              {isBusinessAccount && (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-vintage-rust/15 px-2 py-0.5 text-[10px] font-semibold uppercase">
-                  <Briefcase className="h-3 w-3" /> Business
+              {showBusiness && personalView && !isBusinessPrimaryAccount(profile) && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-sm bg-vintage-rust/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-vintage-rust">
+                  <Briefcase className="h-3 w-3" /> Has business
                 </span>
               )}
             </p>
-            {isBusinessAccount && profile.display_name && (
-              <p className="mt-1 text-sm text-vintage-ink-muted">
-                Contact: {profile.display_name}
-              </p>
-            )}
 
             {(profile.country || birthdate) && (
               <p className="mt-2 text-sm text-vintage-ink-muted">
