@@ -26,6 +26,8 @@
 -- ║   17. trust-safety-schema.sql                                            ║
 -- ║   18. replies-schema.sql                                               ║
 -- ║   19. email-notifications-schema.sql (birthday + purchase emails)    ║
+-- ║   20. business-posts-schema.sql (personal vs business posts)         ║
+-- ║   21. opportunities-board-schema.sql (jobs / gigs board)             ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 drop table if exists __zumelia_diag;
@@ -44,7 +46,7 @@ from unnest(array[
   'gift_catalog','sent_gifts','call_sessions','conversation_member_settings',
   'user_blocks','user_mutes','content_reports','account_appeals','dm_requests',
   'chat_folders','keyword_mutes','notification_preferences','group_polls',
-  'email_notification_log'
+  'email_notification_log','opportunities'
 ]) as t;
 
 -- ── Columns added by feature migrations ──────────────────────────────────────

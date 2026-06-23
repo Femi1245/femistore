@@ -49,6 +49,11 @@ const features = [
     title: "Global discover",
     desc: "Find people by country, username, or phone — connect across continents.",
   },
+  {
+    icon: Sparkles,
+    title: "Opportunities",
+    desc: "Jobs, gigs, collabs, and internships — posted by the community. Apply in one tap.",
+  },
 ];
 
 const stats = [

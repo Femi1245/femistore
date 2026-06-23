@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   Briefcase,
+  Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
@@ -50,6 +51,7 @@ function isLinkActive(pathname: string, href: string, label: string): boolean {
   if (href === "/live" && pathname.startsWith("/live")) return true;
   if (href === "/games" && pathname.startsWith("/games")) return true;
   if (href === "/discover/businesses" && pathname.startsWith("/discover")) return true;
+  if (href === "/opportunities" && pathname.startsWith("/opportunities")) return true;
   if (href === "/profile/settings" && pathname.startsWith("/profile/settings")) {
     return true;
   }
@@ -153,6 +155,7 @@ export function AppNav({ user }: { user: Profile }) {
     : "/profile/business/setup";
 
   const moreLinks: NavItem[] = [
+    { href: "/opportunities", label: "Opportunities", icon: Sparkles },
     { href: "/discover/businesses", label: "Businesses", icon: Briefcase },
     ...(hasBusinessProfile(user)
       ? [{ href: businessHref, label: "My store", icon: Briefcase }]

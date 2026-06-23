@@ -405,3 +405,38 @@ export type StatusGroup = {
   hasUnseen: boolean;
   isOwn: boolean;
 };
+
+export type OpportunityType =
+  | "job"
+  | "gig"
+  | "collab"
+  | "internship"
+  | "volunteer"
+  | "other";
+
+export type OpportunityWorkMode = "remote" | "onsite" | "hybrid";
+
+export type OpportunityCompensation =
+  | "paid"
+  | "unpaid"
+  | "negotiable"
+  | "commission";
+
+export type Opportunity = {
+  id: string;
+  poster_id: string;
+  title: string;
+  description: string;
+  opportunity_type: OpportunityType;
+  category: string;
+  location: string;
+  work_mode: OpportunityWorkMode;
+  compensation_type: OpportunityCompensation;
+  compensation_detail: string;
+  application_url: string | null;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+  poster?: Profile;
+};
