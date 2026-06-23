@@ -4,12 +4,26 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
 export async function requireUser(): Promise<Profile> {
-  const supabase = await createClient();
+  let supabase;
+  try {
+    supabase = await createClient();
+  } catch {
+    redirect(
+      `/login?error=${encodeURIComponent(
+        "App configuration error. Contact support if this persists.",
+      )}`,
+    );
+  }
 
   let user = null;
   try {
     const result = await supabase.auth.getUser();
     user = result.data.user;
+    if (result.error && !user) {
+      redirect(
+        `/login?error=${encodeURIComponent(result.error.message)}`,
+      );
+    }
   } catch {
     redirect(
       `/login?error=${encodeURIComponent(

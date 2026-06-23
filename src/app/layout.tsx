@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
+import { ChunkRecovery } from "@/components/ChunkRecovery";
 import "./globals.css";
 
 const display = Playfair_Display({
@@ -58,6 +59,7 @@ export default function RootLayout({
       <body className="app-body min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
           <RegisterServiceWorker />
+          <ChunkRecovery />
           {children}
           <InstallAppPrompt />
           <AssistantWidgetLoader />
