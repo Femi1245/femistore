@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, Home, MessageCircle, Play, User } from "lucide-react";
+import { Home, MessageCircle, Play, Radio, User } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { UnreadChatBadge } from "@/components/chat/UnreadChatBadge";
 import { useUnreadChatCount } from "@/components/chat/useUnreadChatCount";
-import { useUnreadNotificationCount } from "@/components/notifications/useUnreadNotificationCount";
 import {
   getMobileAppearance,
   MOBILE_APPEARANCE_EVENT,
@@ -22,7 +21,7 @@ type Tab = {
   icon: typeof Home;
   match: (p: string) => boolean;
   center?: boolean;
-  badge?: "chat" | "notifications";
+  badge?: "chat";
 };
 
 function buildTabs(user: Profile): Tab[] {
@@ -41,19 +40,18 @@ function buildTabs(user: Profile): Tab[] {
       match: (p) => p.startsWith("/watch"),
     },
     {
+      href: "/live",
+      label: "Live",
+      icon: Radio,
+      match: (p) => p.startsWith("/live"),
+    },
+    {
       href: "/chat",
       label: "Chat",
       icon: MessageCircle,
       match: (p) => p === "/chat" || p.startsWith("/chat"),
       center: true,
       badge: "chat",
-    },
-    {
-      href: "/notifications",
-      label: "Alerts",
-      icon: Bell,
-      match: (p) => p.startsWith("/notifications"),
-      badge: "notifications",
     },
     {
       href: profileHref,
@@ -72,7 +70,6 @@ function buildTabs(user: Profile): Tab[] {
 export function MobileBottomNav({ user }: { user: Profile }) {
   const pathname = usePathname();
   const unreadChats = useUnreadChatCount(user.id);
-  const unreadNotifications = useUnreadNotificationCount(user.id);
   const [appearance, setAppearance] = useState<MobileAppearance>(() =>
     getMobileAppearance(),
   );
@@ -95,12 +92,7 @@ export function MobileBottomNav({ user }: { user: Profile }) {
         {tabs.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
-          const badgeCount =
-            tab.badge === "chat"
-              ? unreadChats
-              : tab.badge === "notifications"
-                ? unreadNotifications
-                : 0;
+          const badgeCount = tab.badge === "chat" ? unreadChats : 0;
 
           if (tab.center) {
             return (

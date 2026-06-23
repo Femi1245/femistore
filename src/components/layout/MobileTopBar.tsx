@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Settings } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { MessageBell } from "@/components/chat/MessageBell";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { AccountModeSwitcher } from "@/components/business/AccountModeSwitcher";
 import { getDefaultProfileUrl, hasBusinessProfile } from "@/lib/business";
@@ -19,6 +20,7 @@ export function MobileTopBar({ user }: { user: Profile }) {
             <AccountModeSwitcher user={user} compact />
           )}
           <MessageBell userId={user.id} />
+          <NotificationBell userId={user.id} />
           <ThemeToggle />
           <Link
             href="/profile/settings"
