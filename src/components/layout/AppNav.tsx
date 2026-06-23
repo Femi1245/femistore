@@ -27,6 +27,7 @@ import { Avatar } from "@/components/Avatar";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { AccountModeSwitcher } from "@/components/business/AccountModeSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationPushListener } from "@/components/notifications/NotificationPushListener";
 import { MessageBell } from "@/components/chat/MessageBell";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
 
@@ -168,6 +169,7 @@ export function AppNav({ user }: { user: Profile }) {
 
   return (
     <>
+      <NotificationPushListener userId={user.id} />
       <MobileTopBar user={user} />
       <header className="vintage-nav sticky top-0 z-50 hidden md:block">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 lg:gap-4 lg:px-6">
