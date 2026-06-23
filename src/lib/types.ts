@@ -69,7 +69,7 @@ export type ConversationMemberSettings = {
 export type ConversationKind = "dm" | "group" | "channel";
 export type MemberRole = "owner" | "admin" | "member";
 
-export type MessageType = "text" | "voice" | "call_log" | "gift" | "poll";
+export type MessageType = "text" | "voice" | "call_log" | "gift" | "poll" | "payment";
 
 export type Message = {
   id: string;
@@ -81,6 +81,7 @@ export type Message = {
   media_duration_seconds: number | null;
   expires_at: string | null;
   sent_gift_id: string | null;
+  chat_payment_id: string | null;
   poll_id: string | null;
   reply_to_id: string | null;
   created_at: string;
@@ -439,4 +440,40 @@ export type Opportunity = {
   created_at: string;
   updated_at: string;
   poster?: Profile;
+};
+
+export type VoiceRoom = {
+  id: string;
+  host_id: string;
+  title: string;
+  topic: string;
+  room_name: string;
+  is_active: boolean;
+  started_at: string;
+  ended_at: string | null;
+  host?: Profile;
+};
+
+export type VibeResponse = {
+  id: string;
+  user_id: string;
+  prompt_key: string;
+  prompt_text: string;
+  response: string;
+  created_at: string;
+};
+
+export type ChatPayment = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  recipient_id: string;
+  amount_cents: number;
+  currency: string;
+  note: string;
+  payment_status: "pending" | "paid" | "mock" | "failed";
+  payment_provider: string | null;
+  payment_reference: string | null;
+  message_id: string | null;
+  created_at: string;
 };

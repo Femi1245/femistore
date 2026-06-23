@@ -5,6 +5,7 @@ import Link from "next/link";
 import { UserPlus, UserMinus, MessageCircle, Gift, Briefcase, ImageIcon } from "lucide-react";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
+import { CloseFriendButton } from "@/components/social/CloseFriendButton";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { areMutualFriends, canMessageUser, findOrCreateConversation } from "@/lib/chat";
 import { acceptsBusinessContact, getBusinessProfileUrl, hasBusinessProfile, isBusinessPrimaryAccount } from "@/lib/business";
@@ -178,6 +179,10 @@ export function ProfileHeader({
                   >
                     <Gift className="h-4 w-4" /> Gift
                   </button>
+                  <CloseFriendButton
+                    currentUserId={currentUser.id}
+                    profileId={profile.id}
+                  />
                   <UserSafetyMenu profile={profile} currentUserId={currentUser.id} />
                 </>
               )}

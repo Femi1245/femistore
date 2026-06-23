@@ -28,6 +28,7 @@
 -- ║   19. email-notifications-schema.sql (birthday + purchase emails)    ║
 -- ║   20. business-posts-schema.sql (personal vs business posts)         ║
 -- ║   21. opportunities-board-schema.sql (jobs / gigs board)             ║
+-- ║   22. voice-close-friends-payments-schema.sql                        ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 drop table if exists __zumelia_diag;
@@ -46,7 +47,8 @@ from unnest(array[
   'gift_catalog','sent_gifts','call_sessions','conversation_member_settings',
   'user_blocks','user_mutes','content_reports','account_appeals','dm_requests',
   'chat_folders','keyword_mutes','notification_preferences','group_polls',
-  'email_notification_log','opportunities'
+  'email_notification_log','opportunities',
+  'voice_rooms','close_friends','vibe_responses','chat_payments'
 ]) as t;
 
 -- ── Columns added by feature migrations ──────────────────────────────────────
@@ -121,6 +123,7 @@ from (values
   ('conversation_member_settings','last_read_at'),
   ('messages','poll_id'),
   ('messages','reply_to_id'),
+  ('messages','chat_payment_id'),
   ('comments','reply_to_id')
 ) as c(tbl, col);
 

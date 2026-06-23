@@ -64,6 +64,7 @@ export async function updateSession(request: NextRequest) {
     "/notifications",
     "/discover",
     "/opportunities",
+    "/voice",
   ];
   const isProtected = protectedPrefixes.some((p) =>
     request.nextUrl.pathname.startsWith(p),

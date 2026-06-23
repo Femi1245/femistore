@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { markChatPaymentPaidAndFulfill } from "@/lib/chat-payments";
 import { markGiftPaidAndFulfill } from "@/lib/gifts";
 import { verifyWebhookSignature } from "@/lib/paystack";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -30,7 +31,17 @@ export async function POST(request: Request) {
 
   if (event.event === "charge.success" && event.data?.reference) {
     const admin = createAdminClient();
-    await markGiftPaidAndFulfill(admin, event.data.reference, event.data.reference);
+    const ref = event.data.reference;
+    const { data: gift } = await admin
+      .from("sent_gifts")
+      .select("id")
+      .eq("id", ref)
+      .maybeSingle();
+    if (gift) {
+      await markGiftPaidAndFulfill(admin, ref, ref);
+    } else {
+      await markChatPaymentPaidAndFulfill(admin, ref, ref);
+    }
   }
 
   // Always 200 so Paystack stops retrying once we've received it.

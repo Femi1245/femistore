@@ -213,7 +213,7 @@ export async function enrichPosts(
   }));
 }
 
-export type FeedMode = "friends" | "following";
+export type FeedMode = "friends" | "following" | "close_friends";
 
 export async function loadFeed(
   supabase: SupabaseClient,
@@ -236,6 +236,10 @@ export async function loadFeed(
     const { loadMutualFriends } = await import("@/lib/chat");
     const friends = await loadMutualFriends(supabase, userId);
     ids = [userId, ...friends.map((f) => f.id)];
+  } else if (mode === "close_friends") {
+    const { loadCloseFriendIds } = await import("@/lib/close-friends");
+    const closeIds = await loadCloseFriendIds(supabase, userId);
+    ids = [userId, ...closeIds];
   } else {
     const { data: following } = await supabase
       .from("follows")

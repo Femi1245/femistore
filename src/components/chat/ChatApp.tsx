@@ -31,6 +31,7 @@ import {
   BarChart3,
   FolderOpen,
   Reply,
+  DollarSign,
 } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -78,6 +79,7 @@ import { IncomingCallModal } from "@/components/chat/IncomingCallModal";
 import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
+import { PayInChatModal } from "@/components/chat/PayInChatModal";
 import { ChatThemeModal } from "@/components/chat/ChatThemeModal";
 import { CreatePollModal } from "@/components/chat/CreatePollModal";
 import { MessageRequestsPanel } from "@/components/chat/MessageRequestsPanel";
@@ -129,6 +131,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [sendingVoice, setSendingVoice] = useState(false);
   const [recordingVoice, setRecordingVoice] = useState(false);
   const [showGift, setShowGift] = useState(false);
+  const [showPay, setShowPay] = useState(false);
   const [chatTheme, setChatTheme] = useState<ConversationMemberSettings | null>(null);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -1404,14 +1407,24 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     {activeChat.kind === "dm" &&
                       activeChat.otherUser &&
                       !isAssistantProfile(activeChat.otherUser) && (
-                      <button
-                        type="button"
-                        onClick={() => setShowGift(true)}
-                        title="Send a gift"
-                        className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
-                      >
-                        <Gift className="h-4 w-4" />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setShowPay(true)}
+                          title="Send money"
+                          className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                        >
+                          <DollarSign className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowGift(true)}
+                          title="Send a gift"
+                          className="vintage-btn-outline flex h-9 w-9 items-center justify-center"
+                        >
+                          <Gift className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                     {!isAssistantChat && (
                       <>
@@ -1470,6 +1483,14 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   context="chat"
                   conversationId={activeChat.convId}
                   onClose={() => setShowGift(false)}
+                  onSent={() => loadMessages(activeChat.convId, activeChat.isSecret)}
+                />
+              )}
+              {showPay && activeChat.kind === "dm" && activeChat.otherUser && (
+                <PayInChatModal
+                  recipient={activeChat.otherUser}
+                  conversationId={activeChat.convId}
+                  onClose={() => setShowPay(false)}
                   onSent={() => loadMessages(activeChat.convId, activeChat.isSecret)}
                 />
               )}
@@ -1571,6 +1592,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                             <p className="text-sm italic opacity-90">{msg.content}</p>
                           ) : msg.message_type === "gift" ? (
                             <p className="text-sm font-medium">{msg.content}</p>
+                          ) : msg.message_type === "payment" ? (
+                            <p className="flex items-center gap-1.5 text-sm font-medium">
+                              <DollarSign className="h-4 w-4 shrink-0" />
+                              {msg.content}
+                            </p>
                           ) : msg.message_type === "poll" && msg.poll_id ? (
                             <PollMessage pollId={msg.poll_id} userId={currentUser.id} />
                           ) : (
