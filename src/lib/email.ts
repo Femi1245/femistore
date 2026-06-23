@@ -1,15 +1,11 @@
+import { getAppOrigin } from "./app-url";
+
 const RESEND_API = "https://api.resend.com/emails";
+
+export { getAppOrigin };
 
 export function isEmailConfigured(): boolean {
   return !!(process.env.RESEND_API_KEY?.trim() && process.env.EMAIL_FROM?.trim());
-}
-
-export function getAppOrigin(): string {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel}`;
-  return "http://localhost:3000";
 }
 
 export type SendEmailInput = {

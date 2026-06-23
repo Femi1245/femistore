@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ensureProfile } from "@/lib/auth";
 import {
@@ -18,6 +18,7 @@ import {
 import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } from "@/lib/birthday";
 import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { COUNTRIES } from "@/lib/countries";
+import { authCallbackUrl, safeNextPath } from "@/lib/app-url";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
 import { SetupNotice } from "@/components/auth/SetupNotice";
@@ -26,9 +27,9 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 type Mode = "login" | "signup";
 
 export function AuthForm({ mode }: { mode: Mode }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
+  const nextAfterAuth = safeNextPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +63,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: authCallbackUrl(nextAfterAuth),
           skipBrowserRedirect: false,
         },
       });
@@ -217,12 +218,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
           }
 
           if (!profile.date_of_birth && !dateOfBirth) {
-            router.push(
+            window.location.assign(
               `/profile/birthday?next=${encodeURIComponent(
-                accountType === "business" ? "/profile/business/setup" : "/chat",
+                accountType === "business" ? "/profile/business/setup" : nextAfterAuth,
               )}`,
             );
-            router.refresh();
             return;
           }
 
@@ -233,10 +233,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
               .eq("id", profile.id);
           }
 
-          router.push(
-            accountType === "business" ? "/profile/business/setup" : "/chat",
+          window.location.assign(
+            accountType === "business" ? "/profile/business/setup" : nextAfterAuth,
           );
-          router.refresh();
           return;
         }
 
@@ -277,8 +276,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         return;
       }
 
-      router.push("/chat");
-      router.refresh();
+      window.location.assign(nextAfterAuth);
     } finally {
       setLoading(false);
     }

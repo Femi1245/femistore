@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { validateEmail } from "@/lib/auth-validation";
+import { authCallbackUrl } from "@/lib/app-url";
 import { Logo } from "@/components/Logo";
 import { TextField } from "@/components/auth/AuthFields";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -33,7 +34,7 @@ export function ForgotPasswordForm() {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+          redirectTo: authCallbackUrl("/reset-password"),
         },
       );
 
