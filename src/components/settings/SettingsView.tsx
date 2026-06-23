@@ -23,6 +23,7 @@ import {
 } from "@/lib/content-filters";
 import { loadMyAppeals, submitAppeal } from "@/lib/safety";
 import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceSection";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { canAccessPersonalProfile } from "@/lib/business";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
 
@@ -214,7 +215,7 @@ export function SettingsView({ profile }: { profile: Profile }) {
           />
         </label>
         <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-vintage-ink">Digest mode (fewer pings)</span>
+          <span className="text-sm text-vintage-ink">Digest mode (no browser alerts)</span>
           <input
             type="checkbox"
             checked={privacy.digest_mode}
@@ -279,6 +280,7 @@ export function SettingsView({ profile }: { profile: Profile }) {
 
       <section className="vintage-card p-5 space-y-3">
         <h2 className="font-display font-bold text-vintage-ink">Notifications</h2>
+        <PushNotificationSettings />
         {notifPrefs &&
           NOTIFICATION_TYPES.map(({ type, label }) => (
             <label key={type} className="flex items-center justify-between gap-4">
