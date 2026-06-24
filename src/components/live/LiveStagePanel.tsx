@@ -107,12 +107,14 @@ export function LiveStagePanel({
 
   async function handleInvite(friendId: string) {
     setError(null);
+    setLoading(true);
     const { error: err } = await inviteToLiveStage(
       createClient(),
       roomName,
       currentUser.id,
       friendId,
     );
+    setLoading(false);
     if (err) setError(err);
     else void refresh();
   }
@@ -138,8 +140,10 @@ export function LiveStagePanel({
         </div>
 
         {schemaMissing && (
-          <p className="mb-2 text-xs text-vintage-ink-muted">
-            Run <code className="text-[10px]">supabase/live-stage-schema.sql</code> first.
+          <p className="mb-2 text-xs text-vintage-rust">
+            Live stage tables missing — run{" "}
+            <code className="text-[10px]">supabase/live-stage-schema.sql</code> in Supabase SQL
+            Editor, then refresh.
           </p>
         )}
 

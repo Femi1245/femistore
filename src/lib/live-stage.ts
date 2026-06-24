@@ -91,22 +91,30 @@ export async function inviteToLiveStage(
     return { error: "You are already hosting." };
   }
 
-  const { error } = await supabase.from("live_stream_join_requests").insert({
-    room_name: roomName,
-    user_id: inviteUserId,
-    request_type: "invite",
-    status: "pending",
-  });
+  const { error: guestError } = await supabase.from("live_stream_guests").upsert(
+    {
+      room_name: roomName,
+      user_id: inviteUserId,
+      invited_by: hostId,
+      status: "active",
+    },
+    { onConflict: "room_name,user_id" },
+  );
 
-  if (error) {
-    if (error.code === "PGRST205") {
+  if (guestError) {
+    if (guestError.code === "PGRST205") {
       return { error: "Run supabase/live-stage-schema.sql in Supabase SQL Editor first." };
     }
-    if (error.code === "23505") {
-      return { error: "This person already has a pending invite." };
-    }
-    return { error: error.message };
+    return { error: guestError.message };
   }
+
+  await supabase
+    .from("live_stream_join_requests")
+    .update({ status: "approved", responded_at: new Date().toISOString() })
+    .eq("room_name", roomName)
+    .eq("user_id", inviteUserId)
+    .eq("status", "pending");
+
   return {};
 }
 

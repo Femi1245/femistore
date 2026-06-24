@@ -3,14 +3,60 @@ export const DEEPAR_VERSION = "5.6.22";
 
 export const DEEPAR_ROOT_PATH = `https://cdn.jsdelivr.net/npm/deepar@${DEEPAR_VERSION}/`;
 
-export function isDeepARConfigured(): boolean {
-  const key = process.env.NEXT_PUBLIC_DEEPAR_LICENSE_KEY;
-  return (
-    typeof key === "string" &&
-    key.length > 10 &&
-    !key.includes("your-deepar") &&
-    key !== "your-deepar-license-key"
-  );
+function trimLicenseKey(key: string | undefined): string | null {
+  if (!key) return null;
+  const trimmed = key.trim();
+  if (trimmed.length < 10 || trimmed.includes("your-deepar")) return null;
+  return trimmed;
+}
+
+export function isLocalDeepARHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+/**
+ * DeepAR keys are bound to the domain registered in developer.deepar.ai.
+ * Use NEXT_PUBLIC_DEEPAR_LICENSE_KEY for production (e.g. your-app.vercel.app).
+ * Use NEXT_PUBLIC_DEEPAR_LICENSE_KEY_LOCAL for a separate localhost web app key.
+ */
+export function getDeepARLicenseKey(hostname?: string): string | null {
+  const production = trimLicenseKey(process.env.NEXT_PUBLIC_DEEPAR_LICENSE_KEY);
+  const local = trimLicenseKey(process.env.NEXT_PUBLIC_DEEPAR_LICENSE_KEY_LOCAL);
+
+  const host =
+    hostname ?? (typeof window !== "undefined" ? window.location.hostname : "");
+
+  if (isLocalDeepARHost(host)) {
+    return local ?? production;
+  }
+
+  return production ?? local;
+}
+
+export function isDeepARConfigured(hostname?: string): boolean {
+  return !!getDeepARLicenseKey(hostname);
+}
+
+export function getDeepARLicenseDomainHint(hostname?: string): string {
+  const host =
+    hostname ?? (typeof window !== "undefined" ? window.location.hostname : "localhost");
+
+  if (host === "127.0.0.1") {
+    return 'Open http://localhost:3000 instead of 127.0.0.1, or create a DeepAR web app with domain "127.0.0.1".';
+  }
+
+  if (isLocalDeepARHost(host)) {
+    return 'Create a Web app at developer.deepar.ai with domain "localhost" and set NEXT_PUBLIC_DEEPAR_LICENSE_KEY_LOCAL (or use a production key if your plan allows localhost).';
+  }
+
+  return `Create a Web app at developer.deepar.ai with domain "${host}" (no https://) and use that app\'s license key in NEXT_PUBLIC_DEEPAR_LICENSE_KEY.`;
+}
+
+export function formatDeepARError(message: string, hostname?: string): string {
+  if (!/license/i.test(message)) return message;
+  const host =
+    hostname ?? (typeof window !== "undefined" ? window.location.hostname : "");
+  return `DeepAR license not valid on "${host}". ${getDeepARLicenseDomainHint(host)}`;
 }
 
 export type LiveAREffect =

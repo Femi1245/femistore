@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5d0c5"/>
+      <stop offset="100%" stop-color="#e8b4a0"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6b8cae"/>
+      <stop offset="100%" stop-color="#4a6a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bg)"/>
+  <ellipse cx="100" cy="118" rx="72" ry="82" fill="#f0c4b4"/>
+  <ellipse cx="100" cy="95" rx="58" ry="64" fill="#f8d9cf"/>
+  <ellipse cx="72" cy="88" rx="10" ry="7" fill="#3d2914"/>
+  <ellipse cx="128" cy="88" rx="10" ry="7" fill="#3d2914"/>
+  <path d="M88 108 Q100 118 112 108" stroke="#c97b6b" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <ellipse cx="58" cy="102" rx="12" ry="8" fill="#f4a9a0" opacity="0.45"/>
+  <ellipse cx="142" cy="102" rx="12" ry="8" fill="#f4a9a0" opacity="0.45"/>
+  <path d="M40 200 Q40 150 100 142 Q160 150 160 200 Z" fill="url(#shirt)"/>
+  <path d="M30 200 L170 200 L170 175 Q100 160 30 175 Z" fill="#3d2914" opacity="0.15"/>
+</svg>

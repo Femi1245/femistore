@@ -5,7 +5,9 @@ import type { LocalVideoTrack } from "livekit-client";
 import type { DeepAR } from "deepar";
 import {
   DEEPAR_ROOT_PATH,
+  formatDeepARError,
   getDeepAREffectUrl,
+  getDeepARLicenseKey,
   isDeepARConfigured,
   type LiveAREffect,
 } from "@/lib/deepar-config";
@@ -90,7 +92,12 @@ export function useDeepARVideoEffect(
       return;
     }
 
-    const licenseKey = process.env.NEXT_PUBLIC_DEEPAR_LICENSE_KEY!;
+    const licenseKey = getDeepARLicenseKey();
+    if (!licenseKey) {
+      setStatus("error");
+      setError("DeepAR license key is missing.");
+      return;
+    }
     const original = track.mediaStreamTrack;
     let cancelled = false;
     let outputTrack: MediaStreamTrack | null = null;
@@ -157,7 +164,9 @@ export function useDeepARVideoEffect(
         setError(null);
       } catch (err) {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : "AR failed to start";
+        const message = formatDeepARError(
+          err instanceof Error ? err.message : "AR failed to start",
+        );
         console.error("[DeepAR] init failed:", err);
         setStatus("error");
         setError(message);
@@ -190,7 +199,11 @@ export function useDeepARVideoEffect(
 
     void applyDeepAREffect(deepAR, effect).catch((err) => {
       console.error("[DeepAR] effect switch failed:", err);
-      setError(err instanceof Error ? err.message : "Could not switch AR lens");
+      setError(
+        formatDeepARError(
+          err instanceof Error ? err.message : "Could not switch AR lens",
+        ),
+      );
     });
   }, [effect, enabled, status]);
 

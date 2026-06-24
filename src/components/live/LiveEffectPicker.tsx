@@ -9,6 +9,7 @@ import {
   type LiveEffectMode,
 } from "@/lib/deepar-config";
 import type { DeepARStatus } from "@/components/live/useDeepARVideoEffect";
+import { LiveEffectThumbnail } from "@/components/live/LiveEffectThumbnail";
 import {
   LIVE_EFFECT_CATEGORIES,
   LIVE_VIDEO_EFFECTS,
@@ -98,10 +99,7 @@ export function LiveEffectPicker({
         <p className="text-[11px] text-vintage-ink-muted">Loading AR lenses…</p>
       )}
       {deepARReady && mode === "ar" && arStatus === "error" && arError && (
-        <p className="text-[11px] text-vintage-rust">
-          AR error: {arError}. Check that <strong>localhost</strong> is registered in your DeepAR
-          project.
-        </p>
+        <p className="text-[11px] leading-snug text-vintage-rust">{arError}</p>
       )}
 
       {!deepARReady && (
@@ -154,13 +152,12 @@ export function LiveEffectPicker({
               aria-label={effect.label}
               aria-pressed={active}
             >
-              <span
-                className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition ${
-                  active
-                    ? "border-vintage-rust ring-2 ring-vintage-rust/40 ring-offset-2 ring-offset-vintage-paper"
-                    : "border-vintage-border hover:border-vintage-rust/50"
-                }`}
-                style={{ background: effect.swatch }}
+              <LiveEffectThumbnail
+                mode={mode}
+                effectId={effect.id}
+                label={effect.label}
+                swatch={effect.swatch}
+                active={active}
               />
               <span
                 className={`max-w-[4rem] truncate text-[10px] font-semibold ${

@@ -202,8 +202,25 @@ function createProgram(gl: WebGLRenderingContext) {
   return program;
 }
 
+function sourceDimensions(source: TexImageSource): { w: number; h: number } {
+  if (source instanceof HTMLVideoElement) {
+    return { w: source.videoWidth, h: source.videoHeight };
+  }
+  if (source instanceof HTMLImageElement) {
+    return { w: source.naturalWidth, h: source.naturalHeight };
+  }
+  if (source instanceof HTMLCanvasElement) {
+    return { w: source.width, h: source.height };
+  }
+  if (source instanceof ImageBitmap) {
+    return { w: source.width, h: source.height };
+  }
+  return { w: 0, h: 0 };
+}
+
 export type LiveVideoGLPipeline = {
   render: (video: HTMLVideoElement, effect: LiveVideoEffect, timeMs: number) => boolean;
+  renderStill: (source: TexImageSource, effect: LiveVideoEffect, timeMs?: number) => boolean;
   destroy: () => void;
 };
 
@@ -255,36 +272,48 @@ export function createLiveVideoGLPipeline(canvas: HTMLCanvasElement): LiveVideoG
 
   gl.useProgram(program);
 
+  const drawFrame = (
+    source: TexImageSource,
+    effect: LiveVideoEffect,
+    timeMs: number,
+    readyCheck?: () => boolean,
+  ) => {
+    const { w, h } = sourceDimensions(source);
+    if (w <= 0 || h <= 0 || (readyCheck && !readyCheck())) return false;
+
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+    }
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.uniform1i(uTexture, 0);
+    gl.uniform2f(uTexelSize, 1 / w, 1 / h);
+    gl.uniform1f(uTime, timeMs * 0.001);
+    gl.uniform1i(uEffect, EFFECT_SHADER_INDEX[effect]);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuf);
+    gl.enableVertexAttribArray(aTex);
+    gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 0, 0);
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return true;
+  };
+
   return {
     render(video: HTMLVideoElement, effect: LiveVideoEffect, timeMs: number) {
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-      if (w <= 0 || h <= 0 || video.readyState < 2) return false;
+      return drawFrame(video, effect, timeMs, () => video.readyState >= 2);
+    },
 
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-        gl.viewport(0, 0, w, h);
-      }
-
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-      gl.uniform1i(uTexture, 0);
-      gl.uniform2f(uTexelSize, 1 / w, 1 / h);
-      gl.uniform1f(uTime, timeMs * 0.001);
-      gl.uniform1i(uEffect, EFFECT_SHADER_INDEX[effect]);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-      gl.enableVertexAttribArray(aPos);
-      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuf);
-      gl.enableVertexAttribArray(aTex);
-      gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 0, 0);
-
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      return true;
+    renderStill(source: TexImageSource, effect: LiveVideoEffect, timeMs = 0) {
+      return drawFrame(source, effect, timeMs);
     },
 
     destroy() {
