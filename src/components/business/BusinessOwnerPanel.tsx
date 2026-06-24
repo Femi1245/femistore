@@ -8,38 +8,56 @@ import {
   Pencil,
   Radio,
   Settings2,
+  Store,
   User,
 } from "lucide-react";
 import {
+  canCreateServiceGigs,
+  getBusinessProfileUrl,
   getPersonalProfileUrl,
+  hasBusinessProfile,
   isBusinessPrimaryAccount,
 } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 
+function listServiceHref(profile: Profile): string {
+  if (canCreateServiceGigs(profile)) return "/opportunities/new/service";
+  if (hasBusinessProfile(profile)) {
+    return `${getBusinessProfileUrl(profile.username)}?seller=1`;
+  }
+  return "/profile/business/setup";
+}
+
 const actions = [
   {
-    href: "/profile/business/edit",
+    label: "List a service",
+    description: "Publish products & gigs to your store",
+    icon: Store,
+    href: (profile: Profile) => listServiceHref(profile),
+  },
+  {
     label: "Edit storefront",
     description: "Banner, services, contact info",
     icon: Pencil,
+    href: "/profile/business/edit",
   },
   {
-    href: "/live/go-live",
     label: "Go live",
     description: "Host a live shopping or Q&A",
     icon: Radio,
+    href: "/live/go-live",
   },
   {
-    href: "/chat",
     label: "Messages",
     description: "Reply to customer inquiries",
     icon: MessageSquare,
+    href: "/chat",
   },
   {
-    href: "/profile/business/edit",
     label: "Auto-reply",
     description: "Set welcome messages for DMs",
     icon: Settings2,
+    href: "/profile/business/edit",
   },
 ] as const;
 
@@ -62,10 +80,12 @@ export function BusinessOwnerPanel({
       <div className="grid gap-3 p-4 sm:grid-cols-2">
         {actions.map((action) => {
           const Icon = action.icon;
+          const href =
+            typeof action.href === "function" ? action.href(profile) : action.href;
           return (
             <Link
               key={action.label}
-              href={action.href}
+              href={href}
               className="group flex gap-3 rounded-sm border border-vintage-border p-4 transition hover:border-vintage-rust/40 hover:bg-vintage-paper-dark/50"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-vintage-rust/10 text-vintage-rust">

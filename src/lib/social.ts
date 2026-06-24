@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canEditWithinWindow } from "@/lib/edit-window";
+import { COMMENT_MAX_LENGTH } from "@/lib/content-limits";
 import type {
   Comment,
   FollowCounts,
@@ -395,6 +396,15 @@ export async function addComment(
   content: string,
   replyToId?: string | null,
 ) {
+  if (content.length > COMMENT_MAX_LENGTH) {
+    return {
+      data: null,
+      error: {
+        message: `Comments must be ${COMMENT_MAX_LENGTH} characters or less.`,
+      },
+    };
+  }
+
   return supabase
     .from("comments")
     .insert({

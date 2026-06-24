@@ -29,6 +29,7 @@
   --vintage-input-bg: #ffffff;
   --vintage-card-inset-bg: #f7f4ef;
   --vintage-btn-text: #1a1a1a;
+  --vintage-on-rust-muted: color-mix(in srgb, var(--vintage-btn-text) 70%, transparent);
   --vintage-skeleton-mid: #efeae3;
 
   --background: var(--vintage-cream);
@@ -58,6 +59,7 @@
   --vintage-input-bg: rgba(255, 255, 255, 0.05);
   --vintage-card-inset-bg: rgba(255, 255, 255, 0.04);
   --vintage-btn-text: #141414;
+  --vintage-on-rust-muted: color-mix(in srgb, var(--vintage-btn-text) 70%, transparent);
   --vintage-skeleton-mid: #232327;
   --vintage-glow: color-mix(in srgb, var(--vintage-rust) 55%, transparent);
 
@@ -223,6 +225,29 @@ body {
   outline: none;
   border-color: var(--vintage-rust);
   box-shadow: 0 0 0 3px var(--vintage-ring);
+}
+
+select.vintage-input,
+.vintage-input option {
+  color: var(--vintage-ink);
+  background-color: var(--vintage-paper);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--vintage-ink);
+  background: var(--vintage-paper-dark);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.text-on-rust {
+  color: var(--vintage-btn-text);
+}
+
+.text-on-rust-muted {
+  color: var(--vintage-on-rust-muted);
 }
 
 /* ── Nav ───────────────────────────────────────────────────────────────── */
@@ -424,9 +449,16 @@ body {
 }
 
 .mobile-tab-center-btn-active {
-  background: var(--vintage-ink);
-  border-color: var(--vintage-ink);
-  color: var(--vintage-cream);
+  background: var(--vintage-rust);
+  border-color: var(--vintage-rust);
+  color: var(--vintage-btn-text);
+}
+
+.dark .mobile-tab-center-btn-active {
+  background: var(--vintage-rust);
+  border-color: var(--vintage-rust);
+  color: var(--vintage-btn-text);
+  box-shadow: 0 0 16px -6px var(--vintage-glow);
 }
 
 .mobile-tab-bar-preview {

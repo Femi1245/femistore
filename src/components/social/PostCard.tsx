@@ -15,6 +15,7 @@ import {
 import { ReplyQuote } from "@/components/chat/ReplyQuote";
 import { createClient } from "@/lib/supabase/client";
 import { canEditWithinWindow } from "@/lib/edit-window";
+import { COMMENT_MAX_LENGTH } from "@/lib/content-limits";
 import {
   addComment,
   editPost,
@@ -93,6 +94,7 @@ export function PostCard({
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(post.content);
   const [editError, setEditError] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const author = post.author;
@@ -121,14 +123,23 @@ export function PostCard({
   async function handleComment(e: React.FormEvent) {
     e.preventDefault();
     if (!commentDraft.trim()) return;
+    if (commentDraft.length > COMMENT_MAX_LENGTH) {
+      setCommentError(`Comments must be ${COMMENT_MAX_LENGTH} characters or less.`);
+      return;
+    }
+    setCommentError(null);
     const replyId = replyingToComment?.id ?? null;
-    await addComment(
+    const { error } = await addComment(
       createClient(),
       rootId,
       currentUser.id,
       commentDraft.trim(),
       replyId,
     );
+    if (error) {
+      setCommentError(error.message);
+      return;
+    }
     setCommentDraft("");
     setReplyingToComment(null);
     setEngagement((e) => ({ ...e, comments: e.comments + 1 }));
@@ -381,22 +392,44 @@ export function PostCard({
                 </button>
               </div>
             )}
-            <form onSubmit={handleComment} className="flex gap-2">
-              <input
-                value={commentDraft}
-                onChange={(e) => setCommentDraft(e.target.value)}
-                placeholder={
-                  replyingToComment ? "Write a reply…" : "Write a comment…"
-                }
-                className="vintage-input flex-1 px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                className="vintage-btn p-2"
-                disabled={!commentDraft.trim()}
-              >
-                <Send className="h-4 w-4" />
-              </button>
+            <form onSubmit={handleComment} className="space-y-1">
+              <div className="flex gap-2">
+                <input
+                  value={commentDraft}
+                  onChange={(e) => {
+                    setCommentDraft(e.target.value.slice(0, COMMENT_MAX_LENGTH));
+                    setCommentError(null);
+                  }}
+                  placeholder={
+                    replyingToComment ? "Write a reply…" : "Write a comment…"
+                  }
+                  maxLength={COMMENT_MAX_LENGTH}
+                  className="vintage-input flex-1 px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="vintage-btn p-2"
+                  disabled={!commentDraft.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-1">
+                {commentError ? (
+                  <p className="text-xs text-vintage-rust">{commentError}</p>
+                ) : (
+                  <span />
+                )}
+                <span
+                  className={`text-xs ${
+                    commentDraft.length > COMMENT_MAX_LENGTH * 0.9
+                      ? "text-vintage-rust"
+                      : "text-vintage-ink-muted"
+                  }`}
+                >
+                  {commentDraft.length}/{COMMENT_MAX_LENGTH}
+                </span>
+              </div>
             </form>
           </div>
         )}

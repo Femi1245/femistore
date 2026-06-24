@@ -55,13 +55,16 @@ async function compressImage(file: File): Promise<File> {
 
 export async function uploadMedia(
   supabase: SupabaseClient,
-  bucket: "avatars" | "post-media" | "voice-messages" | "chat-wallpapers" | "business-media",
+  bucket: "avatars" | "post-media" | "voice-messages" | "chat-wallpapers" | "business-media" | "opportunity-media",
   userId: string,
   file: File,
   subfolder?: string,
 ): Promise<{ url: string | null; error?: string }> {
   const uploadFile =
-    bucket === "avatars" || bucket === "post-media" || bucket === "business-media"
+    bucket === "avatars" ||
+    bucket === "post-media" ||
+    bucket === "business-media" ||
+    bucket === "opportunity-media"
       ? await compressImage(file)
       : file;
 

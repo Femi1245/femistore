@@ -829,7 +829,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   onClick={() => setTab(id)}
                   className={`flex flex-1 min-w-[4.5rem] items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition ${
                     tab === id
-                      ? "bg-vintage-rust text-[#fff8f0]"
+                      ? "bg-vintage-rust text-on-rust"
                       : "text-vintage-ink-muted hover:text-vintage-ink"
                   }`}
                 >
@@ -855,7 +855,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     type="button"
                     onClick={() => setActiveFolderId(undefined)}
                     className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
-                      activeFolderId === undefined ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                      activeFolderId === undefined ? "bg-vintage-rust text-on-rust" : "vintage-card-inset"
                     }`}
                   >
                     All
@@ -864,7 +864,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     type="button"
                     onClick={() => setActiveFolderId(null)}
                     className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
-                      activeFolderId === null ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                      activeFolderId === null ? "bg-vintage-rust text-on-rust" : "vintage-card-inset"
                     }`}
                   >
                     Unfiled
@@ -875,7 +875,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                       type="button"
                       onClick={() => setActiveFolderId(f.id)}
                       className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
-                        activeFolderId === f.id ? "bg-vintage-rust text-[#fff8f0]" : "vintage-card-inset"
+                        activeFolderId === f.id ? "bg-vintage-rust text-on-rust" : "vintage-card-inset"
                       }`}
                     >
                       {f.name}
@@ -906,7 +906,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                       : "hover:bg-vintage-paper-dark/60"
                   }`}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-on-rust">
                     <Bot className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -1308,7 +1308,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                 {activeChat.otherUser ? (
                   isAssistantProfile(activeChat.otherUser) ? (
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-vintage-rust text-on-rust">
                         <Bot className="h-5 w-5" />
                       </div>
                       <div>
@@ -1541,7 +1541,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         <div
                           className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                             isMine
-                              ? "rounded-br-sm vintage-btn text-[#fff8f0]"
+                              ? "rounded-br-sm vintage-btn text-on-rust"
                               : "rounded-bl-sm vintage-card-inset text-vintage-ink"
                           }`}
                         >
@@ -1566,7 +1566,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                                   type="button"
                                   onClick={() => handleSaveMessageEdit(msg.id, msg.created_at)}
                                   disabled={savingMessageEdit || !editMessageDraft.trim()}
-                                  className="flex items-center gap-1 rounded-lg bg-white/20 px-2 py-1 text-[10px] font-semibold disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded-lg bg-black/20 px-2 py-1 text-[10px] font-semibold text-on-rust disabled:opacity-50"
                                 >
                                   <Check className="h-3 w-3" /> Save
                                 </button>
@@ -1576,7 +1576,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                                     setEditingMessageId(null);
                                     setMessageEditError(null);
                                   }}
-                                  className="flex items-center gap-1 rounded-lg bg-white/10 px-2 py-1 text-[10px]"
+                                  className="flex items-center gap-1 rounded-lg bg-black/10 px-2 py-1 text-[10px] text-on-rust"
                                 >
                                   <X className="h-3 w-3" /> Cancel
                                 </button>
@@ -1631,7 +1631,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                           )}
                           <div
                             className={`mt-1 flex items-center gap-2 text-[10px] ${
-                              isMine ? "text-[#fff8f0]/70" : "text-vintage-ink-muted"
+                              isMine ? "text-on-rust-muted" : "text-vintage-ink-muted"
                             }`}
                           >
                             <span>

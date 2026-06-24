@@ -115,7 +115,7 @@ export function VoiceRoomView({
         body: JSON.stringify({ roomName }),
       });
     }
-    router.push("/voice");
+    router.push("/live?tab=voice");
   }, [isHost, roomName, router]);
 
   if (error) {
@@ -152,7 +152,7 @@ export function VoiceRoomView({
         connect
         audio
         video={false}
-        onDisconnected={() => router.push("/voice")}
+        onDisconnected={() => router.push("/live?tab=voice")}
       >
         <RoomAudioRenderer />
         <VoiceControls isHost={isHost} onLeave={() => void handleLeave()} />

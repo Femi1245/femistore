@@ -61,13 +61,13 @@ export function GamesHub() {
             onClick={() => setActive(g.id)}
             className={`rounded-sm border-2 px-4 py-2 text-left transition ${
               active === g.id
-                ? "border-vintage-rust bg-vintage-rust text-[#fff8f0]"
+                ? "border-vintage-rust bg-vintage-rust text-on-rust"
                 : "border-vintage-border bg-vintage-paper hover:bg-vintage-paper-dark/50"
             }`}
           >
             <span className="block text-sm font-bold">{g.title}</span>
             <span
-              className={`block text-xs ${active === g.id ? "text-[#fff8f0]/80" : "text-vintage-ink-muted"}`}
+              className={`block text-xs ${active === g.id ? "text-on-rust-muted" : "text-vintage-ink-muted"}`}
             >
               {g.desc}
             </span>

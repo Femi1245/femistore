@@ -2,18 +2,29 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Sparkles } from "lucide-react";
+import { Plus, Search, Sparkles, Store } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  canCreateServiceGigs,
+  getBusinessProfileUrl,
+  hasBusinessProfile,
+} from "@/lib/business";
 import {
   loadOpportunities,
   OPPORTUNITY_CATEGORIES,
   OPPORTUNITY_TYPES,
   WORK_MODES,
 } from "@/lib/opportunities";
-import type { Opportunity, OpportunityType, OpportunityWorkMode, Profile } from "@/lib/types";
+import type {
+  Opportunity,
+  OpportunityListingKind,
+  OpportunityType,
+  OpportunityWorkMode,
+  Profile,
+} from "@/lib/types";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 
-type Tab = "all" | "mine";
+type Tab = "all" | "services" | "hiring" | "mine";
 
 export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
   const [tab, setTab] = useState<Tab>("all");
@@ -25,6 +36,17 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
   const [workMode, setWorkMode] = useState<OpportunityWorkMode | "">("");
   const [schemaMissing, setSchemaMissing] = useState(false);
 
+  const listingKind: OpportunityListingKind | "" =
+    tab === "services" ? "offering" : tab === "hiring" ? "seeking" : "";
+
+  const canSell = canCreateServiceGigs(currentUser);
+  const storeHref = getBusinessProfileUrl(currentUser.username);
+  const listServiceHref = canSell
+    ? "/opportunities/new/service"
+    : hasBusinessProfile(currentUser)
+      ? `${storeHref}?seller=1`
+      : "/profile/business/setup";
+
   const load = useCallback(async () => {
     setLoading(true);
     setSchemaMissing(false);
@@ -34,6 +56,7 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
         type,
         category: category || undefined,
         workMode,
+        listingKind,
         mine: tab === "mine",
       });
       setItems(data);
@@ -42,7 +65,7 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
       setItems([]);
     }
     setLoading(false);
-  }, [search, type, category, workMode, tab]);
+  }, [search, type, category, workMode, listingKind, tab]);
 
   useEffect(() => {
     const timer = window.setTimeout(load, 250);
@@ -61,21 +84,49 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
               </h1>
             </div>
             <p className="max-w-xl text-sm leading-relaxed text-vintage-ink-muted">
-              Jobs, gigs, collabs, and internships — posted by people and businesses on
-              Zumelia. Find work, hire talent, or team up without leaving the app.
+              Hire talent, find gigs, or list your own products and services.
+              {hasBusinessProfile(currentUser) && (
+                <>
+                  {" "}
+                  Your listings also appear on{" "}
+                  <Link
+                    href={getBusinessProfileUrl(currentUser.username)}
+                    className="font-semibold text-vintage-rust hover:underline"
+                  >
+                    your storefront
+                  </Link>
+                  .
+                </>
+              )}
             </p>
           </div>
-          <Link
-            href="/opportunities/new"
-            className="vintage-btn inline-flex shrink-0 items-center justify-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Post opportunity
-          </Link>
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <Link
+              href={listServiceHref}
+              className="vintage-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <Store className="h-4 w-4" />
+              List your service
+            </Link>
+            <Link
+              href="/opportunities/new"
+              className="vintage-btn-outline inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Post a hiring need
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-5 flex gap-2">
-          {(["all", "mine"] as const).map((t) => (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {(
+            [
+              ["all", "Browse all"],
+              ["services", "Services & products"],
+              ["hiring", "Hiring & gigs"],
+              ["mine", "My posts"],
+            ] as const
+          ).map(([t, label]) => (
             <button
               key={t}
               type="button"
@@ -86,7 +137,7 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
                   : "text-vintage-ink-muted hover:bg-vintage-paper-dark"
               }`}
             >
-              {t === "all" ? "Browse all" : "My posts"}
+              {label}
             </button>
           ))}
         </div>
@@ -97,7 +148,7 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title, skills, location…"
+              placeholder="Search title, service, skills, location…"
               className="vintage-input w-full py-2.5 pl-10 pr-4 text-sm"
             />
           </div>
@@ -144,8 +195,9 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
         <div className="vintage-card border-vintage-rust/30 bg-vintage-rust/5 p-4 text-sm text-vintage-ink">
           <p className="font-semibold">Database setup needed</p>
           <p className="mt-1 text-vintage-ink-muted">
-            Run <code className="text-xs">supabase/opportunities-board-schema.sql</code> in
-            your Supabase SQL Editor to enable the opportunities board.
+            Run <code className="text-xs">supabase/opportunities-board-schema.sql</code> and{" "}
+            <code className="text-xs">supabase/opportunities-service-gigs-schema.sql</code> in
+            your Supabase SQL Editor.
           </p>
         </div>
       )}
@@ -159,20 +211,37 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
       ) : items.length === 0 ? (
         <div className="vintage-card p-10 text-center">
           <p className="font-display text-lg font-semibold text-vintage-ink">
-            {tab === "mine" ? "You haven't posted yet" : "No opportunities yet"}
+            {tab === "mine"
+              ? "You haven't posted yet"
+              : tab === "services"
+                ? "No services listed yet"
+                : tab === "hiring"
+                  ? "No hiring posts yet"
+                  : "No opportunities yet"}
           </p>
           <p className="mt-2 text-sm text-vintage-ink-muted">
             {tab === "mine"
-              ? "Post a job, gig, or collab and let the community find you."
-              : "Be the first to post — or check back soon."}
+              ? "List a service or post what you're looking for."
+              : tab === "services"
+                ? "Be the first to list your product or service."
+                : "Be the first to post — or check back soon."}
           </p>
-          <Link
-            href="/opportunities/new"
-            className="vintage-btn mt-5 inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Post opportunity
-          </Link>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <Link
+              href={listServiceHref}
+              className="vintage-btn inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <Store className="h-4 w-4" />
+              List your service
+            </Link>
+            <Link
+              href="/opportunities/new"
+              className="vintage-btn-outline inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Post hiring need
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">

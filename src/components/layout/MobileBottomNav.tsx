@@ -43,7 +43,7 @@ function buildTabs(user: Profile): Tab[] {
       href: "/live",
       label: "Live",
       icon: Radio,
-      match: (p) => p.startsWith("/live"),
+      match: (p) => p.startsWith("/live") || p.startsWith("/voice"),
     },
     {
       href: "/chat",

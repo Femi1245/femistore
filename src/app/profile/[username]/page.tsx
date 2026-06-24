@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProfileHeader } from "@/components/social/ProfileHeader";
 import { ProfilePosts } from "@/components/social/ProfilePosts";
+import { StoreGigsSection } from "@/components/opportunities/StoreGigsSection";
 import {
   getBusinessProfileUrl,
   hasBusinessProfile,
@@ -90,6 +91,12 @@ export default async function ProfilePage({
             <span className="text-sm font-semibold text-vintage-rust">Open →</span>
           </Link>
         )}
+
+        <StoreGigsSection
+          profile={typedProfile}
+          currentUser={currentUser}
+          variant="profile"
+        />
 
         <div>
           <h2 className="font-display mb-4 text-lg font-semibold text-vintage-ink">

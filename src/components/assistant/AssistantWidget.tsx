@@ -134,7 +134,7 @@ export function AssistantWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0] shadow-lg transition hover:scale-105 md:bottom-6"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-vintage-rust text-on-rust shadow-lg transition hover:scale-105 md:bottom-6"
           aria-label="Open Zumelia AI assistant"
         >
           <Bot className="h-7 w-7" />
@@ -145,7 +145,7 @@ export function AssistantWidget() {
         <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-[60] flex h-[min(32rem,70vh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-vintage-border bg-vintage-paper shadow-2xl md:bottom-6">
           <header className="flex items-center justify-between border-b border-vintage-border bg-vintage-rust/10 px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-vintage-rust text-[#fff8f0]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-vintage-rust text-on-rust">
                 <Bot className="h-5 w-5" />
               </div>
               <div>
@@ -177,7 +177,7 @@ export function AssistantWidget() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
                     m.role === "user"
-                      ? "bg-vintage-rust text-[#fff8f0]"
+                      ? "bg-vintage-rust text-on-rust"
                       : "vintage-card-inset text-vintage-ink"
                   }`}
                 >

@@ -76,6 +76,11 @@ export function canAccessBusinessProfile(profile: Profile): boolean {
   return hasBusinessProfile(profile);
 }
 
+/** List service/product gigs — requires business profile and business (seller) mode. */
+export function canCreateServiceGigs(profile: Profile): boolean {
+  return hasBusinessProfile(profile) && getActiveMode(profile) === "business";
+}
+
 export function shouldRedirectPersonalToBusiness(
   profile: Profile,
   viewer: Profile,

@@ -18,13 +18,16 @@ import {
   closeOpportunity,
   compensationLabel,
   formatOpportunityAge,
+  listingKindLabel,
   opportunityTypeLabel,
   posterDisplayName,
+  posterStorefrontUrl,
   workModeLabel,
 } from "@/lib/opportunities";
 import type { Opportunity, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
-import { getBusinessProfileUrl, getPersonalProfileUrl } from "@/lib/business";
+import { OpportunityAttachments } from "@/components/opportunities/OpportunityAttachments";
+import { getBusinessProfileUrl, getPersonalProfileUrl, hasBusinessProfile } from "@/lib/business";
 
 export function OpportunityDetailView({
   opportunity,
@@ -45,6 +48,16 @@ export function OpportunityDetailView({
       ? getBusinessProfileUrl(poster.username)
       : getPersonalProfileUrl(poster.username)
     : "#";
+  const storefrontUrl = posterStorefrontUrl(poster);
+  const isOffering = opportunity.listing_kind === "offering";
+  const backHref =
+    isOwner && isOffering && hasBusinessProfile(currentUser)
+      ? getBusinessProfileUrl(currentUser.username)
+      : "/opportunities";
+  const backLabel =
+    isOwner && isOffering && hasBusinessProfile(currentUser)
+      ? "Back to my store"
+      : "All opportunities";
 
   async function handleApply() {
     if (!poster || isOwner) return;
@@ -64,7 +77,9 @@ export function OpportunityDetailView({
     }
 
     if (convId) {
-      const intro = `Hi! I'm interested in your opportunity "${opportunity.title}" on Zumelia.`;
+      const intro = isOffering
+        ? `Hi! I'm interested in your service "${opportunity.service_name || opportunity.title}" on Zumelia.`
+        : `Hi! I'm interested in your opportunity "${opportunity.title}" on Zumelia.`;
       await createClient().from("messages").insert({
         conversation_id: convId,
         sender_id: currentUser.id,
@@ -92,15 +107,24 @@ export function OpportunityDetailView({
   return (
     <div className="space-y-4">
       <Link
-        href="/opportunities"
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm font-medium text-vintage-ink-muted hover:text-vintage-rust"
       >
         <ArrowLeft className="h-4 w-4" />
-        All opportunities
+        {backLabel}
       </Link>
 
       <article className="vintage-card p-5 sm:p-8">
         <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+              isOffering
+                ? "bg-vintage-olive/15 text-vintage-olive"
+                : "bg-vintage-rust/10 text-vintage-rust"
+            }`}
+          >
+            {listingKindLabel(opportunity.listing_kind ?? "seeking")}
+          </span>
           <span className="rounded-full bg-vintage-rust/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-vintage-rust">
             {opportunityTypeLabel(opportunity.opportunity_type)}
           </span>
@@ -117,6 +141,11 @@ export function OpportunityDetailView({
         <h1 className="font-display text-2xl font-bold text-vintage-ink sm:text-3xl">
           {opportunity.title}
         </h1>
+        {opportunity.service_name && (
+          <p className="mt-2 text-base font-semibold text-vintage-rust">
+            {opportunity.service_name}
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-4 text-sm text-vintage-ink-muted">
           <span className="inline-flex items-center gap-1.5">
@@ -163,6 +192,8 @@ export function OpportunityDetailView({
           {opportunity.description}
         </div>
 
+        <OpportunityAttachments attachments={opportunity.attachments ?? []} />
+
         {error && (
           <p className="mt-4 rounded-lg bg-vintage-rust/10 px-3 py-2 text-sm text-vintage-rust">
             {error}
@@ -178,8 +209,21 @@ export function OpportunityDetailView({
               className="vintage-btn inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
             >
               <MessageCircle className="h-4 w-4" />
-              {applying ? "Opening chat…" : "Apply via message"}
+              {applying
+                ? "Opening chat…"
+                : isOffering
+                  ? "Message seller"
+                  : "Apply via message"}
             </button>
+          )}
+          {storefrontUrl && isOffering && (
+            <Link
+              href={storefrontUrl}
+              className="vintage-btn-outline inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View storefront
+            </Link>
           )}
           {opportunity.application_url && (
             <a

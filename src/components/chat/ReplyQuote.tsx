@@ -11,15 +11,23 @@ export function ReplyQuote({
 }) {
   const inner = (
     <>
-      <p className={`font-semibold ${muted ? "text-vintage-ink-muted" : "text-vintage-rust"}`}>
+      <p
+        className={`font-semibold ${
+          muted ? "text-on-rust-muted" : "text-vintage-rust"
+        }`}
+      >
         {label}
       </p>
-      <p className="line-clamp-2 opacity-90">{content}</p>
+      <p className={`line-clamp-2 ${muted ? "text-on-rust" : "text-vintage-ink"}`}>
+        {content}
+      </p>
     </>
   );
 
-  const className = `mb-2 w-full rounded-lg border-l-2 border-vintage-rust/60 px-2 py-1.5 text-left text-xs ${
-    muted ? "bg-black/5" : "bg-black/10"
+  const className = `mb-2 w-full rounded-lg border-l-2 px-2 py-1.5 text-left text-xs ${
+    muted
+      ? "border-[var(--vintage-btn-text)]/35 bg-black/10"
+      : "border-vintage-rust/60 bg-black/10"
   }`;
 
   if (onClick) {

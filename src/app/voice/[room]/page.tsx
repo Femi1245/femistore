@@ -24,7 +24,7 @@ export default async function VoiceRoomPage({ params }: Props) {
   return (
     <AppShell user={user} wide>
       <Link
-        href="/voice"
+        href="/live?tab=voice"
         className="mb-4 inline-block text-sm text-vintage-ink-muted hover:text-vintage-rust"
       >
         ← All lounges

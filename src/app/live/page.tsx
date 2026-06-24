@@ -1,7 +1,6 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { LiveSetupNotice } from "@/components/live/LiveSetupNotice";
-import { LiveStreamList } from "@/components/live/LiveStreamList";
+import { LiveHub } from "@/components/live/LiveHub";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -11,21 +10,16 @@ export default async function LivePage() {
 
   return (
     <AppShell user={user} wide>
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold text-vintage-ink">Live</h1>
-            <p className="text-sm text-vintage-ink-muted">
-              Watch live video from people around the world
-            </p>
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <div className="h-10 w-48 animate-pulse rounded-lg bg-vintage-paper-dark" />
+            <div className="h-64 animate-pulse rounded-lg bg-vintage-paper-dark" />
           </div>
-          <Link href="/live/go-live" className="vintage-btn px-5 py-2.5 text-sm">
-            Go live
-          </Link>
-        </div>
-        <LiveSetupNotice />
-        <LiveStreamList />
-      </div>
+        }
+      >
+        <LiveHub />
+      </Suspense>
     </AppShell>
   );
 }

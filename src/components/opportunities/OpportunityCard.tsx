@@ -11,11 +11,13 @@ import type { Opportunity } from "@/lib/types";
 import {
   compensationLabel,
   formatOpportunityAge,
+  listingKindLabel,
   opportunityTypeLabel,
   posterDisplayName,
   workModeLabel,
 } from "@/lib/opportunities";
 import { Avatar } from "@/components/Avatar";
+import { OpportunityAttachments } from "@/components/opportunities/OpportunityAttachments";
 
 export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
   const poster = opportunity.poster;
@@ -26,6 +28,15 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
       className="vintage-card block p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-5"
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${
+            opportunity.listing_kind === "offering"
+              ? "bg-vintage-olive/15 text-vintage-olive"
+              : "bg-vintage-rust/10 text-vintage-rust"
+          }`}
+        >
+          {listingKindLabel(opportunity.listing_kind ?? "seeking")}
+        </span>
         <span className="rounded-full bg-vintage-rust/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-vintage-rust">
           {opportunityTypeLabel(opportunity.opportunity_type)}
         </span>
@@ -42,10 +53,17 @@ export function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
       <h3 className="font-display text-lg font-bold text-vintage-ink line-clamp-2">
         {opportunity.title}
       </h3>
+      {opportunity.service_name && (
+        <p className="mt-1 text-sm font-medium text-vintage-rust">
+          {opportunity.service_name}
+        </p>
+      )}
 
       <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-vintage-ink-muted">
         {opportunity.description}
       </p>
+
+      <OpportunityAttachments attachments={opportunity.attachments ?? []} compact />
 
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-vintage-ink-muted">
         <span className="inline-flex items-center gap-1">

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { COMMENT_MAX_LENGTH } from "./content-limits";
 import type { LiveChatMessage, Profile } from "./types";
 
 export async function loadLiveChatMessages(
@@ -36,13 +37,19 @@ export async function sendLiveChatMessage(
 ): Promise<{ message: LiveChatMessage | null; error?: string }> {
   const trimmed = content.trim();
   if (!trimmed) return { message: null, error: "Message is empty" };
+  if (trimmed.length > COMMENT_MAX_LENGTH) {
+    return {
+      message: null,
+      error: `Comments must be ${COMMENT_MAX_LENGTH} characters or less.`,
+    };
+  }
 
   const { data, error } = await supabase
     .from("live_chat_messages")
     .insert({
       room_name: roomName,
       user_id: userId,
-      content: trimmed.slice(0, 500),
+      content: trimmed.slice(0, COMMENT_MAX_LENGTH),
     })
     .select()
     .single();

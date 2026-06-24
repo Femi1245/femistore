@@ -345,6 +345,28 @@ export type LiveChatMessage = {
   author?: Profile;
 };
 
+export type LiveStreamViewer = {
+  room_name: string;
+  user_id: string;
+  joined_at: string;
+  last_seen_at: string;
+  profile?: Profile;
+};
+
+export type LiveJoinRequestType = "request" | "invite";
+export type LiveJoinRequestStatus = "pending" | "approved" | "declined";
+
+export type LiveJoinRequest = {
+  id: string;
+  room_name: string;
+  user_id: string;
+  request_type: LiveJoinRequestType;
+  status: LiveJoinRequestStatus;
+  created_at: string;
+  responded_at: string | null;
+  profile?: Profile;
+};
+
 export type VideoSource = "stream" | "upload";
 
 export type WatchVideo = {
@@ -423,12 +445,26 @@ export type OpportunityCompensation =
   | "negotiable"
   | "commission";
 
+export type OpportunityListingKind = "seeking" | "offering";
+
+export type OpportunityMediaType = "image" | "video" | "document";
+
+export type OpportunityAttachment = {
+  type: OpportunityMediaType;
+  url: string;
+  name: string;
+  size_bytes: number;
+};
+
 export type Opportunity = {
   id: string;
   poster_id: string;
   title: string;
   description: string;
   opportunity_type: OpportunityType;
+  listing_kind: OpportunityListingKind;
+  service_name: string;
+  attachments: OpportunityAttachment[];
   category: string;
   location: string;
   work_mode: OpportunityWorkMode;

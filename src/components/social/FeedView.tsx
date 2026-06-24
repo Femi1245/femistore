@@ -55,7 +55,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
             onClick={() => setMode("friends")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
               mode === "friends"
-                ? "bg-vintage-rust text-[#fff8f0]"
+                ? "bg-vintage-rust text-on-rust"
                 : "text-vintage-ink-muted hover:text-vintage-ink"
             }`}
           >
@@ -66,7 +66,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
             onClick={() => setMode("close_friends")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
               mode === "close_friends"
-                ? "bg-vintage-rust text-[#fff8f0]"
+                ? "bg-vintage-rust text-on-rust"
                 : "text-vintage-ink-muted hover:text-vintage-ink"
             }`}
           >
@@ -77,7 +77,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
             onClick={() => setMode("following")}
             className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
               mode === "following"
-                ? "bg-vintage-rust text-[#fff8f0]"
+                ? "bg-vintage-rust text-on-rust"
                 : "text-vintage-ink-muted hover:text-vintage-ink"
             }`}
           >

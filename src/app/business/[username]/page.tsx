@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BusinessOwnerPanel } from "@/components/business/BusinessOwnerPanel";
 import { BusinessPageHeader } from "@/components/business/BusinessPageHeader";
 import { BusinessPosts } from "@/components/business/BusinessPosts";
+import { StoreGigsSection } from "@/components/opportunities/StoreGigsSection";
 import { hasBusinessProfile } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
@@ -51,19 +52,23 @@ export default async function BusinessPage({
 
         {isOwn && <BusinessOwnerPanel profile={typedProfile} />}
 
+        <StoreGigsSection
+          profile={typedProfile}
+          currentUser={currentUser}
+          variant="store"
+        />
+
         <div>
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-vintage-ink-muted">
-                Buy & sell · Storefront
-              </p>
-              <h2 className="font-display text-xl font-semibold text-vintage-ink">
-                Listings & offers
-              </h2>
-              <p className="mt-1 text-sm text-vintage-ink-muted">
-                Products and services for customers — separate from personal social posts.
-              </p>
-            </div>
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-vintage-ink-muted">
+              Store updates
+            </p>
+            <h2 className="font-display text-xl font-semibold text-vintage-ink">
+              News & announcements
+            </h2>
+            <p className="mt-1 text-sm text-vintage-ink-muted">
+              Short posts and updates — your service listings live above.
+            </p>
           </div>
           <BusinessPosts
             profileUserId={profile.id}

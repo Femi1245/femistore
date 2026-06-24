@@ -37,17 +37,29 @@ export async function GET(request: Request) {
 
   const isHost = stream.host_id === user.id;
 
+  const { data: guest } = await supabase
+    .from("live_stream_guests")
+    .select("user_id")
+    .eq("room_name", roomName)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  const canPublish = isHost || !!guest;
+
   const token = await createLiveKitToken({
     roomName,
     identity: user.id,
     name: profile?.display_name ?? "Viewer",
-    canPublish: isHost,
+    canPublish,
   });
 
   return NextResponse.json({
     token,
     serverUrl: getLiveKitUrl(),
     isHost,
+    isGuest: !!guest && !isHost,
+    canPublish,
     stream,
   });
 }

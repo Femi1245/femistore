@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
   COMPENSATION_TYPES,
@@ -11,12 +12,25 @@ import {
   WORK_MODES,
   type CreateOpportunityInput,
 } from "@/lib/opportunities";
+import {
+  canCreateServiceGigs,
+  getBusinessProfileUrl,
+  hasBusinessProfile,
+} from "@/lib/business";
 import type {
   OpportunityCompensation,
   OpportunityType,
   OpportunityWorkMode,
   Profile,
 } from "@/lib/types";
+
+function listServiceHref(user: Profile): string {
+  if (canCreateServiceGigs(user)) return "/opportunities/new/service";
+  if (hasBusinessProfile(user)) {
+    return `${getBusinessProfileUrl(user.username)}?seller=1`;
+  }
+  return "/profile/business/setup";
+}
 
 export function CreateOpportunityForm({ user }: { user: Profile }) {
   const router = useRouter();
@@ -43,6 +57,7 @@ export function CreateOpportunityForm({ user }: { user: Profile }) {
       title,
       description,
       opportunity_type: opportunityType,
+      listing_kind: "seeking",
       category,
       location,
       work_mode: workMode,
@@ -75,6 +90,12 @@ export function CreateOpportunityForm({ user }: { user: Profile }) {
         <p className="mt-1 text-sm text-vintage-ink-muted">
           Share a job, gig, collab, or internship with the Zumelia community.
         </p>
+        <Link
+          href={listServiceHref(user)}
+          className="mt-2 inline-flex text-sm font-semibold text-vintage-rust hover:underline"
+        >
+          Listing a product or service instead? →
+        </Link>
       </div>
 
       <label className="block">

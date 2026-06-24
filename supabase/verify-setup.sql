@@ -22,13 +22,15 @@
 -- ║   13. business-accounts-schema.sql                                         ║
 -- ║   14. assistant-bot-schema.sql (after messaging / phone-groups schemas)    ║
 -- ║   15. seed-zumelia-ai.sql (creates @zumelia-ai profile — run once)       ║
--- ║   16. opportunities-schema.sql                                           ║
+-- ║   16. live-stage-schema.sql (viewers, join requests, co-hosts)         ║
+-- ║   17. opportunities-schema.sql                                           ║
 -- ║   17. trust-safety-schema.sql                                            ║
 -- ║   18. replies-schema.sql                                               ║
 -- ║   19. email-notifications-schema.sql (birthday + purchase emails)    ║
 -- ║   20. business-posts-schema.sql (personal vs business posts)         ║
 -- ║   21. opportunities-board-schema.sql (jobs / gigs board)             ║
 -- ║   22. voice-close-friends-payments-schema.sql                        ║
+-- ║   23. opportunities-service-gigs-schema.sql (list products/services) ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 drop table if exists __zumelia_diag;
@@ -42,7 +44,7 @@ from unnest(array[
   'profiles','conversations','conversation_members','messages',
   'follows','posts','post_likes','comments','post_reshares',
   'notifications','status_updates','status_views',
-  'live_streams','live_chat_messages',
+  'live_streams','live_chat_messages','live_stream_viewers','live_stream_join_requests','live_stream_guests',
   'watch_history','playlists','playlist_items','user_videos',
   'gift_catalog','sent_gifts','call_sessions','conversation_member_settings',
   'user_blocks','user_mutes','content_reports','account_appeals','dm_requests',
@@ -75,6 +77,9 @@ select 'column', c.tbl || '.' || c.col,
       then 'MISSING (run supabase/replies-schema.sql)'
     when c.tbl = 'comments' and c.col = 'reply_to_id'
       then 'MISSING (run supabase/replies-schema.sql)'
+    when c.tbl = 'opportunities'
+      and c.col in ('listing_kind', 'service_name', 'attachments')
+      then 'MISSING (run supabase/opportunities-service-gigs-schema.sql)'
     else 'MISSING'
   end
 from (values
@@ -124,7 +129,10 @@ from (values
   ('messages','poll_id'),
   ('messages','reply_to_id'),
   ('messages','chat_payment_id'),
-  ('comments','reply_to_id')
+  ('comments','reply_to_id'),
+  ('opportunities','listing_kind'),
+  ('opportunities','service_name'),
+  ('opportunities','attachments')
 ) as c(tbl, col);
 
 -- ── Functions ────────────────────────────────────────────────────────────────
@@ -183,7 +191,7 @@ select 'bucket', b,
   case when exists (select 1 from storage.buckets where id = b)
        then 'OK' else 'MISSING' end
 from unnest(array[
-  'avatars','post-media','status-media','user-videos','voice-messages','chat-wallpapers','business-media'
+  'avatars','post-media','status-media','user-videos','voice-messages','chat-wallpapers','business-media','opportunity-media'
 ]) as b;
 
 -- ── Realtime publication (incoming calls + live gifts need these) ────────────
