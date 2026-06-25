@@ -2,6 +2,8 @@ export type AccountKind = "personal" | "business";
 export type AccountMode = "personal" | "business";
 export type DmPolicy = "everyone" | "friends" | "business_only" | "nobody";
 export type ChatInbox = "personal" | "business";
+export type DmContext = "personal" | "business";
+export type BusinessAutoReplyMode = "template" | "ai";
 export type ProfileTheme = "default" | "rust" | "olive" | "midnight" | "paper";
 export type ReportTargetType = "user" | "post" | "message" | "comment";
 
@@ -32,6 +34,10 @@ export type Profile = {
   business_contact_enabled: boolean;
   business_auto_reply_enabled: boolean;
   business_auto_reply_message: string;
+  business_auto_reply_mode?: BusinessAutoReplyMode;
+  business_auto_reply_max_count?: number;
+  business_auto_reply_hours_start?: string | null;
+  business_auto_reply_hours_end?: string | null;
   business_featured: boolean;
   business_featured_at: string | null;
   is_private: boolean;
@@ -88,6 +94,7 @@ export type Message = {
   chat_payment_id: string | null;
   poll_id: string | null;
   reply_to_id: string | null;
+  is_auto_reply?: boolean;
   created_at: string;
   edited_at: string | null;
   reply_to?: MessageReplyPreview | null;
@@ -124,6 +131,7 @@ export type ConversationPreview = {
   kind: ConversationKind;
   name: string | null;
   is_secret?: boolean;
+  dm_context?: DmContext;
   other_user?: Profile;
   member_count?: number;
   my_role?: MemberRole;
@@ -231,6 +239,7 @@ export type ActiveChat = {
   avatarName: string;
   avatarUrl: string | null;
   isSecret?: boolean;
+  dm_context?: DmContext;
   otherUser?: Profile;
   canPost: boolean;
   members?: Profile[];

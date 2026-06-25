@@ -642,7 +642,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           .finally(() => setAssistantThinking(false));
       } else if (
         activeChat.otherUser &&
-        hasBusinessProfile(activeChat.otherUser) &&
+        activeChat.dm_context === "business" &&
         activeChat.otherUser.business_auto_reply_enabled &&
         activeChat.convId
       ) {
@@ -942,7 +942,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   <p className="text-sm font-semibold">Seller inbox</p>
                 </div>
                 <p className="text-xs text-vintage-ink-muted">
-                  Customer inquiries and business messages.{" "}
+                  Messages from buyers who inquire about your gigs or services.{" "}
                   <Link
                     href="/profile/settings#chat-settings"
                     className="font-semibold text-vintage-rust hover:underline"
@@ -955,7 +955,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
                   <Briefcase className="h-10 w-10 text-vintage-border" />
                   <p className="text-sm text-vintage-ink-muted">
-                    No customer messages yet. When someone contacts your business, chats appear here.
+                    No gig inquiries yet. When a buyer messages you about a service listing, it appears here.
                   </p>
                 </div>
               ) : (

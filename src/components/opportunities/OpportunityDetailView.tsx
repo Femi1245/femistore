@@ -68,6 +68,12 @@ export function OpportunityDetailView({
       createClient(),
       currentUser.id,
       poster.id,
+      {
+        businessInquiry: isOffering && hasBusinessProfile(poster),
+        requestPreview: isOffering
+          ? `Inquiry about ${opportunity.service_name || opportunity.title}`
+          : `Inquiry about ${opportunity.title}`,
+      },
     );
     setApplying(false);
 
@@ -85,6 +91,17 @@ export function OpportunityDetailView({
         sender_id: currentUser.id,
         content: intro,
       });
+      if (isOffering && hasBusinessProfile(poster) && poster.business_auto_reply_enabled) {
+        void fetch("/api/business/auto-reply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: convId,
+            message: intro,
+            businessUserId: poster.id,
+          }),
+        });
+      }
       router.push("/chat");
     }
   }

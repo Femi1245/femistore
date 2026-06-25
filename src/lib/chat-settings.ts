@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DmPolicy, Profile } from "./types";
+import type { DmPolicy, Profile, BusinessAutoReplyMode } from "./types";
 import { hasBusinessProfile } from "./business";
 
 export type PersonalChatSettings = {
@@ -13,6 +13,10 @@ export type BusinessChatSettings = {
   business_contact_enabled: boolean;
   business_auto_reply_enabled: boolean;
   business_auto_reply_message: string;
+  business_auto_reply_mode: BusinessAutoReplyMode;
+  business_auto_reply_max_count: number;
+  business_auto_reply_hours_start: string | null;
+  business_auto_reply_hours_end: string | null;
 };
 
 export function personalChatSettingsFromProfile(profile: Profile): PersonalChatSettings {
@@ -29,6 +33,10 @@ export function businessChatSettingsFromProfile(profile: Profile): BusinessChatS
     business_contact_enabled: profile.business_contact_enabled ?? true,
     business_auto_reply_enabled: profile.business_auto_reply_enabled ?? false,
     business_auto_reply_message: profile.business_auto_reply_message ?? "",
+    business_auto_reply_mode: profile.business_auto_reply_mode ?? "template",
+    business_auto_reply_max_count: profile.business_auto_reply_max_count ?? 1,
+    business_auto_reply_hours_start: profile.business_auto_reply_hours_start ?? null,
+    business_auto_reply_hours_end: profile.business_auto_reply_hours_end ?? null,
   };
 }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Briefcase, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { hasBusinessProfile } from "@/lib/business";
@@ -69,17 +68,7 @@ export function ChatModeSettings({ profile }: { profile: Profile }) {
       <div>
         <h2 className="font-display text-lg font-semibold text-vintage-ink">Chat settings</h2>
         <p className="mt-1 text-sm text-vintage-ink-muted">
-          Personal and business messaging use separate inboxes and rules.
-          {isSeller && (
-            <>
-              {" "}
-              Open the <strong>Seller</strong> tab in{" "}
-              <Link href="/chat" className="text-vintage-rust hover:underline">
-                Messages
-              </Link>{" "}
-              for customer chats.
-            </>
-          )}
+          Personal and business messaging use separate inboxes. Gig and service inquiries go to your Seller tab.
         </p>
       </div>
 
@@ -144,7 +133,7 @@ export function ChatModeSettings({ profile }: { profile: Profile }) {
             <h3 className="font-semibold text-vintage-ink">Seller / business messages</h3>
           </div>
           <p className="text-xs text-vintage-ink-muted">
-            Customer inquiries land in your Seller inbox. Auto-reply only applies here.
+            Gig and service inquiries from your listings land in your Seller inbox. Auto-reply only applies here.
           </p>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
@@ -192,24 +181,118 @@ export function ChatModeSettings({ profile }: { profile: Profile }) {
             />
           </label>
           {business.business_auto_reply_enabled && (
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
-                Auto-reply instructions
-              </label>
-              <textarea
-                value={business.business_auto_reply_message}
-                disabled={saving}
-                onChange={(e) => setBusiness((b) => ({ ...b, business_auto_reply_message: e.target.value }))}
-                onBlur={() =>
-                  void saveBusiness({
-                    business_auto_reply_message: business.business_auto_reply_message,
-                  })
-                }
-                rows={3}
-                className="vintage-input w-full resize-y text-sm"
-                placeholder="e.g. Thanks for reaching out! We reply within 24 hours…"
-              />
-            </div>
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
+                  Reply style
+                </label>
+                <select
+                  value={business.business_auto_reply_mode}
+                  disabled={saving}
+                  onChange={(e) =>
+                    void saveBusiness({
+                      business_auto_reply_mode: e.target
+                        .value as BusinessChatSettings["business_auto_reply_mode"],
+                    })
+                  }
+                  className="vintage-input w-full"
+                >
+                  <option value="template">Send my message as-is (recommended)</option>
+                  <option value="ai">AI-enhanced reply from my instructions</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
+                  Auto-reply message
+                </label>
+                <textarea
+                  value={business.business_auto_reply_message}
+                  disabled={saving}
+                  onChange={(e) =>
+                    setBusiness((b) => ({ ...b, business_auto_reply_message: e.target.value }))
+                  }
+                  onBlur={() =>
+                    void saveBusiness({
+                      business_auto_reply_message: business.business_auto_reply_message,
+                    })
+                  }
+                  rows={3}
+                  className="vintage-input w-full resize-y text-sm"
+                  placeholder="e.g. Thanks for your inquiry! We reply within 24 hours on weekdays."
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
+                  Max replies per gig chat
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={business.business_auto_reply_max_count}
+                  disabled={saving}
+                  onChange={(e) =>
+                    setBusiness((b) => ({
+                      ...b,
+                      business_auto_reply_max_count: Math.min(
+                        20,
+                        Math.max(1, Number(e.target.value) || 1),
+                      ),
+                    }))
+                  }
+                  onBlur={() =>
+                    void saveBusiness({
+                      business_auto_reply_max_count: business.business_auto_reply_max_count,
+                    })
+                  }
+                  className="vintage-input w-full"
+                />
+                <p className="mt-1 text-xs text-vintage-ink-muted">
+                  Default is 1 — only the first new customer message gets an auto-reply, not every follow-up.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
+                    Active from
+                  </label>
+                  <input
+                    type="time"
+                    value={business.business_auto_reply_hours_start?.slice(0, 5) ?? ""}
+                    disabled={saving}
+                    onChange={(e) =>
+                      void saveBusiness({
+                        business_auto_reply_hours_start: e.target.value
+                          ? `${e.target.value}:00`
+                          : null,
+                      })
+                    }
+                    className="vintage-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
+                    Active until
+                  </label>
+                  <input
+                    type="time"
+                    value={business.business_auto_reply_hours_end?.slice(0, 5) ?? ""}
+                    disabled={saving}
+                    onChange={(e) =>
+                      void saveBusiness({
+                        business_auto_reply_hours_end: e.target.value
+                          ? `${e.target.value}:00`
+                          : null,
+                      })
+                    }
+                    className="vintage-input w-full"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-vintage-ink-muted">
+                Leave both times empty to auto-reply anytime. Set a window for after-hours only (e.g. 6:00 PM – 9:00 AM).
+              </p>
+            </>
           )}
         </div>
       )}

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       body.conversationId,
       business as Profile,
       body.message.trim(),
+      supabase,
     );
 
     if (!saved) {

@@ -74,6 +74,7 @@ export async function canMessageUser(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
+  options?: { businessChannel?: boolean },
 ): Promise<{
   allowed: boolean;
   requiresRequest?: boolean;
@@ -105,6 +106,34 @@ export async function canMessageUser(
   }
 
   const friends = await areMutualFriends(supabase, userId, otherUserId);
+  const businessChannel = options?.businessChannel ?? false;
+
+  if (businessChannel) {
+    if (!acceptsBusinessContact(other)) {
+      return { allowed: false, reason: "This business is not accepting messages." };
+    }
+
+    const policy = getDmPolicyForInquiry(other, true);
+    if (policy === "nobody") {
+      return { allowed: false, reason: "This business is not accepting messages." };
+    }
+    if (friends) return { allowed: true, asBusinessInquiry: true };
+    if (policy === "friends") {
+      return {
+        allowed: false,
+        reason: "Connect as friends first, or check the business message settings.",
+      };
+    }
+    if (policy === "business_only" || policy === "everyone") {
+      return {
+        allowed: true,
+        requiresRequest: policy === "everyone",
+        asBusinessInquiry: true,
+      };
+    }
+    return { allowed: false, reason: "This business is not accepting messages." };
+  }
+
   const business = acceptsBusinessContact(other);
   const asBusinessInquiry = !friends && business;
   const policy = getDmPolicyForInquiry(other, asBusinessInquiry);
@@ -167,10 +196,14 @@ export async function findOrCreateConversation(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
-  options?: { secret?: boolean; requestPreview?: string },
+  options?: { secret?: boolean; requestPreview?: string; businessInquiry?: boolean },
 ): Promise<{ convId: string | null; requiresRequest?: boolean; error?: string }> {
   const secret = options?.secret ?? false;
-  const access = await canMessageUser(supabase, userId, otherUserId);
+  const businessInquiry = options?.businessInquiry ?? false;
+  const dmContext = businessInquiry ? "business" : "personal";
+  const access = await canMessageUser(supabase, userId, otherUserId, {
+    businessChannel: businessInquiry,
+  });
   if (!access.allowed) {
     return { convId: null, error: access.reason };
   }
@@ -197,10 +230,11 @@ export async function findOrCreateConversation(
         .in("id", sharedIds)
         .eq("kind", "dm")
         .eq("is_secret", secret)
+        .eq("dm_context", dmContext)
         .limit(1);
 
       if (dmConvs?.[0]) {
-        if (!secret && access.asBusinessInquiry) {
+        if (!secret && businessInquiry) {
           await setConversationInbox(supabase, otherUserId, dmConvs[0].id, "business");
         }
         return { convId: dmConvs[0].id };
@@ -210,7 +244,12 @@ export async function findOrCreateConversation(
 
   const { data: conv, error: convError } = await supabase
     .from("conversations")
-    .insert({ kind: "dm", created_by: userId, is_secret: secret })
+    .insert({
+      kind: "dm",
+      created_by: userId,
+      is_secret: secret,
+      dm_context: dmContext,
+    })
     .select("id")
     .single();
 
@@ -236,7 +275,7 @@ export async function findOrCreateConversation(
     );
   }
 
-  if (!secret && access.asBusinessInquiry) {
+  if (!secret && businessInquiry) {
     await setConversationInbox(supabase, otherUserId, conv.id, "business");
   }
 
@@ -491,13 +530,14 @@ export async function loadConversations(
     const convId = membership.conversation_id;
     const { data: conv } = await supabase
       .from("conversations")
-      .select("kind, name, is_secret")
+      .select("kind, name, is_secret, dm_context")
       .eq("id", convId)
       .single();
 
     if (!conv) continue;
 
     const isSecret = !!conv.is_secret;
+    const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
     const settings = settingsMap.get(convId);
     const isArchived = settings?.is_archived ?? false;
 
@@ -564,6 +604,7 @@ export async function loadConversations(
         kind,
         name: null,
         is_secret: isSecret,
+        dm_context: dmContext,
         other_user: profile as Profile,
         my_role: membership.role as MemberRole,
         last_message: lastMsg.content,
@@ -629,13 +670,14 @@ export async function loadActiveChat(
 ): Promise<ActiveChat | null> {
   const { data: conv } = await supabase
     .from("conversations")
-    .select("kind, name, description, is_secret")
+    .select("kind, name, description, is_secret, dm_context")
     .eq("id", convId)
     .single();
 
   if (!conv) return null;
 
   const isSecret = !!conv.is_secret;
+  const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
 
   const { data: myMembership } = await supabase
     .from("conversation_members")
@@ -675,6 +717,7 @@ export async function loadActiveChat(
       avatarName: otherUser.display_name,
       avatarUrl: otherUser.avatar_url,
       isSecret,
+      dm_context: dmContext,
       otherUser,
       canPost,
       members,
@@ -814,7 +857,12 @@ export function attachReplyFromThread(message: Message, thread: Message[]): Mess
 
 export function conversationLabel(conv: ConversationPreview): string {
   if (conv.kind === "dm" && conv.other_user) {
-    return conv.is_secret ? `🔒 ${conv.other_user.display_name}` : conv.other_user.display_name;
+    const name = conv.other_user.display_name;
+    if (conv.is_secret) return `🔒 ${name}`;
+    if (conv.dm_context === "business" || conv.inbox === "business") {
+      return `${name} · Business`;
+    }
+    return name;
   }
   return conv.name ?? (conv.kind === "group" ? "Group" : "Channel");
 }
