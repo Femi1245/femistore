@@ -29,6 +29,7 @@ import {
   markNotificationUnread,
 } from "@/lib/notifications";
 import { markConversationUnread } from "@/lib/chat-folders";
+import { ConnectionRequestsPanel } from "@/components/social/ConnectionRequestsPanel";
 import { CHAT_UNREAD_REFRESH_EVENT } from "@/components/chat/useUnreadChatCount";
 import { NOTIFICATION_UNREAD_REFRESH_EVENT } from "@/components/notifications/useUnreadNotificationCount";
 import type { Notification, NotificationType, Profile } from "@/lib/types";
@@ -48,6 +49,7 @@ const iconMap: Record<
   live_started: Radio,
   live_ended: Radio,
   gift: Gift,
+  connection_request: UserPlus,
 };
 
 export function NotificationsView({ currentUser }: { currentUser: Profile }) {
@@ -219,6 +221,8 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
           </button>
         )}
       </div>
+
+      <ConnectionRequestsPanel userId={currentUser.id} onChanged={refresh} />
 
       {loading ? (
         <div className="flex justify-center py-16">

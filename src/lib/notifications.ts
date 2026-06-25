@@ -124,6 +124,8 @@ export function getNotificationHref(
       if (notification.entity_type === "live") return "/live";
       if (notification.entity_type === "chat") return "/chat";
       return actorUsername ? `/profile/${actorUsername}` : "/feed";
+    case "connection_request":
+      return actorUsername ? `/profile/${actorUsername}` : "/notifications";
     default:
       return "/feed";
   }
@@ -170,6 +172,8 @@ export function getNotificationText(notification: Notification): string {
       return notification.message
         ? `${name} sent you a gift: ${notification.message}`
         : `${name} sent you a gift`;
+    case "connection_request":
+      return `${name} wants to connect with you`;
     default:
       return "You have a new notification";
   }

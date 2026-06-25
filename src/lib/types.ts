@@ -151,6 +151,15 @@ export type DmRequest = {
   from_user?: Profile;
 };
 
+export type ConnectionRequest = {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: "pending" | "accepted" | "declined";
+  created_at: string;
+  from_user?: Profile;
+};
+
 export type ContentReport = {
   id: string;
   reporter_id: string;
@@ -313,7 +322,8 @@ export type NotificationType =
   | "message"
   | "live_started"
   | "live_ended"
-  | "gift";
+  | "gift"
+  | "connection_request";
 
 export type Notification = {
   id: string;

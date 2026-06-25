@@ -87,7 +87,16 @@ async function addConversationMember(
   conversationId: string,
   userId: string,
   role: MemberRole = "member",
+  options?: { asPartner?: boolean },
 ): Promise<string | null> {
+  if (options?.asPartner) {
+    const { error } = await supabase.rpc("add_dm_conversation_partner", {
+      p_conversation_id: conversationId,
+      p_partner_id: userId,
+    });
+    return error?.message ?? null;
+  }
+
   const { error } = await supabase.from("conversation_members").insert({
     conversation_id: conversationId,
     user_id: userId,
@@ -151,7 +160,9 @@ export async function findOrCreateConversation(
   const selfError = await addConversationMember(supabase, conv.id, userId, "member");
   if (selfError) return { convId: null, error: selfError };
 
-  const otherError = await addConversationMember(supabase, conv.id, otherUserId, "member");
+  const otherError = await addConversationMember(supabase, conv.id, otherUserId, "member", {
+    asPartner: true,
+  });
   if (otherError) return { convId: null, error: otherError };
 
   return { convId: conv.id };

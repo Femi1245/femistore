@@ -71,10 +71,10 @@ export function MessageRequestsPanel({
             <button
               type="button"
               onClick={() => void handleRespond(req.id, true).then(() => onOpenConversation(req.conversation_id))}
-              className="rounded-lg bg-vintage-olive/20 p-2 text-vintage-olive"
+              className="inline-flex items-center gap-1 rounded-lg bg-vintage-olive/20 px-3 py-2 text-xs font-semibold text-vintage-olive"
               title="Accept"
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-4 w-4" /> Accept
             </button>
             <button
               type="button"

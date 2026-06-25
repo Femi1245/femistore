@@ -8,6 +8,14 @@ import { createClient } from "@/lib/supabase/client";
 import { CloseFriendButton } from "@/components/social/CloseFriendButton";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { areMutualFriends, canMessageUser, findOrCreateConversation } from "@/lib/chat";
+import {
+  acceptConnectionRequest,
+  declineConnectionRequest,
+  getConnectionStatus,
+  getIncomingConnectionRequest,
+  sendConnectionRequest,
+  type ConnectionStatus,
+} from "@/lib/connection-requests";
 import { acceptsBusinessContact, getBusinessProfileUrl, hasBusinessProfile, isBusinessPrimaryAccount } from "@/lib/business";
 import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
 import { isBirthdayToday } from "@/lib/birthday";
@@ -31,6 +39,9 @@ export function ProfileHeader({
   const [counts, setCounts] = useState(initialCounts);
   const [following, setFollowing] = useState(initialFollowing);
   const [friends, setFriends] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("none");
+  const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
   const [canMessage, setCanMessage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -39,19 +50,78 @@ export function ProfileHeader({
   useEffect(() => {
     if (isOwn) return;
     const supabase = createClient();
-    areMutualFriends(supabase, currentUser.id, profile.id).then(setFriends);
+    areMutualFriends(supabase, currentUser.id, profile.id).then((mutual) => {
+      setFriends(mutual);
+      if (mutual) setConnectionStatus("friends");
+    });
+    getConnectionStatus(supabase, currentUser.id, profile.id).then(setConnectionStatus);
+    getIncomingConnectionRequest(supabase, currentUser.id, profile.id).then((req) =>
+      setIncomingRequestId(req?.id ?? null),
+    );
     canMessageUser(supabase, currentUser.id, profile.id).then((r) =>
       setCanMessage(r.allowed),
     );
-  }, [currentUser.id, profile.id, following, isOwn]);
+  }, [currentUser.id, profile.id, isOwn]);
 
-  async function handleFollow() {
-    setLoading(true);
+  async function refreshConnectionState() {
     const supabase = createClient();
-    const nowFollowing = await toggleFollow(supabase, currentUser.id, profile.id);
-    setFollowing(nowFollowing);
+    const mutual = await areMutualFriends(supabase, currentUser.id, profile.id);
+    setFriends(mutual);
+    setConnectionStatus(
+      mutual ? "friends" : await getConnectionStatus(supabase, currentUser.id, profile.id),
+    );
+    const req = await getIncomingConnectionRequest(supabase, currentUser.id, profile.id);
+    setIncomingRequestId(req?.id ?? null);
+    const msg = await canMessageUser(supabase, currentUser.id, profile.id);
+    setCanMessage(msg.allowed);
     const fresh = await getFollowCounts(supabase, profile.id);
     setCounts(fresh);
+    setFollowing(await isFollowing(supabase, currentUser.id, profile.id));
+  }
+
+  async function handleConnect() {
+    setConnectError(null);
+    setLoading(true);
+    const supabase = createClient();
+
+    if (connectionStatus === "friends") {
+      await toggleFollow(supabase, currentUser.id, profile.id);
+      await refreshConnectionState();
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await sendConnectionRequest(supabase, currentUser.id, profile.id);
+    if (error) {
+      setConnectError(error);
+      setLoading(false);
+      return;
+    }
+
+    setConnectionStatus("outgoing_pending");
+    setLoading(false);
+  }
+
+  async function handleAcceptConnection() {
+    if (!incomingRequestId) return;
+    setConnectError(null);
+    setLoading(true);
+    const { error } = await acceptConnectionRequest(createClient(), incomingRequestId);
+    if (error) {
+      setConnectError(error);
+      setLoading(false);
+      return;
+    }
+    await refreshConnectionState();
+    setLoading(false);
+  }
+
+  async function handleDeclineConnection() {
+    if (!incomingRequestId) return;
+    setLoading(true);
+    await declineConnectionRequest(createClient(), incomingRequestId, currentUser.id);
+    setIncomingRequestId(null);
+    setConnectionStatus("none");
     setLoading(false);
   }
 
@@ -137,23 +207,50 @@ export function ProfileHeader({
                 </>
               ) : (
                 <>
-                  <button
-                    onClick={handleFollow}
-                    disabled={loading}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
-                      following ? "vintage-btn-outline" : "vintage-btn"
-                    }`}
-                  >
-                    {following ? (
-                      <>
-                        <UserMinus className="h-4 w-4" /> Following
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" /> Connect
-                      </>
-                    )}
-                  </button>
+                  {connectionStatus === "incoming_pending" && incomingRequestId ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleAcceptConnection}
+                        disabled={loading}
+                        className="vintage-btn flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50"
+                      >
+                        <UserPlus className="h-4 w-4" /> Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeclineConnection}
+                        disabled={loading}
+                        className="vintage-btn-outline flex items-center gap-2 px-4 py-2 text-sm disabled:opacity-50"
+                      >
+                        Decline
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleConnect}
+                      disabled={loading || connectionStatus === "outgoing_pending"}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+                        connectionStatus === "friends"
+                          ? "vintage-btn-outline"
+                          : connectionStatus === "outgoing_pending"
+                            ? "vintage-btn-outline"
+                            : "vintage-btn"
+                      }`}
+                    >
+                      {connectionStatus === "friends" ? (
+                        <>
+                          <UserMinus className="h-4 w-4" /> Connected
+                        </>
+                      ) : connectionStatus === "outgoing_pending" ? (
+                        <>Request sent</>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4" /> Connect
+                        </>
+                      )}
+                    </button>
+                  )}
                   <button
                     onClick={handleMessage}
                     disabled={!canMessage}
@@ -243,6 +340,16 @@ export function ProfileHeader({
 
             {messageError ? (
               <p className="mt-3 text-sm text-vintage-rust">{messageError}</p>
+            ) : connectError ? (
+              <p className="mt-3 text-sm text-vintage-rust">{connectError}</p>
+            ) : !isOwn && connectionStatus === "incoming_pending" ? (
+              <p className="mt-3 text-xs text-vintage-ink-muted">
+                Accept to become friends and unlock messaging.
+              </p>
+            ) : !isOwn && connectionStatus === "outgoing_pending" ? (
+              <p className="mt-3 text-xs text-vintage-ink-muted">
+                Waiting for them to accept your connection request.
+              </p>
             ) : !isOwn && !canMessage ? (
               <p className="mt-3 text-xs text-vintage-ink-muted">
                 Connect with each other (mutual follow) to unlock messaging.
