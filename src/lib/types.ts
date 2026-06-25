@@ -240,6 +240,8 @@ export type ActiveChat = {
   avatarUrl: string | null;
   isSecret?: boolean;
   dm_context?: DmContext;
+  created_by?: string | null;
+  isSellerGig?: boolean;
   otherUser?: Profile;
   canPost: boolean;
   members?: Profile[];

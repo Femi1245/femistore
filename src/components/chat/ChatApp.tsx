@@ -85,8 +85,7 @@ import { PollMessage } from "@/components/chat/PollMessage";
 import { ReplyQuote } from "@/components/chat/ReplyQuote";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
-import { setConversationInbox } from "@/lib/chat-inbox";
-import type { ChatFolder, ChatInbox } from "@/lib/types";
+import type { ChatFolder } from "@/lib/types";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
 import {
   ASSISTANT_DISPLAY_NAME,
@@ -367,7 +366,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setChatTheme(theme);
     if (chat.isSecret) {
       setTab("secret");
-    } else if (theme?.inbox === "business" && isSeller) {
+    } else if (chat.isSellerGig && isSeller) {
       setTab("seller");
     } else {
       setTab("chats");
@@ -379,23 +378,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setReplyingTo(null);
     await loadMessages(convId, chat.isSecret);
     await markConversationRead(getSupabase(), currentUser.id, convId);
-    await refreshConversations();
-  }
-
-  async function handleMoveInbox(convId: string, inbox: ChatInbox) {
-    const { error } = await setConversationInbox(
-      getSupabase(),
-      currentUser.id,
-      convId,
-      inbox,
-    );
-    if (error) {
-      setChatError(error);
-      return;
-    }
-    const theme = await loadChatTheme(getSupabase(), currentUser.id, convId);
-    setChatTheme(theme);
-    setTab(inbox === "business" ? "seller" : "chats");
     await refreshConversations();
   }
 
@@ -1344,34 +1326,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         void refreshConversations();
                       }}
                     />
-                    {isSeller && activeChat.kind === "dm" && (
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          title="Move to personal inbox"
-                          onClick={() => void handleMoveInbox(activeChat.convId, "personal")}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
-                            chatTheme?.inbox !== "business"
-                              ? "bg-vintage-rust text-on-rust"
-                              : "vintage-card-inset text-vintage-ink-muted"
-                          }`}
-                        >
-                          Personal
-                        </button>
-                        <button
-                          type="button"
-                          title="Move to seller inbox"
-                          onClick={() => void handleMoveInbox(activeChat.convId, "business")}
-                          className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
-                            chatTheme?.inbox === "business"
-                              ? "bg-vintage-rust text-on-rust"
-                              : "vintage-card-inset text-vintage-ink-muted"
-                          }`}
-                        >
-                          Seller
-                        </button>
-                      </div>
-                    )}
                   </div>
                   )
                 ) : (

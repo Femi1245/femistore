@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { uploadMedia } from "@/lib/storage";
+import { resolveMemberInbox } from "@/lib/chat-inbox";
 import type { ChatWallpaperType, ConversationMemberSettings } from "@/lib/types";
 
 export async function loadChatTheme(
@@ -84,6 +85,7 @@ export async function upsertMemberSettings(
 ): Promise<{ error?: string; settings?: ConversationMemberSettings }> {
   const existing = await loadChatTheme(supabase, userId, conversationId);
   const base = defaultMemberFields(existing);
+  const inbox = await resolveMemberInbox(supabase, userId, conversationId, existing);
   const now = new Date().toISOString();
 
   const payload = {
@@ -102,6 +104,10 @@ export async function upsertMemberSettings(
       patch.is_archived === true ? now : patch.is_archived === false ? null : base.archived_at,
     translation_enabled: patch.translation_enabled ?? base.translation_enabled,
     translation_target_lang: patch.translation_target_lang ?? base.translation_target_lang,
+    notifications_muted: base.notifications_muted,
+    last_read_at: base.last_read_at,
+    folder_id: base.folder_id,
+    inbox,
     updated_at: now,
   };
 

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { canEditWithinWindow } from "@/lib/edit-window";
 import { ASSISTANT_USERNAME } from "@/lib/assistant";
 import { acceptsBusinessContact } from "@/lib/business";
-import { setConversationInbox } from "@/lib/chat-inbox";
+import { ensureGigThreadInboxes, isSellerGigThread } from "@/lib/chat-inbox";
 import { getDmPolicyForInquiry } from "@/lib/chat-settings";
 import { createDmRequest } from "@/lib/message-requests";
 import { isBlocked } from "@/lib/safety";
@@ -235,7 +235,7 @@ export async function findOrCreateConversation(
 
       if (dmConvs?.[0]) {
         if (!secret && businessInquiry) {
-          await setConversationInbox(supabase, otherUserId, dmConvs[0].id, "business");
+          await ensureGigThreadInboxes(supabase, dmConvs[0].id, userId, otherUserId);
         }
         return { convId: dmConvs[0].id };
       }
@@ -276,7 +276,7 @@ export async function findOrCreateConversation(
   }
 
   if (!secret && businessInquiry) {
-    await setConversationInbox(supabase, otherUserId, conv.id, "business");
+    await ensureGigThreadInboxes(supabase, conv.id, userId, otherUserId);
   }
 
   return { convId: conv.id, requiresRequest: access.requiresRequest };
@@ -530,7 +530,7 @@ export async function loadConversations(
     const convId = membership.conversation_id;
     const { data: conv } = await supabase
       .from("conversations")
-      .select("kind, name, is_secret, dm_context")
+      .select("kind, name, is_secret, dm_context, created_by")
       .eq("id", convId)
       .single();
 
@@ -538,6 +538,7 @@ export async function loadConversations(
 
     const isSecret = !!conv.is_secret;
     const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
+    const createdBy = conv.created_by as string | null;
     const settings = settingsMap.get(convId);
     const isArchived = settings?.is_archived ?? false;
 
@@ -563,11 +564,13 @@ export async function loadConversations(
     }
 
     const inbox = settings?.inbox ?? "personal";
+    const sellerGig = isSellerGigThread(dmContext, createdBy, userId);
+
     if (filter === "regular" || filter === "personal") {
-      if (isSecret || inbox === "business") continue;
+      if (isSecret || sellerGig) continue;
     }
     if (filter === "seller") {
-      if (isSecret || inbox !== "business") continue;
+      if (isSecret || !sellerGig) continue;
     }
     if (filter === "secret" && !isSecret) continue;
 
@@ -670,7 +673,7 @@ export async function loadActiveChat(
 ): Promise<ActiveChat | null> {
   const { data: conv } = await supabase
     .from("conversations")
-    .select("kind, name, description, is_secret, dm_context")
+    .select("kind, name, description, is_secret, dm_context, created_by")
     .eq("id", convId)
     .single();
 
@@ -678,6 +681,7 @@ export async function loadActiveChat(
 
   const isSecret = !!conv.is_secret;
   const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
+  const createdBy = (conv.created_by as string | null) ?? null;
 
   const { data: myMembership } = await supabase
     .from("conversation_members")
@@ -718,6 +722,8 @@ export async function loadActiveChat(
       avatarUrl: otherUser.avatar_url,
       isSecret,
       dm_context: dmContext,
+      created_by: createdBy,
+      isSellerGig: isSellerGigThread(dmContext, createdBy, userId),
       otherUser,
       canPost,
       members,
@@ -859,8 +865,8 @@ export function conversationLabel(conv: ConversationPreview): string {
   if (conv.kind === "dm" && conv.other_user) {
     const name = conv.other_user.display_name;
     if (conv.is_secret) return `🔒 ${name}`;
-    if (conv.dm_context === "business" || conv.inbox === "business") {
-      return `${name} · Business`;
+    if (conv.dm_context === "business") {
+      return `${name} · Gig`;
     }
     return name;
   }

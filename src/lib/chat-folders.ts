@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ChatFolder } from "./types";
+import { upsertMemberSettingsRow } from "./chat-inbox";
 
 export async function loadChatFolders(
   supabase: SupabaseClient,
@@ -68,18 +69,9 @@ export async function assignConversationToFolder(
   conversationId: string,
   folderId: string | null,
 ): Promise<{ error?: string }> {
-  const { error } = await supabase.from("conversation_member_settings").upsert(
-    {
-      conversation_id: conversationId,
-      user_id: userId,
-      folder_id: folderId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "conversation_id,user_id" },
-  );
-
-  if (error) return { error: error.message };
-  return {};
+  return upsertMemberSettingsRow(supabase, userId, conversationId, {
+    folder_id: folderId,
+  });
 }
 
 export async function setConversationNotificationsMuted(
@@ -88,18 +80,9 @@ export async function setConversationNotificationsMuted(
   conversationId: string,
   muted: boolean,
 ): Promise<{ error?: string }> {
-  const { error } = await supabase.from("conversation_member_settings").upsert(
-    {
-      conversation_id: conversationId,
-      user_id: userId,
-      notifications_muted: muted,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "conversation_id,user_id" },
-  );
-
-  if (error) return { error: error.message };
-  return {};
+  return upsertMemberSettingsRow(supabase, userId, conversationId, {
+    notifications_muted: muted,
+  });
 }
 
 export async function markConversationRead(
@@ -107,15 +90,9 @@ export async function markConversationRead(
   userId: string,
   conversationId: string,
 ): Promise<void> {
-  await supabase.from("conversation_member_settings").upsert(
-    {
-      conversation_id: conversationId,
-      user_id: userId,
-      last_read_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "conversation_id,user_id" },
-  );
+  await upsertMemberSettingsRow(supabase, userId, conversationId, {
+    last_read_at: new Date().toISOString(),
+  });
 }
 
 export async function markConversationUnread(
@@ -123,13 +100,7 @@ export async function markConversationUnread(
   userId: string,
   conversationId: string,
 ): Promise<void> {
-  await supabase.from("conversation_member_settings").upsert(
-    {
-      conversation_id: conversationId,
-      user_id: userId,
-      last_read_at: null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "conversation_id,user_id" },
-  );
+  await upsertMemberSettingsRow(supabase, userId, conversationId, {
+    last_read_at: null,
+  });
 }
