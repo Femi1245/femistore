@@ -49,6 +49,7 @@ function defaultMemberFields(
     notifications_muted: existing?.notifications_muted ?? false,
     last_read_at: existing?.last_read_at ?? null,
     folder_id: existing?.folder_id ?? null,
+    inbox: existing?.inbox ?? "personal",
   };
 }
 

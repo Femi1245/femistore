@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { canEditWithinWindow } from "@/lib/edit-window";
 import { ASSISTANT_USERNAME } from "@/lib/assistant";
 import { acceptsBusinessContact } from "@/lib/business";
+import { setConversationInbox } from "@/lib/chat-inbox";
+import { getDmPolicyForInquiry } from "@/lib/chat-settings";
 import { createDmRequest } from "@/lib/message-requests";
 import { isBlocked } from "@/lib/safety";
 import type {
@@ -72,7 +74,12 @@ export async function canMessageUser(
   supabase: SupabaseClient,
   userId: string,
   otherUserId: string,
-): Promise<{ allowed: boolean; requiresRequest?: boolean; reason?: string }> {
+): Promise<{
+  allowed: boolean;
+  requiresRequest?: boolean;
+  asBusinessInquiry?: boolean;
+  reason?: string;
+}> {
   if (userId === otherUserId) {
     return { allowed: false, reason: "You cannot message yourself." };
   }
@@ -99,16 +106,17 @@ export async function canMessageUser(
 
   const friends = await areMutualFriends(supabase, userId, otherUserId);
   const business = acceptsBusinessContact(other);
-  const policy = other.dm_policy ?? "friends";
+  const asBusinessInquiry = !friends && business;
+  const policy = getDmPolicyForInquiry(other, asBusinessInquiry);
 
   if (policy === "nobody") {
     return { allowed: false, reason: "This user is not accepting messages." };
   }
 
-  if (friends) return { allowed: true };
+  if (friends) return { allowed: true, asBusinessInquiry: false };
 
   if (policy === "friends") {
-    if (business) return { allowed: true };
+    if (business) return { allowed: true, asBusinessInquiry: true };
     return {
       allowed: false,
       reason:
@@ -117,12 +125,16 @@ export async function canMessageUser(
   }
 
   if (policy === "business_only") {
-    if (business) return { allowed: true };
+    if (business) return { allowed: true, asBusinessInquiry: true };
     return { allowed: false, reason: "This user only accepts business inquiries." };
   }
 
   // everyone — strangers use message requests
-  return { allowed: true, requiresRequest: !friends && !business };
+  return {
+    allowed: true,
+    requiresRequest: !friends && !business,
+    asBusinessInquiry,
+  };
 }
 
 async function addConversationMember(
@@ -188,6 +200,9 @@ export async function findOrCreateConversation(
         .limit(1);
 
       if (dmConvs?.[0]) {
+        if (!secret && access.asBusinessInquiry) {
+          await setConversationInbox(supabase, otherUserId, dmConvs[0].id, "business");
+        }
         return { convId: dmConvs[0].id };
       }
     }
@@ -219,6 +234,10 @@ export async function findOrCreateConversation(
       otherUserId,
       options?.requestPreview ?? "New message request",
     );
+  }
+
+  if (!secret && access.asBusinessInquiry) {
+    await setConversationInbox(supabase, otherUserId, conv.id, "business");
   }
 
   return { convId: conv.id, requiresRequest: access.requiresRequest };
@@ -395,7 +414,15 @@ async function getLastMessage(
   };
 }
 
-export type ConversationFilter = "all" | "regular" | "secret" | "archived" | "unread" | "requests";
+export type ConversationFilter =
+  | "all"
+  | "regular"
+  | "personal"
+  | "seller"
+  | "secret"
+  | "archived"
+  | "unread"
+  | "requests";
 
 export async function loadMemberSettingsMap(
   supabase: SupabaseClient,
@@ -495,7 +522,13 @@ export async function loadConversations(
       continue;
     }
 
-    if (filter === "regular" && isSecret) continue;
+    const inbox = settings?.inbox ?? "personal";
+    if (filter === "regular" || filter === "personal") {
+      if (isSecret || inbox === "business") continue;
+    }
+    if (filter === "seller") {
+      if (isSecret || inbox !== "business") continue;
+    }
     if (filter === "secret" && !isSecret) continue;
 
     const lastMsg = await getLastMessage(supabase, convId);
@@ -539,6 +572,7 @@ export async function loadConversations(
         is_archived: isArchived,
         is_unread: isUnread,
         folder_id: settings?.folder_id ?? null,
+        inbox,
         is_pending_request: pendingRequestIds.has(convId),
       });
     } else {

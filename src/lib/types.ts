@@ -1,6 +1,7 @@
 export type AccountKind = "personal" | "business";
 export type AccountMode = "personal" | "business";
 export type DmPolicy = "everyone" | "friends" | "business_only" | "nobody";
+export type ChatInbox = "personal" | "business";
 export type ProfileTheme = "default" | "rust" | "olive" | "midnight" | "paper";
 export type ReportTargetType = "user" | "post" | "message" | "comment";
 
@@ -35,6 +36,8 @@ export type Profile = {
   business_featured_at: string | null;
   is_private: boolean;
   dm_policy: DmPolicy;
+  personal_dm_policy?: DmPolicy | null;
+  business_dm_policy?: DmPolicy | null;
   show_last_seen: boolean;
   show_read_receipts: boolean;
   ai_assistant_enabled: boolean;
@@ -63,6 +66,7 @@ export type ConversationMemberSettings = {
   notifications_muted: boolean;
   last_read_at: string | null;
   folder_id: string | null;
+  inbox?: ChatInbox;
   updated_at: string;
 };
 
@@ -130,6 +134,7 @@ export type ConversationPreview = {
   is_unread?: boolean;
   folder_id?: string | null;
   is_pending_request?: boolean;
+  inbox?: ChatInbox;
 };
 
 export type ChatFolder = {

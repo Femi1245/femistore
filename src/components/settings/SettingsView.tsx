@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Download, Loader2, Shield } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  DM_POLICY_LABELS,
   PROFILE_THEMES,
   privacyFromProfile,
   updatePrivacySettings,
@@ -23,6 +22,7 @@ import {
 } from "@/lib/content-filters";
 import { loadMyAppeals, submitAppeal } from "@/lib/safety";
 import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceSection";
+import { ChatModeSettings } from "@/components/chat/ChatModeSettings";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { canAccessPersonalProfile } from "@/lib/business";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
@@ -138,6 +138,8 @@ export function SettingsView({ profile }: { profile: Profile }) {
 
       <MobileAppearanceSection />
 
+      <ChatModeSettings profile={profile} />
+
       {canAccessPersonalProfile(profile) && (
         <section className="vintage-card p-5 space-y-3">
           <h2 className="font-display font-bold text-vintage-ink">Personal profile</h2>
@@ -167,44 +169,6 @@ export function SettingsView({ profile }: { profile: Profile }) {
         <p className="text-xs text-vintage-ink-muted">
           When private, only followers can see your full profile and posts.
         </p>
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-vintage-ink-muted">
-            Who can message you
-          </label>
-          <select
-            value={privacy.dm_policy}
-            onChange={(e) =>
-              void savePrivacy({
-                dm_policy: e.target.value as PrivacySettings["dm_policy"],
-              })
-            }
-            className="vintage-input w-full"
-          >
-            {Object.entries(DM_POLICY_LABELS).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-vintage-ink">Show last seen</span>
-          <input
-            type="checkbox"
-            checked={privacy.show_last_seen}
-            onChange={(e) => void savePrivacy({ show_last_seen: e.target.checked })}
-            className="h-4 w-4 accent-vintage-rust"
-          />
-        </label>
-        <label className="flex items-center justify-between gap-4">
-          <span className="text-sm text-vintage-ink">Show read receipts</span>
-          <input
-            type="checkbox"
-            checked={privacy.show_read_receipts}
-            onChange={(e) => void savePrivacy({ show_read_receipts: e.target.checked })}
-            className="h-4 w-4 accent-vintage-rust"
-          />
-        </label>
         <label className="flex items-center justify-between gap-4">
           <span className="text-sm text-vintage-ink">Zumelia AI assistant</span>
           <input

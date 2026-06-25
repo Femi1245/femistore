@@ -1,14 +1,55 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useRoomContext,
   VideoConference,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Loader2, Mic, PhoneOff } from "lucide-react";
-import type { CallType } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import type { CallSession, CallType } from "@/lib/types";
+
+function CallSessionWatcher({
+  sessionId,
+  onRemoteEnd,
+}: {
+  sessionId: string;
+  onRemoteEnd: () => void;
+}) {
+  const room = useRoomContext();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`call-overlay:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const session = payload.new as CallSession;
+          if (!["ringing", "active"].includes(session.status)) {
+            void room.disconnect(true);
+            onRemoteEnd();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [onRemoteEnd, room, sessionId]);
+
+  return null;
+}
 
 export function CallOverlay({
   sessionId,
@@ -25,6 +66,13 @@ export function CallOverlay({
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const endedRef = useRef(false);
+
+  const finishCall = useCallback(() => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    onEnd();
+  }, [onEnd]);
 
   const connect = useCallback(async () => {
     setLoading(true);
@@ -51,7 +99,7 @@ export function CallOverlay({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
     });
-    onEnd();
+    finishCall();
   }
 
   if (loading) {
@@ -67,7 +115,7 @@ export function CallOverlay({
     return (
       <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 p-6 text-white">
         <p className="text-center text-red-300">{error ?? "Connection failed"}</p>
-        <button type="button" onClick={onEnd} className="vintage-btn mt-4 px-6 py-2">
+        <button type="button" onClick={finishCall} className="vintage-btn mt-4 px-6 py-2">
           Close
         </button>
       </div>
@@ -99,9 +147,10 @@ export function CallOverlay({
           connect
           video={callType === "video"}
           audio
-          onDisconnected={onEnd}
+          onDisconnected={finishCall}
           className="flex flex-1 flex-col"
         >
+          <CallSessionWatcher sessionId={sessionId} onRemoteEnd={finishCall} />
           <RoomAudioRenderer />
           {callType === "video" ? (
             <div className="flex-1 overflow-hidden rounded-lg [&_.lk-video-conference]:min-h-[50vh]">

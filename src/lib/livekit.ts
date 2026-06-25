@@ -1,4 +1,4 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 
 export function isLiveKitConfigured(): boolean {
   return !!(
@@ -6,6 +6,11 @@ export function isLiveKitConfigured(): boolean {
     process.env.LIVEKIT_API_SECRET &&
     process.env.NEXT_PUBLIC_LIVEKIT_URL
   );
+}
+
+export function getLiveKitHttpUrl(): string {
+  const url = process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "";
+  return url.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
 }
 
 export async function createLiveKitToken(options: {
@@ -36,4 +41,21 @@ export async function createLiveKitToken(options: {
 
 export function getLiveKitUrl(): string {
   return process.env.NEXT_PUBLIC_LIVEKIT_URL ?? "";
+}
+
+/** Closes the LiveKit room so every participant disconnects immediately. */
+export async function endLiveKitRoom(roomName: string): Promise<void> {
+  if (!isLiveKitConfigured()) return;
+
+  const client = new RoomServiceClient(
+    getLiveKitHttpUrl(),
+    process.env.LIVEKIT_API_KEY!,
+    process.env.LIVEKIT_API_SECRET!,
+  );
+
+  try {
+    await client.deleteRoom(roomName);
+  } catch {
+    // Room may already be empty or deleted.
+  }
 }

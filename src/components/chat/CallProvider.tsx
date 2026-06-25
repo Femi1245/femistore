@@ -111,7 +111,6 @@ export function CallProvider({
         { event: "UPDATE", schema: "public", table: "call_sessions" },
         (payload) => {
           const session = payload.new as CallSession;
-          if (session.initiator_id === userId) return;
           if (incomingCall?.id === session.id && !["ringing", "active"].includes(session.status)) {
             setIncomingCall(null);
             setIncomingCaller(null);
@@ -124,6 +123,34 @@ export function CallProvider({
       supabase.removeChannel(channel);
     };
   }, [getSupabase, handleIncomingSession, incomingCall?.id, userId]);
+
+  useEffect(() => {
+    if (!activeCall) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`active-call:${activeCall.sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "call_sessions",
+          filter: `id=eq.${activeCall.sessionId}`,
+        },
+        (payload) => {
+          const session = payload.new as CallSession;
+          if (!["ringing", "active"].includes(session.status)) {
+            setActiveCall(null);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeCall, getSupabase]);
 
   const startCall = useCallback(async (params: StartCallParams) => {
     void ensureCallNotificationPermission();

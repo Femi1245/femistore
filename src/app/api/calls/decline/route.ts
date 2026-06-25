@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callTypeLabel, isConversationMember, loadCallSession } from "@/lib/calls";
+import { endLiveKitRoom } from "@/lib/livekit";
 import { createAuthenticatedClient } from "@/lib/supabase/route-auth";
 
 export async function POST(request: Request) {
@@ -37,6 +38,8 @@ export async function POST(request: Request) {
   if (error || !updated) {
     return NextResponse.json({ error: error?.message ?? "Could not decline" }, { status: 409 });
   }
+
+  await endLiveKitRoom(session.room_name);
 
   await supabase.from("messages").insert({
     conversation_id: session.conversation_id,

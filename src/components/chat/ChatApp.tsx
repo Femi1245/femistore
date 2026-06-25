@@ -85,21 +85,24 @@ import { PollMessage } from "@/components/chat/PollMessage";
 import { ReplyQuote } from "@/components/chat/ReplyQuote";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
-import type { ChatFolder } from "@/lib/types";
+import { setConversationInbox } from "@/lib/chat-inbox";
+import type { ChatFolder, ChatInbox } from "@/lib/types";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
 import {
   ASSISTANT_DISPLAY_NAME,
   isAssistantProfile,
 } from "@/lib/assistant";
 
-type Tab = "chats" | "discover" | "phone" | "channels" | "secret" | "archived" | "requests" | "unread";
+type Tab = "chats" | "seller" | "discover" | "phone" | "channels" | "secret" | "archived" | "requests" | "unread";
 
 export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const getSupabase = useCallback(() => createClient(), []);
   const { startCall: startCallSession } = useCalls();
+  const isSeller = hasBusinessProfile(currentUser);
 
   const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
+  const [sellerChats, setSellerChats] = useState<ConversationPreview[]>([]);
   const [secretChats, setSecretChats] = useState<ConversationPreview[]>([]);
   const [archivedChats, setArchivedChats] = useState<ConversationPreview[]>([]);
   const [unreadChats, setUnreadChats] = useState<ConversationPreview[]>([]);
@@ -144,14 +147,18 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const refreshConversations = useCallback(async () => {
     const supabase = getSupabase();
     const folderFilter = activeFolderId;
-    const [regular, secret, archived, unread, folders] = await Promise.all([
+    const [regular, seller, secret, archived, unread, folders] = await Promise.all([
       loadConversations(supabase, currentUser.id, "regular", folderFilter),
+      isSeller
+        ? loadConversations(supabase, currentUser.id, "seller")
+        : Promise.resolve([] as ConversationPreview[]),
       loadConversations(supabase, currentUser.id, "secret"),
       loadConversations(supabase, currentUser.id, "archived"),
       loadConversations(supabase, currentUser.id, "unread"),
       loadChatFolders(supabase, currentUser.id),
     ]);
     setConversations(regular);
+    setSellerChats(seller);
     setSecretChats(secret);
     setArchivedChats(archived);
     setUnreadChats(unread);
@@ -159,7 +166,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event(CHAT_UNREAD_REFRESH_EVENT));
     }
-  }, [getSupabase, currentUser.id, activeFolderId]);
+  }, [getSupabase, currentUser.id, activeFolderId, isSeller]);
 
   useEffect(() => {
     refreshConversations();
@@ -356,16 +363,39 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
       return;
     }
     setActiveChat(chat);
-    setTab(chat.isSecret ? "secret" : "chats");
-    setEditingMessageId(null);
     const theme = await loadChatTheme(getSupabase(), currentUser.id, convId);
     setChatTheme(theme);
+    if (chat.isSecret) {
+      setTab("secret");
+    } else if (theme?.inbox === "business" && isSeller) {
+      setTab("seller");
+    } else {
+      setTab("chats");
+    }
+    setEditingMessageId(null);
     setTranslations({});
     setShowMessageSearch(false);
     setMessageSearch("");
     setReplyingTo(null);
     await loadMessages(convId, chat.isSecret);
     await markConversationRead(getSupabase(), currentUser.id, convId);
+    await refreshConversations();
+  }
+
+  async function handleMoveInbox(convId: string, inbox: ChatInbox) {
+    const { error } = await setConversationInbox(
+      getSupabase(),
+      currentUser.id,
+      convId,
+      inbox,
+    );
+    if (error) {
+      setChatError(error);
+      return;
+    }
+    const theme = await loadChatTheme(getSupabase(), currentUser.id, convId);
+    setChatTheme(theme);
+    setTab(inbox === "business" ? "seller" : "chats");
     await refreshConversations();
   }
 
@@ -705,6 +735,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               {(
                 [
                   ["chats", MessageCircle, "Chats"],
+                  ...(isSeller ? ([["seller", Briefcase, "Seller"]] as const) : []),
                   ["unread", Inbox, "Unread"],
                   ["requests", UserPlus, "Requests"],
                   ["secret", Lock, "Secret"],
@@ -896,6 +927,73 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                           </button>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "seller" && isSeller && (
+            <div className="flex-1 overflow-y-auto">
+              <div className="border-b border-vintage-border bg-vintage-rust/5 px-4 py-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-vintage-rust" />
+                  <p className="text-sm font-semibold">Seller inbox</p>
+                </div>
+                <p className="text-xs text-vintage-ink-muted">
+                  Customer inquiries and business messages.{" "}
+                  <Link
+                    href="/profile/settings#chat-settings"
+                    className="font-semibold text-vintage-rust hover:underline"
+                  >
+                    Seller chat settings
+                  </Link>
+                </p>
+              </div>
+              {sellerChats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+                  <Briefcase className="h-10 w-10 text-vintage-border" />
+                  <p className="text-sm text-vintage-ink-muted">
+                    No customer messages yet. When someone contacts your business, chats appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-0.5 p-2">
+                  {sellerChats.map((conv) => {
+                    const active = activeChat?.convId === conv.id;
+                    return (
+                      <button
+                        key={conv.id}
+                        type="button"
+                        onClick={() => openConversationById(conv.id)}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${
+                          active ? "bg-vintage-rust/10" : "hover:bg-vintage-paper-dark/60"
+                        }`}
+                      >
+                        <Avatar
+                          name={conversationLabel(conv)}
+                          avatarUrl={conv.other_user?.avatar_url ?? null}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`truncate font-medium ${active ? "text-vintage-rust" : "text-vintage-ink"}`}>
+                              {conversationLabel(conv)}
+                            </p>
+                            {conv.last_message_at && (
+                              <span className="shrink-0 text-[11px] text-vintage-ink-muted">
+                                {formatMessageTime(conv.last_message_at)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="truncate text-xs text-vintage-ink-muted">
+                            {conv.last_message ?? "Customer inquiry"}
+                          </p>
+                        </div>
+                        {conv.is_unread && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-vintage-rust" />
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -1246,6 +1344,34 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         void refreshConversations();
                       }}
                     />
+                    {isSeller && activeChat.kind === "dm" && (
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          title="Move to personal inbox"
+                          onClick={() => void handleMoveInbox(activeChat.convId, "personal")}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
+                            chatTheme?.inbox !== "business"
+                              ? "bg-vintage-rust text-on-rust"
+                              : "vintage-card-inset text-vintage-ink-muted"
+                          }`}
+                        >
+                          Personal
+                        </button>
+                        <button
+                          type="button"
+                          title="Move to seller inbox"
+                          onClick={() => void handleMoveInbox(activeChat.convId, "business")}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${
+                            chatTheme?.inbox === "business"
+                              ? "bg-vintage-rust text-on-rust"
+                              : "vintage-card-inset text-vintage-ink-muted"
+                          }`}
+                        >
+                          Seller
+                        </button>
+                      </div>
+                    )}
                   </div>
                   )
                 ) : (
