@@ -8,6 +8,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 export type OAuthProvider = "google" | "github" | "twitter";
 
+function toSupabaseProvider(provider: OAuthProvider): "google" | "github" | "x" {
+  return provider === "twitter" ? "x" : provider;
+}
+
 export function getOAuthRedirectUri(): string {
   return makeRedirectUri({
     scheme: "zumelia",
@@ -53,7 +57,7 @@ export async function signInWithOAuthProvider(
   }
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
+    provider: toSupabaseProvider(provider),
     options: {
       redirectTo,
       skipBrowserRedirect: true,

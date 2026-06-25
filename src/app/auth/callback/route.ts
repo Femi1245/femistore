@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureProfile } from "@/lib/auth";
+import { formatOAuthError } from "@/lib/oauth-providers";
 import {
   createRouteHandlerClient,
   redirectWithCookies,
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     searchParams.get("error_description") ?? searchParams.get("error");
   if (providerError) {
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(providerError)}`,
+      `${origin}/login?error=${encodeURIComponent(formatOAuthError(providerError))}`,
     );
   }
 

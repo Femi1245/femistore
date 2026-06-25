@@ -8,13 +8,13 @@ import { loadSuggestedProfiles, toggleFollow } from "@/lib/social";
 import type { Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
-const quickActions = [
-  { href: "/opportunities", label: "Opportunities", icon: Sparkles },
-  { href: "/live?tab=voice", label: "Voice lounges", icon: Radio },
-  { href: "/discover/businesses", label: "Discover businesses", icon: Briefcase },
-  { href: "/live/go-live", label: "Go Live", icon: Radio },
-  { href: "/watch", label: "Watch videos", icon: Play },
-  { href: "/games", label: "Play games", icon: Gamepad2 },
+const discoverLinks = [
+  { href: "/opportunities", label: "Marketplace & gigs", icon: Sparkles, desc: "Services & opportunities" },
+  { href: "/live?tab=voice", label: "Voice lounges", icon: Radio, desc: "Audio hangouts" },
+  { href: "/live/go-live", label: "Go live", icon: Radio, desc: "Video with AR effects" },
+  { href: "/discover/businesses", label: "Businesses", icon: Briefcase, desc: "Curated storefronts" },
+  { href: "/watch", label: "Watch", icon: Play, desc: "Long-form video" },
+  { href: "/games", label: "Play", icon: Gamepad2, desc: "Games with friends" },
 ];
 
 export function FeedSidebar({ currentUser }: { currentUser: Profile }) {
@@ -35,30 +35,33 @@ export function FeedSidebar({ currentUser }: { currentUser: Profile }) {
 
   return (
     <aside className="hidden w-72 shrink-0 lg:block">
-      <div className="sticky top-[7.5rem] space-y-4">
-        <div className="vintage-card p-4">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-vintage-ink-muted">
-            Quick actions
-          </h2>
-          <div className="mt-3 space-y-1">
-            {quickActions.map(({ href, label, icon: Icon }) => (
+      <div className="sticky top-[7.5rem] space-y-5">
+        <div className="vintage-card editorial-sidebar-card">
+          <p className="editorial-eyebrow mb-1">Discover</p>
+          <h2 className="editorial-sidebar-title">Beyond the feed</h2>
+          <div className="mt-4 space-y-0.5">
+            {discoverLinks.map(({ href, label, icon: Icon, desc }) => (
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-vintage-ink transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
+                className="flex items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-vintage-rust/8"
               >
-                <Icon className="h-4 w-4" />
-                {label}
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-vintage-rust/10 text-vintage-rust">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-vintage-ink">{label}</span>
+                  <span className="block text-xs text-vintage-ink-muted">{desc}</span>
+                </span>
               </Link>
             ))}
           </div>
         </div>
 
-        <div className="vintage-card p-4">
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-vintage-ink-muted">
-            Suggested for you
-          </h2>
-          <div className="mt-3 space-y-3">
+        <div className="vintage-card editorial-sidebar-card p-4 pl-5">
+          <p className="editorial-eyebrow mb-1">People</p>
+          <h2 className="editorial-sidebar-title">Worth knowing</h2>
+          <div className="mt-4 space-y-3">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -70,9 +73,7 @@ export function FeedSidebar({ currentUser }: { currentUser: Profile }) {
                 </div>
               ))
             ) : suggestions.length === 0 ? (
-              <p className="text-sm text-vintage-ink-muted">
-                No suggestions right now.
-              </p>
+              <p className="text-sm text-vintage-ink-muted">No suggestions right now.</p>
             ) : (
               suggestions.map((p) => (
                 <div key={p.id} className="flex items-center gap-3">
@@ -82,25 +83,21 @@ export function FeedSidebar({ currentUser }: { currentUser: Profile }) {
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/profile/${p.username}`}
-                      className="block truncate text-sm font-semibold text-vintage-ink hover:text-vintage-rust"
+                      className="block truncate font-display text-sm font-semibold text-vintage-ink hover:text-vintage-rust"
                     >
                       {p.display_name}
                     </Link>
-                    <p className="truncate text-xs text-vintage-ink-muted">
-                      @{p.username}
-                    </p>
+                    <p className="truncate text-xs text-vintage-ink-muted">@{p.username}</p>
                   </div>
                   <button
                     onClick={() => handleFollow(p.id)}
                     disabled={followed.has(p.id)}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-vintage-rust transition hover:bg-vintage-rust/10 disabled:opacity-50"
+                    className="rounded-full border border-vintage-border px-2.5 py-1 text-xs font-semibold text-vintage-rust transition hover:border-vintage-rust/50 hover:bg-vintage-rust/10 disabled:opacity-50"
                   >
-                    {followed.has(p.id) ? (
-                      "Following"
-                    ) : (
-                      <>
-                        <UserPlus className="h-3.5 w-3.5" /> Follow
-                      </>
+                    {followed.has(p.id) ? "Following" : (
+                      <span className="inline-flex items-center gap-1">
+                        <UserPlus className="h-3 w-3" /> Follow
+                      </span>
                     )}
                   </button>
                 </div>
@@ -109,8 +106,8 @@ export function FeedSidebar({ currentUser }: { currentUser: Profile }) {
           </div>
         </div>
 
-        <p className="px-2 text-xs text-vintage-ink-muted/70">
-          Zumelia · Connect globally
+        <p className="px-2 font-display text-sm text-vintage-ink-muted">
+          Zumelia — connection, crafted.
         </p>
       </div>
     </aside>

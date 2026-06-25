@@ -26,20 +26,15 @@ export function Avatar({
         alt={name}
         width={px}
         height={px}
-        className={`shrink-0 rounded-full object-cover ${sizeClasses[size]}`}
+        className={`avatar-editorial shrink-0 rounded-full object-cover ${sizeClasses[size]}`}
         unoptimized
       />
     );
   }
 
-  const hue = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
-
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${sizeClasses[size]}`}
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue}, 70%, 55%), hsl(${(hue + 40) % 360}, 70%, 45%))`,
-      }}
+      className={`avatar-editorial avatar-editorial-fallback flex shrink-0 items-center justify-center rounded-full ${sizeClasses[size]}`}
     >
       {getInitials(name)}
     </div>

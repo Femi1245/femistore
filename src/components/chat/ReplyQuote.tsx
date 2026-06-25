@@ -10,7 +10,7 @@ export function ReplyQuote({
   muted?: boolean;
 }) {
   const inner = (
-    <>
+    <div className="flex flex-col gap-1">
       <p
         className={`font-semibold ${
           muted ? "text-on-rust-muted" : "text-vintage-rust"
@@ -18,10 +18,10 @@ export function ReplyQuote({
       >
         {label}
       </p>
-      <p className={`line-clamp-2 ${muted ? "text-on-rust" : "text-vintage-ink"}`}>
+      <p className={`line-clamp-2 whitespace-pre-wrap break-words ${muted ? "text-on-rust" : "text-vintage-ink"}`}>
         {content}
       </p>
-    </>
+    </div>
   );
 
   const className = `mb-2 w-full rounded-lg border-l-2 px-2 py-1.5 text-left text-xs ${

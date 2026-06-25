@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
+import { CallProviderLoader } from "@/components/chat/CallProviderLoader";
 import { ChunkRecovery } from "@/components/ChunkRecovery";
 import "./globals.css";
 
@@ -20,9 +21,9 @@ const body = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Zumelia — Global Chat",
+  title: "Zumelia — Connection, crafted",
   description:
-    "Connect and chat with people worldwide. Real-time messaging across borders on Zumelia.",
+    "A premium social space for real conversation, live moments, business, and community — beyond the feed.",
   applicationName: "Zumelia",
   appleWebApp: {
     capable: true,
@@ -60,7 +61,9 @@ export default function RootLayout({
         <ThemeProvider>
           <RegisterServiceWorker />
           <ChunkRecovery />
-          {children}
+          <CallProviderLoader>
+            {children}
+          </CallProviderLoader>
           <InstallAppPrompt />
           <AssistantWidgetLoader />
         </ThemeProvider>

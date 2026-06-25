@@ -106,10 +106,13 @@ export type CallSession = {
   call_type: CallType;
   status: CallStatus;
   initiator_id: string;
+  recipient_id: string | null;
+  delivered_at: string | null;
   started_at: string;
   ended_at: string | null;
   created_at: string;
   initiator?: Profile;
+  recipient?: Profile;
 };
 
 export type ConversationPreview = {

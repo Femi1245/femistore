@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
+  Briefcase,
   Gamepad2,
   Gift,
   Globe,
@@ -10,6 +11,7 @@ import {
   Radio,
   Shield,
   Sparkles,
+  Star,
   Zap,
 } from "lucide-react";
 import { HomeNavActions } from "@/components/layout/HomeNavActions";
@@ -18,48 +20,61 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const pillars = [
+  {
+    icon: Star,
+    title: "Curated circles",
+    desc: "Friends, close friends, and following — you choose who gets in. No endless algorithm feed.",
+  },
+  {
+    icon: Briefcase,
+    title: "Business with soul",
+    desc: "A real storefront, service gigs, and marketplace — without losing your personal identity.",
+  },
+  {
+    icon: Radio,
+    title: "Stage-worthy live",
+    desc: "Go live with AR lenses, invite co-hosts, and voice lounges — built for presence, not performance anxiety.",
+  },
+];
+
 const features = [
   {
     icon: MessageCircle,
     title: "Real-time chat",
-    desc: "DMs, groups, and channels that update live — with secret chats that self-destruct.",
+    desc: "DMs, groups, channels, secret chats, and pay-in-chat — conversations that feel immediate.",
   },
   {
     icon: Phone,
-    title: "Voice & video calls",
-    desc: "Crystal-clear 1:1 and group calls, plus voice messages when words aren't enough.",
-  },
-  {
-    icon: Radio,
-    title: "Go live",
-    desc: "Stream to your followers with live chat and reactions in real time.",
+    title: "Voice & video",
+    desc: "Crystal-clear calls and voice messages when text isn't enough.",
   },
   {
     icon: Gift,
-    title: "Send gifts",
-    desc: "Show love with virtual gifts on profiles, in chat, or during live streams.",
+    title: "Gifts & moments",
+    desc: "Send gifts on profiles, in chat, or during live streams — generosity built in.",
   },
   {
     icon: Gamepad2,
     title: "Play together",
-    desc: "Built-in games that even work offline. Challenge friends anytime.",
-  },
-  {
-    icon: Globe,
-    title: "Global discover",
-    desc: "Find people by country, username, or phone — connect across continents.",
+    desc: "Built-in games, including offline play with people you care about.",
   },
   {
     icon: Sparkles,
     title: "Opportunities",
-    desc: "Jobs, gigs, collabs, and internships — posted by the community. Apply in one tap.",
+    desc: "Jobs, gigs, and collabs posted by the community — apply in one tap.",
+  },
+  {
+    icon: Globe,
+    title: "Global discover",
+    desc: "Find people and businesses across borders — one premium home for connection.",
   },
 ];
 
 const stats = [
-  { value: "190+", label: "Countries" },
-  { value: "Real-time", label: "Everything live" },
-  { value: "End-to-end", label: "Your space, private" },
+  { value: "190+", label: "Countries reachable" },
+  { value: "Live", label: "Video, voice & AR" },
+  { value: "Yours", label: "Privacy-first spaces" },
 ];
 
 export default async function HomePage({
@@ -69,8 +84,6 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
 
-  // OAuth providers (or a misconfigured Site URL) can deliver the auth code to
-  // the root instead of /auth/callback. Forward it so the session is created.
   if (params.code) {
     redirect(`/auth/callback?code=${encodeURIComponent(params.code)}`);
   }
@@ -87,33 +100,31 @@ export default async function HomePage({
     <div className="vintage-page min-h-full">
       <nav className="vintage-nav sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Logo />
+          <Logo showWordmark />
           <HomeNavActions isLoggedIn={!!user} />
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pb-20 pt-16 md:pt-24">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+      <section className="relative mx-auto max-w-6xl px-6 pb-20 pt-14 md:pt-20">
+        <div className="landing-hero-glow" aria-hidden />
+        <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="text-center lg:text-left">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-vintage-border bg-vintage-paper px-4 py-1.5 text-sm text-vintage-ink-muted shadow-sm">
-              <Sparkles className="h-4 w-4 text-vintage-rust" />
-              Chat, call, live & play — all in one
-            </p>
-            <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-vintage-ink md:text-6xl">
-              The world&apos;s conversation starts on{" "}
-              <span className="text-vintage-gradient">Zumelia</span>
+            <p className="editorial-eyebrow mb-4">Connection, crafted</p>
+            <h1 className="editorial-title max-w-2xl lg:max-w-none">
+              Social media that feels{" "}
+              <span className="text-vintage-gradient">worth your time</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-vintage-ink-muted lg:mx-0">
-              Message in real time, hop on a call, go live, send gifts, and play games —
-              with people across the world. One app for every way you connect.
+            <p className="editorial-lead mx-auto mt-5 max-w-xl lg:mx-0">
+              Zumelia is a premium space for real conversation, live moments, business,
+              and community — designed with editorial care, not engagement bait.
             </p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
               <Link
                 href={user ? "/feed" : "/signup"}
                 className="vintage-btn flex w-full items-center justify-center gap-2 px-7 py-3.5 text-base sm:w-auto"
               >
-                {user ? "Go to your feed" : "Start free"}
+                {user ? "Open your feed" : "Create your space"}
                 <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
@@ -121,61 +132,60 @@ export default async function HomePage({
                 className="vintage-btn-outline flex w-full items-center justify-center gap-2 px-7 py-3.5 text-base sm:w-auto"
               >
                 <MessageCircle className="h-5 w-5" />
-                {user ? "Open messages" : "I have an account"}
+                {user ? "Messages" : "Sign in"}
               </Link>
             </div>
 
-            <div className="mt-10 grid max-w-md grid-cols-3 gap-4 lg:mx-0">
+            <div className="mt-12 grid max-w-lg grid-cols-3 gap-6 lg:mx-0">
               {stats.map((s) => (
                 <div key={s.label} className="text-center lg:text-left">
-                  <p className="font-display text-xl font-bold text-vintage-ink">{s.value}</p>
-                  <p className="text-xs text-vintage-ink-muted">{s.label}</p>
+                  <p className="font-display text-xl font-semibold text-vintage-ink md:text-2xl">
+                    {s.value}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-snug text-vintage-ink-muted">{s.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Chat preview mockup */}
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-vintage-rust/20 to-vintage-mustard/10 blur-2xl" />
-            <div className="vintage-card overflow-hidden p-0">
-              <div className="flex items-center gap-3 border-b border-vintage-border px-4 py-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-vintage-rust to-vintage-rust-dark text-sm font-bold text-white">
+          {/* Product preview */}
+          <div className="relative mx-auto w-full max-w-md">
+            <div className="landing-mockup-frame vintage-card overflow-hidden p-0">
+              <div className="flex items-center gap-3 border-b border-vintage-border bg-vintage-paper-dark/50 px-4 py-3">
+                <div className="avatar-editorial avatar-editorial-fallback flex h-9 w-9 items-center justify-center rounded-full text-sm">
                   A
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-vintage-ink">Amara</p>
-                  <p className="text-xs text-vintage-olive">online</p>
+                  <p className="font-display text-sm font-semibold text-vintage-ink">Amara</p>
+                  <p className="flex items-center gap-1.5 text-xs text-vintage-olive">
+                    <span className="status-dot-online inline-block h-1.5 w-1.5 rounded-full" />
+                    Online now
+                  </p>
                 </div>
                 <Phone className="h-4 w-4 text-vintage-ink-muted" />
                 <Radio className="h-4 w-4 text-vintage-rust" />
               </div>
               <div className="space-y-3 px-4 py-5">
                 <div className="flex justify-start">
-                  <div className="max-w-[75%] rounded-2xl rounded-bl-sm bg-vintage-card-inset px-3.5 py-2 text-sm text-vintage-ink">
-                    Hey! Are you going live tonight? 👀
+                  <div className="max-w-[82%] rounded-2xl rounded-bl-md border border-vintage-border bg-vintage-card-inset px-3.5 py-2.5 text-sm leading-relaxed text-vintage-ink">
+                    Going live at 9 — AR lenses are wild on here ✨
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-gradient-to-br from-vintage-rust to-vintage-rust-dark px-3.5 py-2 text-sm text-white">
-                    Yes! 9pm. Bringing the games too 🎮
+                  <div className="max-w-[82%] rounded-2xl rounded-br-md bg-gradient-to-br from-vintage-rust to-vintage-rust-dark px-3.5 py-2.5 text-sm leading-relaxed text-on-rust">
+                    I&apos;ll join. Bringing the lounge link too.
                   </div>
                 </div>
-                <div className="flex justify-start">
-                  <div className="max-w-[75%] rounded-2xl rounded-bl-sm bg-vintage-card-inset px-3.5 py-2 text-sm text-vintage-ink">
-                    Sending you a gift 🎁
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-2 pt-1 text-xs text-vintage-ink-muted">
+                <div className="flex items-center justify-center gap-2 rounded-lg border border-vintage-border/80 bg-vintage-rust/5 py-2 text-xs text-vintage-ink-muted">
                   <Gift className="h-4 w-4 text-vintage-rust" />
-                  Amara sent you a Diamond 💎
+                  Amara sent a Diamond gift
                 </div>
               </div>
               <div className="flex items-center gap-2 border-t border-vintage-border px-4 py-3">
-                <div className="flex-1 rounded-full bg-vintage-card-inset px-4 py-2 text-sm text-vintage-ink-muted">
-                  Message Amara…
+                <div className="flex-1 rounded-full border border-vintage-border bg-vintage-card-inset px-4 py-2 text-sm text-vintage-ink-muted">
+                  Message with intention…
                 </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-vintage-rust to-vintage-rust-dark text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-vintage-rust to-vintage-rust-dark text-on-rust">
                   <ArrowRight className="h-4 w-4" />
                 </div>
               </div>
@@ -184,47 +194,77 @@ export default async function HomePage({
         </div>
       </section>
 
-      {/* Features */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-bold tracking-tight text-vintage-ink md:text-4xl">
-            Everything you need to stay connected
-          </h2>
-          <p className="mt-3 text-vintage-ink-muted">
-            Not just another chat app — a full social home for your people.
-          </p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="vintage-card group p-6 transition-transform duration-200 hover:-translate-y-1"
-            >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust transition-colors group-hover:bg-vintage-rust group-hover:text-white">
-                <Icon className="h-6 w-6" />
+      {/* Pillars */}
+      <section className="border-y border-vintage-border bg-vintage-paper-dark/40 py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="editorial-masthead mx-auto mb-12 max-w-2xl text-center">
+            <p className="editorial-eyebrow">Why Zumelia</p>
+            <h2 className="editorial-title text-3xl md:text-4xl">Beyond the scroll</h2>
+            <p className="editorial-lead mx-auto">
+              Not another feed optimized for addiction — a considered social home for people
+              who want depth, business, and live connection in one place.
+            </p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {pillars.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="text-center md:text-left">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust md:mx-0">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-vintage-ink">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-vintage-ink-muted">{desc}</p>
               </div>
-              <h3 className="font-display text-lg font-bold text-vintage-ink">{title}</h3>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="mx-auto max-w-6xl px-6 py-16 md:py-20">
+        <div className="editorial-masthead mb-12 max-w-2xl">
+          <p className="editorial-eyebrow">Everything included</p>
+          <h2 className="editorial-title text-3xl md:text-4xl">One app. Every way you connect.</h2>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="vintage-card landing-feature-card pl-5">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-vintage-rust/10 text-vintage-rust">
+                <Icon className="h-5 w-5" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-vintage-ink">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-vintage-ink-muted">{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Trust band */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-6 md:grid-cols-3">
+      {/* Trust */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="grid gap-8 md:grid-cols-3">
           {[
-            { icon: Zap, title: "Built for speed", desc: "Messages, calls, and live streams that feel instant — no refresh, no waiting." },
-            { icon: Shield, title: "Private by design", desc: "Mutual-friend messaging and secret chats keep your conversations yours." },
-            { icon: Globe, title: "Made for everyone", desc: "Connect across borders, languages, and time zones — the world in one app." },
+            {
+              icon: Zap,
+              title: "Built for speed",
+              desc: "Messages, calls, and live streams that feel instant — no refresh, no waiting.",
+            },
+            {
+              icon: Shield,
+              title: "Private by design",
+              desc: "Mutual-friend messaging, close circles, and secret chats keep your space yours.",
+            },
+            {
+              icon: Globe,
+              title: "Made for everyone",
+              desc: "Connect across borders, languages, and time zones — the world in one premium home.",
+            },
           ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
+            <div key={title} className="flex gap-4 border-t border-vintage-border pt-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-vintage-border bg-vintage-paper text-vintage-rust">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-display font-bold text-vintage-ink">{title}</h3>
-                <p className="mt-1 text-sm text-vintage-ink-muted">{desc}</p>
+                <h3 className="font-display font-semibold text-vintage-ink">{title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-vintage-ink-muted">{desc}</p>
               </div>
             </div>
           ))}
@@ -232,23 +272,29 @@ export default async function HomePage({
       </section>
 
       {/* CTA */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="vintage-card relative overflow-hidden p-10 text-center md:p-16">
-          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-vintage-rust/15 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-vintage-mustard/15 blur-3xl" />
-          <h2 className="font-display relative text-3xl font-bold tracking-tight text-vintage-ink md:text-4xl">
-            Your people are waiting
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="vintage-card relative overflow-hidden px-8 py-14 text-center md:px-16 md:py-16">
+          <div className="landing-hero-glow opacity-60" aria-hidden />
+          <p className="editorial-eyebrow relative">Join Zumelia</p>
+          <h2 className="editorial-title relative mx-auto max-w-xl text-3xl md:text-4xl">
+            Your people deserve a better place to gather
           </h2>
-          <p className="relative mx-auto mt-3 max-w-lg text-vintage-ink-muted">
-            Join Zumelia and start chatting, calling, and going live in minutes. It&apos;s free.
+          <p className="relative mx-auto mt-4 max-w-md text-vintage-ink-muted">
+            Free to start. Premium in feel. Open your feed, go live, or open your store in minutes.
           </p>
-          <div className="relative mt-8 flex justify-center">
+          <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
               href={user ? "/feed" : "/signup"}
-              className="vintage-btn flex items-center gap-2 px-8 py-4 text-base"
+              className="vintage-btn flex items-center gap-2 px-8 py-3.5 text-base"
             >
               {user ? "Go to your feed" : "Create your account"}
               <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/discover/businesses"
+              className="vintage-btn-outline px-6 py-3.5 text-base"
+            >
+              Explore businesses
             </Link>
           </div>
         </div>
@@ -256,8 +302,10 @@ export default async function HomePage({
 
       <footer className="border-t border-vintage-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-vintage-ink-muted sm:flex-row">
-          <Logo size="sm" />
-          <p>© {new Date().getFullYear()} Zumelia — chat globally, connect freely.</p>
+          <Logo size="sm" showWordmark />
+          <p className="font-display text-sm">
+            © {new Date().getFullYear()} Zumelia — connection, crafted.
+          </p>
         </div>
       </footer>
     </div>

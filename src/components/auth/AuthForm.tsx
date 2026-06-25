@@ -19,6 +19,7 @@ import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } fro
 import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { COUNTRIES } from "@/lib/countries";
 import { authCallbackUrl, safeNextPath } from "@/lib/app-url";
+import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
 import { SetupNotice } from "@/components/auth/SetupNotice";
@@ -45,23 +46,22 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | "github" | "twitter" | null>(
-    null,
-  );
+  const [oauthLoading, setOauthLoading] = useState<OAuthUiProvider | null>(null);
 
   useEffect(() => {
-    if (urlError) setError(urlError);
+    if (urlError) setError(formatOAuthError(urlError));
   }, [urlError]);
 
-  async function handleOAuthSignIn(provider: "google" | "github" | "twitter") {
+  async function handleOAuthSignIn(provider: OAuthUiProvider) {
     setError(null);
     setSuccess(null);
     setOauthLoading(provider);
 
     try {
       const supabase = createClient();
+      const supabaseProvider = toSupabaseOAuthProvider(provider);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
+        provider: supabaseProvider,
         options: {
           redirectTo: authCallbackUrl(nextAfterAuth),
           skipBrowserRedirect: false,
@@ -69,16 +69,19 @@ export function AuthForm({ mode }: { mode: Mode }) {
       });
 
       if (oauthError) {
-        setError(oauthError.message);
+        setError(formatOAuthError(oauthError.message));
         setOauthLoading(null);
         return;
       }
 
       if (data?.url) {
         window.location.assign(data.url);
+      } else {
+        setError("Could not start X sign-in. Check Supabase → Authentication → Providers.");
+        setOauthLoading(null);
       }
     } catch {
-      setError("Could not start sign in. Check your Supabase settings and try again.");
+      setError("Could not start sign in. Check your Supabase and X Developer settings.");
       setOauthLoading(null);
     }
   }

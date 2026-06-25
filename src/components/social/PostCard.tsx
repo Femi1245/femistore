@@ -44,28 +44,28 @@ function PostBody({
 
   return (
     <>
-      {post.reshare_of && displayContent && (
-        <p className="mb-2 text-sm text-vintage-ink-muted">{displayContent}</p>
-      )}
       {!post.reshare_of && displayContent && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{displayContent}</p>
+        <p className="editorial-post-body whitespace-pre-wrap">{displayContent}</p>
+      )}
+      {post.reshare_of && displayContent && (
+        <p className="mb-2 text-sm italic text-vintage-ink-muted">{displayContent}</p>
       )}
       {post.reshare_of && target.content && (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{target.content}</p>
+        <p className="editorial-post-body whitespace-pre-wrap">{target.content}</p>
       )}
       {target.media_url && target.media_type === "image" && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={target.media_url}
           alt=""
-          className="mt-3 max-h-96 w-full rounded-xl object-cover"
+          className="editorial-media-frame max-h-96 w-full object-cover"
         />
       )}
       {target.media_url && target.media_type === "video" && (
         <video
           src={target.media_url}
           controls
-          className="mt-3 max-h-96 w-full rounded-xl"
+          className="editorial-media-frame max-h-96 w-full"
         />
       )}
     </>
@@ -203,16 +203,16 @@ export function PostCard({
     isBusinessPost && author.business_name ? author.business_name : author.display_name;
 
   return (
-    <article className="vintage-card p-4">
+    <article className="editorial-post group">
       <div className="flex items-start gap-3">
         <Link href={authorHref}>
           <Avatar name={authorLabel} avatarUrl={author.avatar_url} />
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={authorHref}
-              className="font-semibold hover:text-vintage-rust"
+              className="font-display text-base font-semibold tracking-tight hover:text-vintage-rust"
             >
               {authorLabel}
             </Link>
@@ -285,7 +285,7 @@ export function PostCard({
           <PostBody post={post} contentOverride={content} />
         )}
 
-        <div className="mt-4 flex items-center gap-1 border-t border-vintage-border pt-2">
+        <div className="mt-4 flex items-center gap-0.5 border-t border-vintage-border/80 pt-3">
           <button
             onClick={handleLike}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
@@ -345,14 +345,14 @@ export function PostCard({
               <p className="text-sm text-vintage-ink-muted">Loading comments…</p>
             ) : (
               comments.map((c) => (
-                <div key={c.id} className="flex gap-2">
+                <div key={c.id} className="flex gap-2.5">
                   <Avatar
                     name={c.author?.display_name ?? "?"}
                     avatarUrl={c.author?.avatar_url}
                     size="sm"
                   />
-                  <div className="vintage-card-inset px-3 py-2 text-sm flex-1">
-                    <p className="font-medium text-vintage-rust">
+                  <div className="vintage-card-inset flex min-w-0 flex-1 flex-col gap-1.5 px-3 py-2.5 text-sm">
+                    <p className="font-display font-semibold leading-tight text-vintage-rust">
                       {c.author?.display_name}
                     </p>
                     {c.reply_to && (
@@ -361,7 +361,9 @@ export function PostCard({
                         content={c.reply_to.content}
                       />
                     )}
-                    <p>{c.content}</p>
+                    <p className="whitespace-pre-wrap break-words leading-relaxed text-vintage-ink">
+                      {c.content}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setReplyingToComment(c)}

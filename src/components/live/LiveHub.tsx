@@ -22,13 +22,14 @@ export function LiveHub() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="editorial-masthead flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-vintage-ink">Live</h1>
-          <p className="text-sm text-vintage-ink-muted">
+          <p className="editorial-eyebrow">Broadcast</p>
+          <h1 className="editorial-title">Live</h1>
+          <p className="editorial-lead">
             {tab === "video"
-              ? "Watch live video from people around the world"
-              : "Audio-only hangouts — talk without camera pressure"}
+              ? "Stage-worthy video with real-time effects — not another scroll."
+              : "Intimate audio lounges when camera is too much."}
           </p>
         </div>
         {tab === "video" ? (
@@ -40,16 +41,14 @@ export function LiveHub() {
             Start lounge
           </Link>
         )}
-      </div>
+      </header>
 
-      <div className="flex gap-1 vintage-card-inset p-1">
+      <div className="editorial-segmented w-full sm:w-auto">
         <button
           type="button"
           onClick={() => setTab("video")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-            tab === "video"
-              ? "bg-vintage-rust text-on-rust"
-              : "text-vintage-ink-muted hover:text-vintage-ink"
+          className={`editorial-segmented-btn flex flex-1 items-center justify-center gap-2 sm:flex-initial ${
+            tab === "video" ? "editorial-segmented-btn-active" : ""
           }`}
         >
           <Radio className="h-4 w-4" />
@@ -58,10 +57,8 @@ export function LiveHub() {
         <button
           type="button"
           onClick={() => setTab("voice")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-            tab === "voice"
-              ? "bg-vintage-rust text-on-rust"
-              : "text-vintage-ink-muted hover:text-vintage-ink"
+          className={`editorial-segmented-btn flex flex-1 items-center justify-center gap-2 sm:flex-initial ${
+            tab === "voice" ? "editorial-segmented-btn-active" : ""
           }`}
         >
           <Mic2 className="h-4 w-4" />

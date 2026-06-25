@@ -65,7 +65,6 @@ import { formatLastSeen, isOnline } from "@/lib/presence";
 import { sendVoiceMessage } from "@/lib/voicemail";
 import type {
   ActiveChat,
-  CallSession,
   CallType,
   ConversationMemberSettings,
   ConversationPreview,
@@ -73,9 +72,8 @@ import type {
   Profile,
 } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
-import { CallOverlay } from "@/components/chat/CallOverlay";
+import { useCalls } from "@/components/chat/CallProvider";
 import { CreateConversationModal } from "@/components/chat/CreateConversationModal";
-import { IncomingCallModal } from "@/components/chat/IncomingCallModal";
 import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
@@ -98,6 +96,7 @@ type Tab = "chats" | "discover" | "phone" | "channels" | "secret" | "archived" |
 
 export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const getSupabase = useCallback(() => createClient(), []);
+  const { startCall: startCallSession } = useCalls();
 
   const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
@@ -121,13 +120,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [modal, setModal] = useState<"group" | "channel" | "add-members" | null>(null);
-  const [activeCall, setActiveCall] = useState<{
-    sessionId: string;
-    callType: CallType;
-    title: string;
-  } | null>(null);
-  const [incomingCall, setIncomingCall] = useState<CallSession | null>(null);
-  const [incomingCaller, setIncomingCaller] = useState<Profile | null>(null);
   const [sendingVoice, setSendingVoice] = useState(false);
   const [recordingVoice, setRecordingVoice] = useState(false);
   const [showGift, setShowGift] = useState(false);
@@ -259,44 +251,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
       loadMutualFriends(getSupabase(), currentUser.id).then(setSecretFriends);
     }
   }, [tab, getSupabase, currentUser.id, conversations]);
-
-  useEffect(() => {
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`incoming-calls:${currentUser.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "call_sessions" },
-        async (payload) => {
-          const session = payload.new as CallSession;
-          if (session.initiator_id === currentUser.id) return;
-          if (!["ringing", "active"].includes(session.status)) return;
-          if (activeCall) return;
-
-          const { data: member } = await supabase
-            .from("conversation_members")
-            .select("user_id")
-            .eq("conversation_id", session.conversation_id)
-            .eq("user_id", currentUser.id)
-            .maybeSingle();
-          if (!member) return;
-
-          const { data: caller } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.initiator_id)
-            .maybeSingle();
-
-          setIncomingCall(session);
-          setIncomingCaller((caller as Profile) ?? null);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [getSupabase, currentUser.id]);
 
   const loadMessages = useCallback(
     async (convId: string, isSecret?: boolean) => {
@@ -480,61 +434,13 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     }
     setChatError(null);
 
-    const res = await fetch("/api/calls/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId: activeChat.convId,
-        callType,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setChatError(data.error ?? "Could not start call");
-      return;
-    }
-
-    const session = data.session as CallSession;
-    setActiveCall({
-      sessionId: session.id,
-      callType: session.call_type,
+    const { error } = await startCallSession({
+      conversationId: activeChat.convId,
+      callType,
       title: activeChat.title,
+      callee: activeChat.otherUser ?? null,
     });
-  }
-
-  async function acceptIncomingCall() {
-    if (!incomingCall) return;
-    const res = await fetch("/api/calls/answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: incomingCall.id }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setChatError(data.error ?? "Could not answer");
-      setIncomingCall(null);
-      return;
-    }
-
-    const chat = await loadActiveChat(getSupabase(), currentUser.id, incomingCall.conversation_id);
-    setActiveCall({
-      sessionId: incomingCall.id,
-      callType: incomingCall.call_type,
-      title: chat?.title ?? incomingCaller?.display_name ?? "Call",
-    });
-    setIncomingCall(null);
-    setIncomingCaller(null);
-  }
-
-  async function declineIncomingCall() {
-    if (!incomingCall) return;
-    await fetch("/api/calls/decline", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: incomingCall.id }),
-    });
-    setIncomingCall(null);
-    setIncomingCaller(null);
+    if (error) setChatError(error);
   }
 
   async function handleVoiceRecorded(blob: Blob, duration: number) {
@@ -731,22 +637,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     <div className="vintage-page flex h-screen flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] text-vintage-ink md:pb-0">
       <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
-      {incomingCall && (
-        <IncomingCallModal
-          session={incomingCall}
-          caller={incomingCaller}
-          onAccept={acceptIncomingCall}
-          onDecline={declineIncomingCall}
-        />
-      )}
-      {activeCall && (
-        <CallOverlay
-          sessionId={activeCall.sessionId}
-          callType={activeCall.callType}
-          title={activeCall.title}
-          onEnd={() => setActiveCall(null)}
-        />
-      )}
       {modal && (
         <CreateConversationModal
           mode={modal}
@@ -1600,7 +1490,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                           ) : msg.message_type === "poll" && msg.poll_id ? (
                             <PollMessage pollId={msg.poll_id} userId={currentUser.id} />
                           ) : (
-                            <>
+                            <div className="flex flex-col gap-1.5">
                               {msg.reply_to && (
                                 <ReplyQuote
                                   muted={isMine}
@@ -1623,11 +1513,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                                 chatTheme?.translation_enabled &&
                                 translations[msg.id] &&
                                 translations[msg.id] !== msg.content && (
-                                  <p className="mt-2 border-t border-vintage-border/40 pt-2 text-xs italic text-vintage-ink-muted">
+                                  <p className="border-t border-vintage-border/40 pt-2 text-xs italic text-vintage-ink-muted">
                                     {translations[msg.id]}
                                   </p>
                                 )}
-                            </>
+                            </div>
                           )}
                           <div
                             className={`mt-1 flex items-center gap-2 text-[10px] ${

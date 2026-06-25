@@ -88,14 +88,9 @@ export function ProfileHeader({
     <div className="vintage-card overflow-hidden">
       <div className="relative">
         <div
-          className={`relative z-0 h-28 sm:h-36 ${
-            showCover ? "" : "bg-gradient-to-br from-vintage-rust via-vintage-rust-dark to-vintage-mustard"
-          }`}
+          className={`relative z-0 h-32 sm:h-44 ${showCover ? "" : "profile-cover-editorial"}`}
           style={coverStyle}
         >
-          {!showCover && (
-            <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.5)_0,transparent_40%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.35)_0,transparent_45%)]" />
-          )}
           {isOwn && showBusiness && !personalView && (
             <Link
               href="/profile/business/edit"

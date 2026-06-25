@@ -30,61 +30,51 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
   }, [refresh]);
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust md:h-11 md:w-11">
-            <Newspaper className="h-5 w-5" />
-          </div>
+    <div className="space-y-5 md:space-y-8">
+      <header className="editorial-masthead">
+        <p className="editorial-eyebrow">Your circle</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="font-display text-xl font-bold tracking-tight text-vintage-ink md:text-2xl">
-              Personal feed
-            </h1>
-            <p className="text-sm text-vintage-ink-muted">
+            <h1 className="editorial-title">Today</h1>
+            <p className="editorial-lead">
               {mode === "friends"
-                ? "Friends only — personal posts, not business listings"
+                ? "Personal moments from friends — curated, not algorithmic noise."
                 : mode === "close_friends"
-                  ? "Close friends only — your inner circle"
-                  : "People you follow — personal posts only"}
+                  ? "Your inner circle — the people who matter most."
+                  : "Following — voices you chose to keep close."}
             </p>
           </div>
+          <div className="editorial-segmented shrink-0">
+            <button
+              type="button"
+              onClick={() => setMode("friends")}
+              className={`editorial-segmented-btn inline-flex items-center gap-1.5 ${
+                mode === "friends" ? "editorial-segmented-btn-active" : ""
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" /> Friends
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("close_friends")}
+              className={`editorial-segmented-btn inline-flex items-center gap-1.5 ${
+                mode === "close_friends" ? "editorial-segmented-btn-active" : ""
+              }`}
+            >
+              <Star className="h-3.5 w-3.5" /> Close
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("following")}
+              className={`editorial-segmented-btn ${
+                mode === "following" ? "editorial-segmented-btn-active" : ""
+              }`}
+            >
+              Following
+            </button>
+          </div>
         </div>
-        <div className="flex gap-1 vintage-card-inset p-1">
-          <button
-            type="button"
-            onClick={() => setMode("friends")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
-              mode === "friends"
-                ? "bg-vintage-rust text-on-rust"
-                : "text-vintage-ink-muted hover:text-vintage-ink"
-            }`}
-          >
-            <Users className="h-3.5 w-3.5" /> Friends
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("close_friends")}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
-              mode === "close_friends"
-                ? "bg-vintage-rust text-on-rust"
-                : "text-vintage-ink-muted hover:text-vintage-ink"
-            }`}
-          >
-            <Star className="h-3.5 w-3.5" /> Close
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("following")}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-              mode === "following"
-                ? "bg-vintage-rust text-on-rust"
-                : "text-vintage-ink-muted hover:text-vintage-ink"
-            }`}
-          >
-            Following
-          </button>
-        </div>
-      </div>
+      </header>
 
       {inBusinessMode ? (
         <div className="vintage-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -109,7 +99,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
       )}
 
       {loading ? (
-        <div className="space-y-4">
+        <div className="space-y-0 divide-y divide-vintage-border">
           <PostCardSkeleton />
           <PostCardSkeleton />
           <PostCardSkeleton />
@@ -141,7 +131,7 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="border-t border-vintage-border">
           {posts.map((post) => (
             <PostCard
               key={post.id}

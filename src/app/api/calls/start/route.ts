@@ -33,6 +33,18 @@ export async function POST(request: Request) {
   const roomName = `call-${crypto.randomUUID()}`;
   const initialStatus = conv?.kind === "group" ? "active" : "ringing";
 
+  let recipientId: string | null = null;
+  if (conv?.kind === "dm") {
+    const { data: otherMember } = await supabase
+      .from("conversation_members")
+      .select("user_id")
+      .eq("conversation_id", conversationId)
+      .neq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    recipientId = otherMember?.user_id ?? null;
+  }
+
   const { data: session, error } = await supabase
     .from("call_sessions")
     .insert({
@@ -41,6 +53,7 @@ export async function POST(request: Request) {
       call_type: callType,
       status: initialStatus,
       initiator_id: user.id,
+      recipient_id: recipientId,
     })
     .select("*")
     .single();

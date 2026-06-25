@@ -210,7 +210,7 @@ export function LiveChat({
                     <span>{formatLiveChatTime(msg.created_at)}</span>
                   </div>
                   <p
-                    className={`inline-block rounded-sm px-3 py-2 text-sm ${
+                    className={`inline-block whitespace-pre-wrap break-words rounded-sm px-3 py-2 text-sm leading-relaxed ${
                       isMe
                         ? "bg-vintage-rust text-[var(--vintage-btn-text)]"
                         : "vintage-card-inset text-vintage-ink"
