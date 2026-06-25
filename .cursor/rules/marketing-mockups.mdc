@@ -1,0 +1,26 @@
+---
+description: Keep X/Twitter mockups in sync when shipping user-facing features
+globs:
+  - src/components/marketing/**
+  - src/lib/marketing-mockups.ts
+  - ZUMELIA-TWITTER-PLAN.md
+alwaysApply: true
+---
+
+# Marketing mockups (X / Twitter)
+
+When you ship a **user-facing feature** to Zumelia, also update marketing assets:
+
+1. **`src/lib/marketing-mockups.ts`** — add or update slide metadata (`id`, `title`, `feature`, `caption`, `hashtags`, `shippedAt`). Remove from `MOCKUP_BACKLOG` when done.
+2. **`src/components/marketing/SocialMockups.tsx`** — add or update the phone UI mock component in `MOCKUP_UI`.
+3. **`ZUMELIA-TWITTER-PLAN.md`** — add an entry under **Ongoing content** (mockup + caption reference by slide `id`).
+
+Mockup page (local): `/marketing/mockups`
+
+**Do not** ask for or use the user's login credentials for screenshots. Use mockups or fictional demo personas (`DEMO_PERSONAS` in `marketing-mockups.ts`).
+
+When the user asks "what to post on Twitter/X", mix:
+- **Text posts** from `ZUMELIA-TWITTER-PLAN.md`
+- **Mockup posts** — screenshot from `/marketing/mockups` + caption from `MARKETING_MOCKUP_SLIDES`
+
+Default weekly rhythm: alternate text ↔ mockup (see plan doc).

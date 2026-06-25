@@ -2,7 +2,62 @@
 
 A day-by-day "build in public" posting plan for launching the Zumelia brand as a vibe coder.
 
-**The arc:**
+---
+
+## Mockups + captions (use every week)
+
+**Mockup page (screenshot these for posts):**
+- Local: `http://localhost:3000/marketing/mockups`
+- Live: `https://itunes-mu.vercel.app/marketing/mockups`
+
+**Caption source of truth:** `src/lib/marketing-mockups.ts` (same text as the mockup page — copy button on each card).
+
+**Demo personas (fictional — do not share real logins):**
+- **Amara Studio** — seller (`@amarastudio_demo`)
+- **James O.** — buyer (`@james_buyer_demo`)
+
+### How to mix mockups with normal posts
+
+| Pattern | When | What to post |
+|--------|------|----------------|
+| **Text only** | Mon, Wed, Sun | Story, hot take, question, build-in-public update from calendar below |
+| **Mockup + caption** | Tue, Thu, Sat | Screenshot one phone frame from `/marketing/mockups` + copy caption |
+| **Thread / launch** | Milestones | Reveal thread + hero mockup or real screenshot |
+
+**Rule of thumb:** ~**50% mockup posts**, ~**50% text/build-in-public** after launch (Week 4+).
+
+### Mockup slide → post mapping
+
+| Slide ID | Feature | Suggested post day |
+|----------|---------|-------------------|
+| `seller-inbox` | Seller tab / gig inquiries | Ongoing Mon, Day 23 |
+| `storefront` | Business storefront | Ongoing Tue, Day 25 |
+| `service-gig` | Service gig → separate thread | Ongoing Wed, Day 24 |
+| `calls` | Voice & video calls | Ongoing Thu |
+| `auto-reply` | Seller auto-reply settings | Ongoing Fri |
+| `live` | Go live + gifts | Ongoing Sat |
+
+When you ship a **new feature**, add a row here + a new slide in `marketing-mockups.ts` (agent rule in `.cursor/rules/marketing-mockups.mdc`).
+
+---
+
+## Ongoing content (Week 5+ — repeat weekly)
+
+Rotate mockups and text. Check off each week.
+
+| Day | Type | Content |
+|-----|------|---------|
+| **Mon** | 🖼️ Mockup | `seller-inbox` — Seller vs personal inbox |
+| **Tue** | Text | Build-in-public: what you shipped this week |
+| **Wed** | 🖼️ Mockup | `service-gig` or `storefront` |
+| **Thu** | Text | Ask a question / poll your audience |
+| **Fri** | 🖼️ Mockup | `auto-reply` or `calls` |
+| **Sat** | 🖼️ Mockup | `live` |
+| **Sun** | Text | Thank followers / vibe coder lesson |
+
+---
+
+**The arc (Days 1–30):**
 - **Week 1 (Days 1–7):** Mystery. Logo-only teasers. Establish "vibe coder building Zumelia."
 - **Week 2 (Days 8–14):** Build in public. Show the *process* (not the product).
 - **Week 3 (Days 15–21):** Tiny glimpses. Hint at the category, drop feature names.
@@ -12,7 +67,8 @@ A day-by-day "build in public" posting plan for launching the Zumelia brand as a
 - Post once per day at a consistent time (e.g. 9am or 7pm your time).
 - Use 1–2 hashtags max per post.
 - Reply to 3–5 other builders' tweets each day so your handle gets discovered.
-- 🖼️ = attach an image. Early days = **logo only**.
+- 🖼️ = attach an image. Use **logo** (Week 1–3) or **mockup page** (Week 4+).
+- 📱 = screenshot from `/marketing/mockups` + caption from `marketing-mockups.ts`.
 - Check off each day as you post it.
 
 ---
@@ -244,26 +300,22 @@ No image (text only)
 ---
 
 ### ⬜ Day 23
-🖼️ Feature screenshot (chat)
-> Zumelia, feature #1: real-time chat that feels instant.
+📱 Mockup `seller-inbox` OR `calls` (alternate weeks)
+> Use caption from `/marketing/mockups` — copy button on the card.
 >
-> DMs, groups, channels — even secret chats that disappear. 🟠
+> Zumelia, feature highlight: real-time chat + seller inbox for gig inquiries. 🟠
 
 ---
 
 ### ⬜ Day 24
-🖼️ Feature screenshot (live)
-> Zumelia, feature #2: go live and let people send you gifts in real time. 🎁
->
-> Creators, this one's for you.
+📱 Mockup `live` OR `service-gig`
+> Use caption from mockup page.
 
 ---
 
 ### ⬜ Day 25
-🖼️ Feature screenshot (games)
-> Zumelia, feature #3: built-in games to play with friends.
->
-> Because connecting should be fun, not just functional. 🎮
+📱 Mockup `storefront`
+> Use caption from mockup page. Built-in games post can be text-only that week.
 
 ---
 
@@ -319,6 +371,11 @@ No image (text only)
 - "Unpopular opinion about building with AI: ___."
 - "Behind the scenes of Zumelia 👇"
 - "Reply with what you'd want in a social app and I might build it."
+- "New on Zumelia: ___" + 📱 mockup from `/marketing/mockups`
+
+## When you ask the AI "what should I post?"
+
+It will mix **this calendar** + **mockup slides** from `src/lib/marketing-mockups.ts`. Prefer the next unchecked day; if you shipped a feature recently, use that feature's mockup slide.
 
 ## Hashtags (rotate, max 1–2 per post)
 `#buildinpublic` · `#vibecoding` · `#indiehacker` · `#AItools` · `#solopreneur` · `#startup`
