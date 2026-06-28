@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ChevronLeft,
   Globe,
   Hash,
   Home,
@@ -20,8 +21,6 @@ import {
   Lock,
   Gift,
   Palette,
-  Pencil,
-  Check,
   X,
   Bot,
   Briefcase,
@@ -30,7 +29,6 @@ import {
   Inbox,
   BarChart3,
   FolderOpen,
-  Reply,
   DollarSign,
 } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
@@ -60,6 +58,13 @@ import {
 } from "@/lib/chat-themes";
 import { hasBusinessProfile } from "@/lib/business";
 import { canEditWithinWindow } from "@/lib/edit-window";
+import {
+  deleteMessageForEveryone,
+  forwardMessage,
+  hideMessageForMe,
+  loadHiddenMessageIds,
+  translateMessageText,
+} from "@/lib/message-actions";
 import { findUserByPhone } from "@/lib/phone";
 import { formatLastSeen, isOnline } from "@/lib/presence";
 import { sendVoiceMessage } from "@/lib/voicemail";
@@ -74,15 +79,15 @@ import type {
 import { Avatar } from "@/components/Avatar";
 import { useCalls } from "@/components/chat/CallProvider";
 import { CreateConversationModal } from "@/components/chat/CreateConversationModal";
-import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
+import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
+import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
+import { MessageActionSheet, type MessageActionId } from "@/components/chat/MessageActionSheet";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { PayInChatModal } from "@/components/chat/PayInChatModal";
 import { ChatThemeModal } from "@/components/chat/ChatThemeModal";
 import { CreatePollModal } from "@/components/chat/CreatePollModal";
 import { MessageRequestsPanel } from "@/components/chat/MessageRequestsPanel";
-import { PollMessage } from "@/components/chat/PollMessage";
-import { ReplyQuote } from "@/components/chat/ReplyQuote";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
 import type { ChatFolder } from "@/lib/types";
@@ -139,6 +144,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [searchResults, setSearchResults] = useState<Message[] | null>(null);
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [actionMessage, setActionMessage] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
 
   const isAssistantChat =
     !!activeChat?.otherUser && isAssistantProfile(activeChat.otherUser);
@@ -261,7 +268,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const loadMessages = useCallback(
     async (convId: string, isSecret?: boolean) => {
       setLoadingMsgs(true);
-      let query = getSupabase()
+      const supabase = getSupabase();
+      let query = supabase
         .from("messages")
         .select("*")
         .eq("conversation_id", convId)
@@ -273,10 +281,12 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
 
       const { data } = await query;
       const rows = (data as Message[]) ?? [];
-      setMessages(await enrichMessagesWithReplies(getSupabase(), rows));
+      const hiddenIds = await loadHiddenMessageIds(supabase, currentUser.id, convId);
+      const visible = rows.filter((m) => !hiddenIds.has(m.id));
+      setMessages(await enrichMessagesWithReplies(supabase, visible));
       setLoadingMsgs(false);
     },
-    [getSupabase],
+    [getSupabase, currentUser.id],
   );
 
   useEffect(() => {
@@ -543,6 +553,100 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     await refreshConversations();
   }
 
+  function closeActiveChat() {
+    setActiveChat(null);
+    setReplyingTo(null);
+    setShowMessageSearch(false);
+    setMessageSearch("");
+    setActionMessage(null);
+    setEditingMessageId(null);
+  }
+
+  const allConversationsForForward = useMemo(() => {
+    const map = new Map<string, ConversationPreview>();
+    for (const conv of [...conversations, ...sellerChats, ...secretChats]) {
+      map.set(conv.id, conv);
+    }
+    return [...map.values()];
+  }, [conversations, sellerChats, secretChats]);
+
+  async function handleMessageAction(action: MessageActionId) {
+    if (!actionMessage) return;
+    const msg = actionMessage;
+    setActionMessage(null);
+
+    switch (action) {
+      case "reply":
+        setReplyingTo(msg);
+        break;
+      case "copy":
+        try {
+          await navigator.clipboard.writeText(msg.content);
+        } catch {
+          setChatError("Could not copy to clipboard.");
+        }
+        break;
+      case "edit":
+        setEditingMessageId(msg.id);
+        setEditMessageDraft(msg.content);
+        setMessageEditError(null);
+        break;
+      case "translate": {
+        const target = chatTheme?.translation_target_lang || "en";
+        const { translated, error } = await translateMessageText(msg.content, target);
+        if (error) setChatError(error);
+        else if (translated) {
+          setTranslations((prev) => ({ ...prev, [msg.id]: translated }));
+        }
+        break;
+      }
+      case "forward":
+        setForwardingMessage(msg);
+        break;
+      case "delete_me": {
+        const { error } = await hideMessageForMe(getSupabase(), currentUser.id, msg.id);
+        if (error) setChatError(error);
+        else setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+        break;
+      }
+      case "delete_everyone": {
+        const { error } = await deleteMessageForEveryone(
+          getSupabase(),
+          currentUser.id,
+          msg.id,
+          msg.created_at,
+        );
+        if (error) setChatError(error);
+        else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.id
+                ? {
+                    ...m,
+                    content: "This message was deleted",
+                    deleted_at: new Date().toISOString(),
+                  }
+                : m,
+            ),
+          );
+        }
+        break;
+      }
+    }
+  }
+
+  async function handleForwardTo(conversationId: string) {
+    if (!forwardingMessage) return;
+    const { error } = await forwardMessage(
+      getSupabase(),
+      currentUser.id,
+      conversationId,
+      forwardingMessage.content,
+    );
+    setForwardingMessage(null);
+    if (error) setChatError(error);
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.trim() || !activeChat?.convId || sending || !activeChat.canPost) return;
@@ -646,7 +750,13 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const countriesInDiscover = [...new Set(discoverUsers.map((u) => u.country))].sort();
 
   return (
-    <div className="vintage-page flex h-screen flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] text-vintage-ink md:pb-0">
+    <div
+      className={`vintage-page flex h-screen flex-col text-vintage-ink ${
+        activeChat
+          ? "pb-0"
+          : "pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0"
+      }`}
+    >
       <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
       {modal && (
@@ -663,7 +773,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
         />
       )}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside className="flex w-full flex-col border-r border-vintage-border bg-vintage-paper md:w-80 lg:w-96">
+        <aside
+          className={`${
+            activeChat ? "hidden md:flex" : "flex min-h-0 flex-1"
+          } w-full flex-col border-r border-vintage-border bg-vintage-paper md:w-80 md:flex-none lg:w-96`}
+        >
           <div className="border-b border-vintage-border p-3">
             <div className="mb-2 flex items-center gap-2 vintage-card-inset px-3 py-2">
               <Link href={`/profile/${currentUser.username}`}>
@@ -1262,16 +1376,28 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           )}
         </aside>
 
-        <main className="flex min-h-0 flex-1 flex-col">
+        <main
+          className={`${
+            activeChat ? "flex" : "hidden md:flex"
+          } min-h-0 flex-1 flex-col`}
+        >
           {activeChat ? (
             <>
               <header
-                className={`flex items-center gap-3 border-b px-4 py-3 ${
+                className={`flex items-center gap-2 border-b px-3 py-3 md:gap-3 md:px-4 ${
                   activeChat.isSecret
                     ? "border-vintage-ink/20 bg-vintage-ink/5"
                     : "border-vintage-border bg-vintage-paper"
                 }`}
               >
+                <button
+                  type="button"
+                  onClick={closeActiveChat}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-vintage-ink hover:bg-vintage-paper-dark/60 md:hidden"
+                  aria-label="Back to chats"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
                 {activeChat.isSecret && (
                   <Lock className="h-4 w-4 shrink-0 text-vintage-rust" aria-hidden />
                 )}
@@ -1480,6 +1606,37 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   onCreated={() => loadMessages(activeChat.convId, activeChat.isSecret)}
                 />
               )}
+              {actionMessage && (
+                <MessageActionSheet
+                  message={actionMessage}
+                  isMine={actionMessage.sender_id === currentUser.id}
+                  canEdit={
+                    actionMessage.sender_id === currentUser.id &&
+                    (!actionMessage.message_type ||
+                      actionMessage.message_type === "text") &&
+                    !actionMessage.deleted_at &&
+                    canEditWithinWindow(actionMessage.created_at)
+                  }
+                  canDeleteForEveryone={
+                    actionMessage.sender_id === currentUser.id &&
+                    (!actionMessage.message_type ||
+                      actionMessage.message_type === "text") &&
+                    !actionMessage.deleted_at &&
+                    canEditWithinWindow(actionMessage.created_at)
+                  }
+                  onAction={handleMessageAction}
+                  onClose={() => setActionMessage(null)}
+                />
+              )}
+              {forwardingMessage && activeChat && (
+                <ForwardMessageModal
+                  conversations={allConversationsForForward}
+                  currentConversationId={activeChat.convId}
+                  preview={forwardingMessage.content}
+                  onClose={() => setForwardingMessage(null)}
+                  onSelect={handleForwardTo}
+                />
+              )}
 
               <div
                 className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
@@ -1499,144 +1656,40 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                     const sender = activeChat.members?.find((m) => m.id === msg.sender_id);
                     const isText = !msg.message_type || msg.message_type === "text";
                     const canEditMsg =
-                      isMine && isText && canEditWithinWindow(msg.created_at);
-                    const isEditing = editingMessageId === msg.id;
+                      isMine &&
+                      isText &&
+                      !msg.deleted_at &&
+                      canEditWithinWindow(msg.created_at);
 
                     return (
-                      <div
+                      <ChatMessageBubble
                         key={msg.id}
-                        id={`msg-${msg.id}`}
-                        className={`group flex ${isMine ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-                            isMine
-                              ? "rounded-br-sm vintage-btn text-on-rust"
-                              : "rounded-bl-sm vintage-card-inset text-vintage-ink"
-                          }`}
-                        >
-                          {!isMine && activeChat.kind !== "dm" && (
-                            <p className="mb-1 text-[10px] font-semibold text-vintage-rust">
-                              {sender?.display_name ?? "Member"}
-                            </p>
-                          )}
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <textarea
-                                value={editMessageDraft}
-                                onChange={(e) => setEditMessageDraft(e.target.value)}
-                                rows={2}
-                                className="vintage-input w-full resize-none px-2 py-1.5 text-sm text-vintage-ink"
-                              />
-                              {messageEditError && (
-                                <p className="text-[10px] text-vintage-rust">{messageEditError}</p>
-                              )}
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveMessageEdit(msg.id, msg.created_at)}
-                                  disabled={savingMessageEdit || !editMessageDraft.trim()}
-                                  className="flex items-center gap-1 rounded-lg bg-black/20 px-2 py-1 text-[10px] font-semibold text-on-rust disabled:opacity-50"
-                                >
-                                  <Check className="h-3 w-3" /> Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingMessageId(null);
-                                    setMessageEditError(null);
-                                  }}
-                                  className="flex items-center gap-1 rounded-lg bg-black/10 px-2 py-1 text-[10px] text-on-rust"
-                                >
-                                  <X className="h-3 w-3" /> Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : msg.message_type === "voice" && msg.media_url ? (
-                            <VoiceMessageBubble
-                              url={msg.media_url}
-                              durationSeconds={msg.media_duration_seconds}
-                              isMine={isMine}
-                            />
-                          ) : msg.message_type === "call_log" ? (
-                            <p className="text-sm italic opacity-90">{msg.content}</p>
-                          ) : msg.message_type === "gift" ? (
-                            <p className="text-sm font-medium">{msg.content}</p>
-                          ) : msg.message_type === "payment" ? (
-                            <p className="flex items-center gap-1.5 text-sm font-medium">
-                              <DollarSign className="h-4 w-4 shrink-0" />
-                              {msg.content}
-                            </p>
-                          ) : msg.message_type === "poll" && msg.poll_id ? (
-                            <PollMessage pollId={msg.poll_id} userId={currentUser.id} />
-                          ) : (
-                            <div className="flex flex-col gap-1.5">
-                              {msg.reply_to && (
-                                <ReplyQuote
-                                  muted={isMine}
-                                  label={
-                                    msg.reply_to.sender?.display_name ??
-                                    (msg.reply_to.sender_id === currentUser.id ? "You" : "Message")
-                                  }
-                                  content={msg.reply_to.content}
-                                  onClick={() =>
-                                    document
-                                      .getElementById(`msg-${msg.reply_to!.id}`)
-                                      ?.scrollIntoView({ behavior: "smooth", block: "center" })
-                                  }
-                                />
-                              )}
-                              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                                {msg.content}
-                              </p>
-                              {!isMine &&
-                                chatTheme?.translation_enabled &&
-                                translations[msg.id] &&
-                                translations[msg.id] !== msg.content && (
-                                  <p className="border-t border-vintage-border/40 pt-2 text-xs italic text-vintage-ink-muted">
-                                    {translations[msg.id]}
-                                  </p>
-                                )}
-                            </div>
-                          )}
-                          <div
-                            className={`mt-1 flex items-center gap-2 text-[10px] ${
-                              isMine ? "text-on-rust-muted" : "text-vintage-ink-muted"
-                            }`}
-                          >
-                            <span>
-                              {formatMessageTime(msg.created_at)}
-                              {msg.edited_at ? " · edited" : ""}
-                            </span>
-                            {canEditMsg && !isEditing && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingMessageId(msg.id);
-                                  setEditMessageDraft(msg.content);
-                                  setMessageEditError(null);
-                                }}
-                                className={`flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 ${
-                                  isMine ? "hover:text-white" : "hover:text-vintage-rust"
-                                }`}
-                              >
-                                <Pencil className="h-3 w-3" /> Edit
-                              </button>
-                            )}
-                            {isText && !isEditing && (
-                              <button
-                                type="button"
-                                onClick={() => setReplyingTo(msg)}
-                                className={`flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100 ${
-                                  isMine ? "hover:text-white" : "hover:text-vintage-rust"
-                                }`}
-                              >
-                                <Reply className="h-3 w-3" /> Reply
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                        msg={msg}
+                        isMine={isMine}
+                        currentUserId={currentUser.id}
+                        activeChat={activeChat}
+                        sender={sender}
+                        canEditMsg={canEditMsg}
+                        isEditing={editingMessageId === msg.id}
+                        editMessageDraft={editMessageDraft}
+                        messageEditError={messageEditError}
+                        savingMessageEdit={savingMessageEdit}
+                        translation={translations[msg.id]}
+                        showTranslation={!!chatTheme?.translation_enabled}
+                        onLongPress={setActionMessage}
+                        onStartEdit={(m) => {
+                          setEditingMessageId(m.id);
+                          setEditMessageDraft(m.content);
+                          setMessageEditError(null);
+                        }}
+                        onSaveEdit={handleSaveMessageEdit}
+                        onCancelEdit={() => {
+                          setEditingMessageId(null);
+                          setMessageEditError(null);
+                        }}
+                        onEditDraftChange={setEditMessageDraft}
+                        onReply={setReplyingTo}
+                      />
                     );
                   })
                 )}
@@ -1656,7 +1709,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
               ) : null}
 
               {activeChat.canPost ? (
-                <div className="border-t border-vintage-border bg-vintage-paper p-4">
+                <div className="border-t border-vintage-border bg-vintage-paper p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                   {recordingVoice ? (
                     <VoiceRecorder
                       disabled={sendingVoice}
@@ -1759,7 +1812,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           )}
         </main>
       </div>
-      <MobileBottomNav user={currentUser} />
+      {!activeChat && <MobileBottomNav user={currentUser} />}
     </div>
   );
 }

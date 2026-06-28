@@ -95,6 +95,7 @@ export type Message = {
   poll_id: string | null;
   reply_to_id: string | null;
   is_auto_reply?: boolean;
+  deleted_at?: string | null;
   created_at: string;
   edited_at: string | null;
   reply_to?: MessageReplyPreview | null;
