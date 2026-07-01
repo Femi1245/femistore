@@ -7,6 +7,23 @@ export type BusinessAutoReplyMode = "template" | "ai";
 export type ProfileTheme = "default" | "rust" | "olive" | "midnight" | "paper";
 export type ReportTargetType = "user" | "post" | "message" | "comment";
 
+export type VerificationCategory = "public_figure" | "celebrity" | "official" | "notable";
+export type VerificationRequestStatus = "pending" | "approved" | "rejected";
+
+export type VerificationRequest = {
+  id: string;
+  user_id: string;
+  status: VerificationRequestStatus;
+  category: VerificationCategory;
+  public_links: string[];
+  applicant_note: string;
+  admin_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Profile = {
   id: string;
   username: string;
@@ -40,6 +57,10 @@ export type Profile = {
   business_auto_reply_hours_end?: string | null;
   business_featured: boolean;
   business_featured_at: string | null;
+  is_verified: boolean;
+  verified_at: string | null;
+  verified_category: VerificationCategory | null;
+  verified_by: string | null;
   is_private: boolean;
   dm_policy: DmPolicy;
   personal_dm_policy?: DmPolicy | null;

@@ -21,6 +21,7 @@ import { formatBirthdate, getFollowCounts, isFollowing, toggleFollow } from "@/l
 import { isBirthdayToday } from "@/lib/birthday";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { VerifiedName } from "@/components/VerifiedBadge";
 
 export function ProfileHeader({
   profile,
@@ -283,7 +284,11 @@ export function ProfileHeader({
 
           <div className="mt-4">
             <h1 className="font-display text-2xl font-bold tracking-tight text-vintage-ink">
-              {profile.display_name}
+              <VerifiedName
+                name={profile.display_name}
+                verified={profile.is_verified}
+                category={profile.verified_category}
+              />
             </h1>
             <p className="text-sm font-medium text-vintage-rust">
               @{profile.username}

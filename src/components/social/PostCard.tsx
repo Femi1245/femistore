@@ -31,6 +31,7 @@ import {
 } from "@/lib/business";
 import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 function PostBody({
   post,
@@ -212,9 +213,12 @@ export function PostCard({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={authorHref}
-              className="font-display text-base font-semibold tracking-tight hover:text-vintage-rust"
+              className="font-display inline-flex items-center gap-1 text-base font-semibold tracking-tight hover:text-vintage-rust"
             >
               {authorLabel}
+              {author.is_verified && (
+                <VerifiedBadge category={author.verified_category} size="xs" />
+              )}
             </Link>
             {isBusinessPost && (
               <span className="rounded-sm bg-vintage-rust/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vintage-rust">

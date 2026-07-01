@@ -22,6 +22,7 @@ import {
 } from "@/lib/content-filters";
 import { loadMyAppeals, submitAppeal } from "@/lib/safety";
 import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceSection";
+import { VerificationRequestSection } from "@/components/settings/VerificationRequestSection";
 import { ChatModeSettings } from "@/components/chat/ChatModeSettings";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { canAccessPersonalProfile } from "@/lib/business";
@@ -137,6 +138,8 @@ export function SettingsView({ profile }: { profile: Profile }) {
       )}
 
       <MobileAppearanceSection />
+
+      <VerificationRequestSection profile={profile} />
 
       <ChatModeSettings profile={profile} />
 
