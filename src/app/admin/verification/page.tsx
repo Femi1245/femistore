@@ -1,20 +1,11 @@
-import { redirect } from "next/navigation";
 import { VerificationAdminDashboard } from "@/components/admin/VerificationAdminDashboard";
 import { AppShell } from "@/components/layout/AppShell";
-import { isPlatformAdmin } from "@/lib/platform-admin";
-import { createClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/session";
+import { requireAdminPageUser } from "@/lib/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminVerificationPage() {
-  const user = await requireUser();
-  const supabase = await createClient();
-  const admin = await isPlatformAdmin(supabase, user.id);
-
-  if (!admin) {
-    redirect("/");
-  }
+  const user = await requireAdminPageUser("/admin/verification");
 
   return (
     <AppShell user={user} wide>

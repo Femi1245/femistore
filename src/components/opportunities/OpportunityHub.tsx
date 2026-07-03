@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Sparkles, Store } from "lucide-react";
+import { Plus, Sparkles, Store } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   canCreateServiceGigs,
@@ -23,6 +23,7 @@ import type {
   Profile,
 } from "@/lib/types";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
+import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 
 type Tab = "all" | "services" | "hiring" | "mine";
 
@@ -143,13 +144,12 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="relative sm:col-span-2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-rust" />
-            <input
+          <div className="sm:col-span-2">
+            <SearchWithSuggestions
+              scope="opportunities"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
               placeholder="Search title, service, skills, location…"
-              className="vintage-input w-full py-2.5 pl-10 pr-4 text-sm"
             />
           </div>
           <select

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { requireUser } from "@/lib/session";
@@ -9,7 +10,9 @@ export default async function SettingsPage() {
 
   return (
     <AppShell user={user} wide>
-      <SettingsView profile={user} />
+      <Suspense fallback={null}>
+        <SettingsView profile={user} />
+      </Suspense>
     </AppShell>
   );
 }

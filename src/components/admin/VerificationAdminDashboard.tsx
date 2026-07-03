@@ -5,13 +5,14 @@ import Link from "next/link";
 import {
   BadgeCheck,
   Check,
+  ChevronLeft,
   ExternalLink,
   Loader2,
-  Search,
   Shield,
   X,
 } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import {
   VERIFICATION_CATEGORIES,
@@ -58,12 +59,26 @@ export function VerificationAdminDashboard() {
         fetch("/api/admin/verification/verified"),
       ]);
 
-      if (!pendingRes.ok || !verifiedRes.ok) {
-        throw new Error("Could not load admin data");
+      const pendingData = (await pendingRes.json().catch(() => ({}))) as {
+        requests?: RequestRow[];
+        error?: string;
+      };
+      const verifiedData = (await verifiedRes.json().catch(() => ({}))) as {
+        users?: VerifiedUser[];
+        error?: string;
+      };
+
+      if (!pendingRes.ok) {
+        throw new Error(
+          pendingData.error ?? `Could not load pending requests (${pendingRes.status})`,
+        );
+      }
+      if (!verifiedRes.ok) {
+        throw new Error(
+          verifiedData.error ?? `Could not load verified users (${verifiedRes.status})`,
+        );
       }
 
-      const pendingData = (await pendingRes.json()) as { requests: RequestRow[] };
-      const verifiedData = (await verifiedRes.json()) as { users: VerifiedUser[] };
       setPending(pendingData.requests ?? []);
       setVerified(verifiedData.users ?? []);
     } catch (e) {
@@ -173,6 +188,12 @@ export function VerificationAdminDashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <Link
+            href="/admin"
+            className="mb-3 inline-flex items-center gap-1 text-sm text-vintage-ink-muted hover:text-vintage-rust"
+          >
+            <ChevronLeft className="h-4 w-4" /> Admin home
+          </Link>
           <div className="flex items-center gap-2 text-vintage-rust">
             <Shield className="h-5 w-5" />
             <span className="text-xs font-bold uppercase tracking-wider">Admin</span>
@@ -368,25 +389,37 @@ export function VerificationAdminDashboard() {
             onboard directly.
           </p>
           <div className="flex gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-ink-muted" />
-              <input
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && void runSearch()}
-                placeholder="Search username or name…"
-                className="vintage-input w-full py-2.5 pl-9 pr-3 text-sm"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => void runSearch()}
-              disabled={searching}
-              className="vintage-btn px-4 py-2 text-sm disabled:opacity-50"
-            >
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-            </button>
+          <div className="min-w-0 flex-1">
+            <SearchWithSuggestions
+              scope="people"
+              value={searchQ}
+              onChange={setSearchQ}
+              placeholder="Search username or name…"
+              onSuggestionSelect={(s) => {
+                setGrantUserId(s.id);
+                setSearchResults([
+                  {
+                    id: s.id,
+                    username: s.sublabel?.replace(/^@/, "").split(" · ")[0] ?? "",
+                    display_name: s.label,
+                    avatar_url: s.avatarUrl ?? null,
+                    verified_category: null,
+                    verified_at: null,
+                    country: "",
+                  },
+                ]);
+              }}
+            />
           </div>
+          <button
+            type="button"
+            onClick={() => void runSearch()}
+            disabled={searching}
+            className="vintage-btn shrink-0 px-4 py-2 text-sm disabled:opacity-50"
+          >
+            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+          </button>
+        </div>
 
           {searchResults.length > 0 && (
             <ul className="space-y-2">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminApiFromRequest } from "@/lib/admin-api";
+import { adminDbError, requireAdminApiFromRequest } from "@/lib/admin-api";
 
 export async function GET(request: Request) {
   const auth = await requireAdminApiFromRequest(request);
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     .limit(200);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return adminDbError(error.message);
   }
 
   return NextResponse.json({ users: data ?? [] });

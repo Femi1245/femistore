@@ -47,7 +47,6 @@ import {
   loadConversations,
   loadMutualFriends,
   loadPublicChannels,
-  searchMessages,
   secretMessageExpiry,
 } from "@/lib/chat";
 import {
@@ -77,6 +76,7 @@ import type {
   Profile,
 } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 import { useCalls } from "@/components/chat/CallProvider";
 import { CreateConversationModal } from "@/components/chat/CreateConversationModal";
 import { ChatMessageBubble } from "@/components/chat/ChatMessageBubble";
@@ -141,7 +141,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [assistantThinking, setAssistantThinking] = useState(false);
   const [messageSearch, setMessageSearch] = useState("");
   const [showMessageSearch, setShowMessageSearch] = useState(false);
-  const [searchResults, setSearchResults] = useState<Message[] | null>(null);
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [actionMessage, setActionMessage] = useState<Message | null>(null);
@@ -214,23 +213,6 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
       cancelled = true;
     };
   }, [messages, chatTheme?.translation_enabled, chatTheme?.translation_target_lang, currentUser.id]);
-
-  useEffect(() => {
-    if (!showMessageSearch || !messageSearch.trim() || !activeChat?.convId) {
-      setSearchResults(null);
-      return;
-    }
-    const timer = window.setTimeout(async () => {
-      const results = await searchMessages(
-        getSupabase(),
-        activeChat.convId,
-        messageSearch,
-        activeChat.isSecret,
-      );
-      setSearchResults(results);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [messageSearch, showMessageSearch, activeChat?.convId, activeChat?.isSecret, getSupabase]);
 
   useEffect(() => {
     async function loadDiscover() {
@@ -1192,15 +1174,13 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                 >
                   <Briefcase className="h-3.5 w-3.5" /> Discover businesses
                 </Link>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-rust" />
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search name, username, country…"
-                    className="vintage-input w-full py-2.5 pl-10 pr-4 text-sm"
-                  />
-                </div>
+                <SearchWithSuggestions
+                  scope="people"
+                  value={search}
+                  onChange={setSearch}
+                  excludeUserId={currentUser.id}
+                  placeholder="Search name, username, country…"
+                />
                 <select
                   value={countryFilter}
                   onChange={(e) => setCountryFilter(e.target.value)}
@@ -1545,32 +1525,22 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                   </div>
                 )}
               </header>
-              {showMessageSearch && (
+              {showMessageSearch && activeChat?.convId && (
                 <div className="border-b border-vintage-border bg-vintage-paper px-4 py-2">
-                  <input
+                  <SearchWithSuggestions
+                    scope="messages"
                     value={messageSearch}
-                    onChange={(e) => setMessageSearch(e.target.value)}
+                    onChange={setMessageSearch}
+                    conversationId={activeChat.convId}
                     placeholder="Search in this conversation…"
-                    className="vintage-input w-full px-3 py-2 text-sm"
+                    onSuggestionSelect={(s) => {
+                      if (s.href?.startsWith("#")) {
+                        document
+                          .getElementById(s.href.slice(1))
+                          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }
+                    }}
                   />
-                  {searchResults && searchResults.length > 0 && (
-                    <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
-                      {searchResults.map((hit) => (
-                        <button
-                          key={hit.id}
-                          type="button"
-                          onClick={() => {
-                            document
-                              .getElementById(`msg-${hit.id}`)
-                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }}
-                          className="block w-full truncate rounded-lg px-2 py-1 text-left text-xs hover:bg-vintage-rust/10"
-                        >
-                          {hit.content}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
               {showGift && activeChat.kind === "dm" && activeChat.otherUser && (

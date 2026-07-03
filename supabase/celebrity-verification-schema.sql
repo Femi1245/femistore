@@ -21,7 +21,7 @@ create index if not exists profiles_verified_idx
   on public.profiles (is_verified, verified_at desc nulls last)
   where is_verified = true;
 
--- Platform admins (who can use /admin/verification)
+-- Platform admin table (optional audit log only — app checks @femisaint owner username)
 create table if not exists public.platform_admins (
   user_id uuid primary key references public.profiles (id) on delete cascade,
   granted_at timestamptz not null default now(),
@@ -114,7 +114,9 @@ create trigger protect_profile_verification
   before update on public.profiles
   for each row execute function public.protect_profile_verification_fields();
 
--- Platform admin: @femisaint (run after profile exists)
+-- Platform owner admin (by email — must match sign-in email in the app)
 insert into public.platform_admins (user_id)
-select id from public.profiles where lower(username) = 'femisaint'
+select u.id
+from auth.users u
+where lower(u.email) = lower('olaniranfemi01@gmail.com')
 on conflict (user_id) do nothing;

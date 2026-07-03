@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Briefcase, Search } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_CATEGORIES, loadDiscoverableBusinesses, loadFeaturedBusinesses } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 import { BusinessDiscoveryCard } from "@/components/business/BusinessDiscoveryCard";
 import { BusinessMarketplaceFeed } from "@/components/business/BusinessMarketplaceFeed";
+import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 
 export function BusinessDiscoveryList({ currentUser }: { currentUser: Profile }) {
   const [businesses, setBusinesses] = useState<Profile[]>([]);
@@ -55,13 +56,13 @@ export function BusinessDiscoveryList({ currentUser }: { currentUser: Profile })
           Shop from businesses on Zumelia — browse listings, offers, and storefronts.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="relative sm:col-span-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-rust" />
-            <input
+          <div className="sm:col-span-1">
+            <SearchWithSuggestions
+              scope="businesses"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={setSearch}
+              excludeUserId={currentUser.id}
               placeholder="Search businesses…"
-              className="vintage-input w-full py-2.5 pl-10 pr-4 text-sm"
             />
           </div>
           <select

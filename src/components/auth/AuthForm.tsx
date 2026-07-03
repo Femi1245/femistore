@@ -306,6 +306,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
               : "Create your account and connect across borders"}
           </p>
 
+          {mode === "login" && nextAfterAuth.startsWith("/admin") && (
+            <p className="mb-4 rounded-lg bg-vintage-rust/10 px-3 py-2 text-center text-xs text-vintage-ink">
+              <span className="font-semibold text-vintage-rust">Admin dashboard:</span> use your{" "}
+              <span className="font-medium">email and password</span> — not your @username. After
+              sign-in you&apos;ll return to admin.
+            </p>
+          )}
+
           <div className="space-y-3">
             <button
               type="button"

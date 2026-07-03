@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clapperboard, Loader2, Search } from "lucide-react";
 import type { VideoResult } from "@/lib/youtube";
 import { VideoCard } from "@/components/watch/VideoCard";
+import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 
 export function VideoSearchView() {
   const router = useRouter();
@@ -61,14 +62,14 @@ export function VideoSearchView() {
       </div>
 
       <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-vintage-ink-muted" />
-          <input
-            type="search"
+        <div className="flex-1">
+          <SearchWithSuggestions
+            scope="videos"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="Search music videos, tutorials, documentaries…"
-            className="vintage-input w-full py-3 pl-10 pr-4"
+            inputClassName="py-3"
+            debounceMs={400}
           />
         </div>
         <button

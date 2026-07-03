@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, Loader2, Shield } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Download, Loader2, Shield, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import {
   PROFILE_THEMES,
   privacyFromProfile,
@@ -29,6 +31,10 @@ import { canAccessPersonalProfile } from "@/lib/business";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
 
 export function SettingsView({ profile }: { profile: Profile }) {
+  const searchParams = useSearchParams();
+  const adminDenied = searchParams.get("admin_denied") === "1";
+  const deniedAs = searchParams.get("as");
+  const { isAdmin } = usePlatformAdmin();
   const [privacy, setPrivacy] = useState<PrivacySettings>(() => privacyFromProfile(profile));
   const [notifPrefs, setNotifPrefs] = useState<Record<NotificationType, boolean> | null>(null);
   const [keywords, setKeywords] = useState<KeywordMute[]>([]);
@@ -135,6 +141,49 @@ export function SettingsView({ profile }: { profile: Profile }) {
       )}
       {error && (
         <p className="rounded-lg bg-vintage-rust/10 px-3 py-2 text-sm text-vintage-rust">{error}</p>
+      )}
+
+      {adminDenied && !isAdmin && (
+        <p className="rounded-lg border border-vintage-rust/30 bg-vintage-rust/10 px-4 py-3 text-sm text-vintage-ink">
+          <span className="font-semibold text-vintage-rust">Admin access denied.</span> You are
+          signed in as <span className="font-medium">@{deniedAs ?? profile.username}</span>. The
+          dashboard is owner-only. If this is your account, set{" "}
+          <code className="text-xs">ZUMELIA_OWNER_USERNAME={profile.username}</code> in Vercel env
+          (or <code className="text-xs">.env.local</code> locally), redeploy, then try again.
+        </p>
+      )}
+
+      {isAdmin && (
+        <section className="vintage-card overflow-hidden">
+          <div className="border-b border-vintage-border bg-vintage-rust/8 px-5 py-4">
+            <div className="flex items-center gap-2 text-vintage-rust">
+              <Shield className="h-5 w-5" />
+              <h2 className="font-display text-lg font-semibold text-vintage-ink">
+                Platform admin
+              </h2>
+            </div>
+            <p className="mt-1 text-sm text-vintage-ink-muted">
+              Verify famous accounts and manage blue-check badges.
+            </p>
+          </div>
+          <div className="px-5 py-4">
+            <Link
+              href="/admin/verification"
+              className="flex items-start gap-3 rounded-xl transition hover:bg-vintage-paper-dark/40 px-2 py-2 -mx-2"
+            >
+              <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
+              <div>
+                <p className="font-semibold text-vintage-ink">Verified accounts</p>
+                <p className="text-xs text-vintage-ink-muted">Approve requests & grant badges</p>
+              </div>
+            </Link>
+          </div>
+          <div className="border-t border-vintage-border px-5 py-3">
+            <Link href="/admin" className="text-sm font-semibold text-vintage-rust hover:underline">
+              Open admin home →
+            </Link>
+          </div>
+        </section>
       )}
 
       <MobileAppearanceSection />

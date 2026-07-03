@@ -13,8 +13,10 @@ import {
   Settings,
   Briefcase,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import {
   hasBusinessProfile,
   getBusinessProfileUrl,
@@ -56,6 +58,9 @@ function isLinkActive(pathname: string, href: string, label: string): boolean {
   if (href === "/discover/businesses" && pathname.startsWith("/discover")) return true;
   if (href === "/opportunities" && pathname.startsWith("/opportunities")) return true;
   if (href === "/profile/settings" && pathname.startsWith("/profile/settings")) {
+    return true;
+  }
+  if (href === "/admin" && pathname.startsWith("/admin")) {
     return true;
   }
   if (label === "Profile" && pathname.startsWith("/profile/")) {
@@ -151,6 +156,7 @@ function NavMoreMenu({
 
 export function AppNav({ user }: { user: Profile }) {
   const pathname = usePathname();
+  const { isAdmin } = usePlatformAdmin();
   const profileHref = getDefaultProfileUrl(user);
   const personalHref = getPersonalProfileUrl(user.username);
   const businessHref = hasBusinessProfile(user)
@@ -197,6 +203,18 @@ export function AppNav({ user }: { user: Profile }) {
             <MessageBell userId={user.id} />
             <NotificationBell userId={user.id} />
             <ThemeToggle />
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`nav-icon-btn ${
+                  pathname.startsWith("/admin") ? "nav-icon-btn-active" : ""
+                }`}
+                title="Admin dashboard"
+                aria-label="Admin dashboard"
+              >
+                <Shield className="h-[18px] w-[18px]" />
+              </Link>
+            )}
             <Link
               href="/profile/settings"
               className={`nav-icon-btn ${
