@@ -68,7 +68,7 @@ export function GiftPickerModal({
 
     // Real payment: redirect to the secure Paystack checkout.
     if (data.authorization_url) {
-      window.location.href = data.authorization_url;
+      globalThis.location.assign(data.authorization_url);
       return;
     }
 
@@ -98,7 +98,7 @@ export function GiftPickerModal({
         </p>
 
         <p className="mb-4 rounded-lg bg-vintage-rust/10 px-3 py-2 text-xs text-vintage-rust">
-          Secure checkout via Paystack. You'll confirm payment on the next screen.
+          Secure checkout via Paystack. You&apos;ll confirm payment on the next screen.
         </p>
 
         {loading ? (

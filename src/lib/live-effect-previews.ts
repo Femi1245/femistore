@@ -15,6 +15,7 @@ export const AR_EFFECT_PREVIEW_IMAGES: Record<LiveAREffect, string> = {
 };
 
 export function getVideoEffectPreviewPath(_effect: LiveVideoEffect): string {
+  void _effect;
   return LIVE_EFFECT_PREVIEW_BASE;
 }
 

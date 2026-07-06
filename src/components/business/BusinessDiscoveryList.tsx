@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -111,9 +112,9 @@ export function BusinessDiscoveryList({ currentUser }: { currentUser: Profile })
           <p className="text-sm text-vintage-ink-muted">
             No businesses match your search yet. Try different filters or create your own business profile.
           </p>
-          <a href="/profile/business/setup" className="vintage-btn-outline px-4 py-2 text-sm">
+          <Link href="/profile/business/setup" className="vintage-btn-outline px-4 py-2 text-sm">
             Create business profile
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

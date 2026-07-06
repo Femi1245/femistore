@@ -1,20 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeProfile } from "@/lib/auth";
+import { formatPhoneE164, phoneFormatHint } from "@/lib/format-phone-e164";
 import type { Profile } from "@/lib/types";
 
 export function normalizePhone(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  let digits = trimmed.replace(/[^\d+]/g, "");
-  if (!digits.startsWith("+")) {
-    digits = `+${digits.replace(/^\+/, "")}`;
-  }
-
-  const numCount = digits.replace(/\D/g, "").length;
-  if (numCount < 8) return null;
-
-  return digits;
+  return formatPhoneE164(input);
 }
 
 export function maskPhone(phone: string): string {
@@ -23,24 +13,39 @@ export function maskPhone(phone: string): string {
   return `•••• ${digits.slice(-4)}`;
 }
 
+function mapPhoneAuthError(message: string): string {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("e.164") || lower.includes("invalid phone")) {
+    return `${message} ${phoneFormatHint()}`;
+  }
+
+  if (lower.includes("sms provider") || lower.includes("error sending sms")) {
+    return `${message} In Supabase → Authentication → Providers → Phone, connect Twilio (Account SID, Auth Token, and a sender number or Messaging Service SID).`;
+  }
+
+  if (
+    lower.includes("phone provider is not enabled") ||
+    lower.includes("unsupported phone provider")
+  ) {
+    return "Phone provider is off in Supabase. Open Authentication → Providers → Phone and enable it.";
+  }
+
+  return message;
+}
+
 export async function sendPhoneVerificationOtp(
   supabase: SupabaseClient,
   phone: string,
 ): Promise<{ error?: string }> {
   const normalized = normalizePhone(phone);
   if (!normalized) {
-    return { error: "Enter a valid phone number with country code (e.g. +2348012345678)." };
+    return { error: `Enter a valid phone number. ${phoneFormatHint()}` };
   }
 
   const { error } = await supabase.auth.updateUser({ phone: normalized });
   if (error) {
-    if (error.message.toLowerCase().includes("phone")) {
-      return {
-        error:
-          "Phone sign-in is not enabled. In Supabase: Authentication → Providers → Phone.",
-      };
-    }
-    return { error: error.message };
+    return { error: mapPhoneAuthError(error.message) };
   }
 
   return {};

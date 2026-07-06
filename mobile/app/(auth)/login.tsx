@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from "react-native";
 import { Link, router } from "expo-router";
+import iconImage from "@/assets/icon.png";
 import { OAuthButtons } from "@/components/OAuthButtons";
 import { Btn, ErrorText, Input, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
@@ -54,7 +55,8 @@ export default function LoginScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Image source={require("@/assets/icon.png")} style={styles.logo} />
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- React Native Image uses accessibilityLabel */}
+          <Image source={iconImage} style={styles.logo} accessibilityLabel="Zumelia" />
           <Text style={styles.brand}>Zumelia</Text>
           <Text style={styles.tagline}>Connect and chat worldwide</Text>
 

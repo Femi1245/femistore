@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Redirect } from "expo-router";
 import { View } from "react-native";
 import { Loader } from "@/components/ui";

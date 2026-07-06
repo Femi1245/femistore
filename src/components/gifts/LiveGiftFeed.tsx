@@ -36,8 +36,7 @@ export function LiveGiftFeed({
           table: "sent_gifts",
           filter: `room_name=eq.${roomName}`,
         },
-        async (payload) => {
-          const incoming = payload.new as SentGift;
+        async () => {
           const list = await loadLiveGifts(createClient(), roomName, 10);
           setGifts(list);
         },

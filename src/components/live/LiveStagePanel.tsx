@@ -17,7 +17,6 @@ import { Avatar } from "@/components/Avatar";
 export function LiveStagePanel({
   roomName,
   currentUser,
-  hostId,
   isHost,
   isGuest,
   onGuestApproved,

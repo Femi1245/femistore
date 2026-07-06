@@ -32,7 +32,7 @@ export function BusinessSetupForm({
   const [phone, setPhone] = useState(profile.business_phone ?? "");
   const [location, setLocation] = useState(profile.business_location ?? "");
   const [services, setServices] = useState(profile.business_services ?? "");
-  const [coverUrl, setCoverUrl] = useState(profile.business_cover_url);
+  const [coverUrl] = useState(profile.business_cover_url);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [contactEnabled, setContactEnabled] = useState(profile.business_contact_enabled ?? true);

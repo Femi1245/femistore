@@ -9,7 +9,7 @@ import { MessageBell } from "@/components/chat/MessageBell";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { AccountModeSwitcher } from "@/components/business/AccountModeSwitcher";
-import { getDefaultProfileUrl, hasBusinessProfile } from "@/lib/business";
+import { hasBusinessProfile } from "@/lib/business";
 import type { Profile } from "@/lib/types";
 
 export function MobileTopBar({ user }: { user: Profile }) {

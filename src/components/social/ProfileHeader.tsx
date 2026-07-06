@@ -38,7 +38,7 @@ export function ProfileHeader({
 }) {
   const isOwn = profile.id === currentUser.id;
   const [counts, setCounts] = useState(initialCounts);
-  const [following, setFollowing] = useState(initialFollowing);
+  const [, setFollowing] = useState(initialFollowing);
   const [friends, setFriends] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("none");
   const [incomingRequestId, setIncomingRequestId] = useState<string | null>(null);

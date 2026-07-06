@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -18,7 +19,7 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
   const [bio, setBio] = useState(profile.bio ?? "");
   const [country, setCountry] = useState(profile.country);
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
+  const [avatarUrl] = useState(profile.avatar_url);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,12 +92,12 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
         <p className="text-sm text-vintage-ink-muted">
           Update how you appear on Zumelia.
         </p>
-        <a
+        <Link
           href="/profile/settings"
           className="vintage-btn-outline shrink-0 px-3 py-2 text-sm font-semibold"
         >
           Privacy & safety
-        </a>
+        </Link>
       </div>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <Avatar
@@ -163,12 +164,12 @@ export function ProfileEditForm({ profile }: { profile: Profile }) {
           <label className="block text-xs font-medium text-vintage-ink-muted">
             Date of birth
           </label>
-          <a
+          <Link
             href="/profile/birthday"
             className="text-xs font-semibold text-vintage-rust hover:underline"
           >
             Birthday page →
-          </a>
+          </Link>
         </div>
         <input
           type="date"

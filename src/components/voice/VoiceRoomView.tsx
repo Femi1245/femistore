@@ -80,11 +80,10 @@ function VoiceControls({
 export function VoiceRoomView({
   roomName,
   room,
-  currentUser,
 }: {
   roomName: string;
   room: VoiceRoom;
-  currentUser: Profile;
+  currentUser?: Profile;
 }) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);

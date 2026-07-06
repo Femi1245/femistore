@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
-import { Btn, Loader, Screen, Subtitle, Title } from "@/components/ui";
+import { Btn, Loader, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 

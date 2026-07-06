@@ -23,7 +23,10 @@ export function SnakeGame() {
   const [gameOver, setGameOver] = useState(false);
   const [running, setRunning] = useState(false);
   const dirRef = useRef(dir);
-  dirRef.current = dir;
+
+  useEffect(() => {
+    dirRef.current = dir;
+  }, [dir]);
 
   const reset = useCallback(() => {
     const start = [{ x: 8, y: 8 }];

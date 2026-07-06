@@ -20,7 +20,6 @@ export function useLiveVideoEffect(
   enabled: boolean,
 ) {
   const effectRef = useRef(effect);
-  effectRef.current = effect;
 
   const pipelineActiveRef = useRef(false);
 

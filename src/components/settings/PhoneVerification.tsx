@@ -75,8 +75,8 @@ export function PhoneVerification({
         </div>
       ) : (
         <p className="text-xs text-vintage-ink-muted">
-          Verify your number to find and message friends by phone. Enable Phone auth in
-          Supabase → Authentication → Providers.
+          Verify your number to find and message friends by phone. Use +234… not 080….
+          If SMS still fails, connect Twilio under Supabase → Authentication → Providers → Phone.
         </p>
       )}
 
@@ -96,6 +96,9 @@ export function PhoneVerification({
                 placeholder="+2348012345678"
                 className="vintage-input w-full px-3 py-2 text-sm"
               />
+              <p className="text-[11px] text-vintage-ink-muted">
+                International format with country code. Nigerian local 080… is converted automatically.
+              </p>
               <button
                 type="button"
                 onClick={handleSendOtp}

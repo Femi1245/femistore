@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/app-url";
 import { ensureProfile } from "@/lib/auth";
 import { formatOAuthError } from "@/lib/oauth-providers";
 import {
@@ -6,27 +7,37 @@ import {
   redirectWithCookies,
 } from "@/lib/supabase/route-handler";
 
+function loginErrorRedirect(origin: string, message: string, next: string) {
+  const params = new URLSearchParams({
+    error: formatOAuthError(message),
+  });
+  if (next !== "/chat") {
+    params.set("next", next);
+  }
+  return `${origin}/login?${params.toString()}`;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+  const next = safeNextPath(searchParams.get("next"));
 
   const providerError =
     searchParams.get("error_description") ?? searchParams.get("error");
   if (providerError) {
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(formatOAuthError(providerError))}`,
+      loginErrorRedirect(origin, providerError, next),
     );
   }
 
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/chat";
 
   if (!code) {
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("Missing sign-in code")}`,
+      loginErrorRedirect(origin, "Missing sign-in code", next),
     );
   }
 
-  const successRedirect = `${origin}${next.startsWith("/") ? next : "/chat"}`;
+  const successRedirect = `${origin}${next}`;
   const pending = NextResponse.redirect(successRedirect);
 
   try {
@@ -35,7 +46,11 @@ export async function GET(request: Request) {
 
     if (error || !data.user) {
       return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(error?.message ?? "Could not sign in")}`,
+        loginErrorRedirect(
+          origin,
+          error?.message ?? "Could not sign in",
+          next,
+        ),
       );
     }
 
@@ -46,21 +61,27 @@ export async function GET(request: Request) {
 
     if (!profile) {
       return redirectWithCookies(
-        `${origin}/login?error=${encodeURIComponent(profileError ?? "Could not create profile")}`,
+        loginErrorRedirect(
+          origin,
+          profileError ?? "Could not create profile",
+          next,
+        ),
         applied,
       );
     }
 
     const dest = profile.date_of_birth
-      ? next.startsWith("/")
-        ? next
-        : "/chat"
-      : `/profile/birthday?next=${encodeURIComponent(next.startsWith("/") ? next : "/chat")}`;
+      ? next
+      : `/profile/birthday?next=${encodeURIComponent(next)}`;
 
     return redirectWithCookies(`${origin}${dest}`, applied);
   } catch {
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent("Authentication service is not configured")}`,
+      loginErrorRedirect(
+        origin,
+        "Authentication service is not configured",
+        next,
+      ),
     );
   }
 }

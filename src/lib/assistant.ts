@@ -76,7 +76,7 @@ export async function ensureAssistantUser(): Promise<Profile> {
     }
   }
 
-  let { data: profile, error: profileError } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("*")
     .eq("id", userId)

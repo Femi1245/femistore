@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { PhoneVerification } from "@/components/PhoneVerification";
 import { Btn, ErrorText, Input, Screen, Title } from "@/components/ui";
-import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { uploadMediaFromUri } from "@/lib/storage";
 import { getSupabase } from "@/lib/supabase";
@@ -75,7 +74,3 @@ export default function EditProfileScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  note: { color: colors.inkMuted, marginBottom: spacing.md },
-});

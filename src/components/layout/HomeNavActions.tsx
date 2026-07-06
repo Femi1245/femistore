@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useAuthSession } from "@/hooks/use-auth-session";
 
-export function HomeNavActions({ isLoggedIn }: { isLoggedIn: boolean }) {
+export function HomeNavActions() {
+  const { loggedIn: isLoggedIn } = useAuthSession();
+
   return (
     <div className="flex items-center gap-3">
       <ThemeToggle />

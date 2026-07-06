@@ -14,11 +14,9 @@ import {
   Star,
   Zap,
 } from "lucide-react";
+import { HomeAuthLabel, HomeAuthLink } from "@/components/home/HomeAuthLink";
 import { HomeNavActions } from "@/components/layout/HomeNavActions";
 import { Logo } from "@/components/Logo";
-import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
 
 const pillars = [
   {
@@ -80,28 +78,27 @@ const stats = [
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; error?: string }>;
+  searchParams: Promise<{ code?: string; error?: string; next?: string }>;
 }) {
   const params = await searchParams;
 
   if (params.code) {
-    redirect(`/auth/callback?code=${encodeURIComponent(params.code)}`);
+    const callback = new URLSearchParams({ code: params.code });
+    if (params.next) callback.set("next", params.next);
+    redirect(`/auth/callback?${callback.toString()}`);
   }
   if (params.error) {
-    redirect(`/login?error=${encodeURIComponent(params.error)}`);
+    const login = new URLSearchParams({ error: params.error });
+    if (params.next) login.set("next", params.next);
+    redirect(`/login?${login.toString()}`);
   }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   return (
     <div className="vintage-page min-h-full">
       <nav className="vintage-nav sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Logo showWordmark />
-          <HomeNavActions isLoggedIn={!!user} />
+          <HomeNavActions />
         </div>
       </nav>
 
@@ -120,20 +117,22 @@ export default async function HomePage({
               and community — designed with editorial care, not engagement bait.
             </p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
-              <Link
-                href={user ? "/feed" : "/signup"}
+              <HomeAuthLink
+                loggedInHref="/feed"
+                guestHref="/signup"
                 className="vintage-btn flex w-full items-center justify-center gap-2 px-7 py-3.5 text-base sm:w-auto"
               >
-                {user ? "Open your feed" : "Create your space"}
+                <HomeAuthLabel loggedIn="Open your feed" guest="Create your space" />
                 <ArrowRight className="h-5 w-5" />
-              </Link>
-              <Link
-                href={user ? "/chat" : "/login"}
+              </HomeAuthLink>
+              <HomeAuthLink
+                loggedInHref="/chat"
+                guestHref="/login"
                 className="vintage-btn-outline flex w-full items-center justify-center gap-2 px-7 py-3.5 text-base sm:w-auto"
               >
                 <MessageCircle className="h-5 w-5" />
-                {user ? "Messages" : "Sign in"}
-              </Link>
+                <HomeAuthLabel loggedIn="Messages" guest="Sign in" />
+              </HomeAuthLink>
             </div>
 
             <div className="mt-12 grid max-w-lg grid-cols-3 gap-6 lg:mx-0">
@@ -283,13 +282,14 @@ export default async function HomePage({
             Free to start. Premium in feel. Open your feed, go live, or open your store in minutes.
           </p>
           <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href={user ? "/feed" : "/signup"}
-              className="vintage-btn flex items-center gap-2 px-8 py-3.5 text-base"
+            <HomeAuthLink
+              loggedInHref="/feed"
+              guestHref="/signup"
+              className="vintage-btn relative flex items-center gap-2 px-8 py-3.5 text-base"
             >
-              {user ? "Go to your feed" : "Create your account"}
+              <HomeAuthLabel loggedIn="Go to your feed" guest="Create your account" />
               <ArrowRight className="h-5 w-5" />
-            </Link>
+            </HomeAuthLink>
             <Link
               href="/discover/businesses"
               className="vintage-btn-outline px-6 py-3.5 text-base"

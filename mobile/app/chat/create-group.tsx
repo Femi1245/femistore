@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, TextInput } from "react-native";
 import { router } from "expo-router";
 import { Avatar } from "@/components/Avatar";
 import { Btn, ErrorText, Screen, Title } from "@/components/ui";

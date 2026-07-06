@@ -84,7 +84,7 @@ export function StatusBar({ user }: { user: Profile }) {
                 </div>
               ))
             ) : (
-              visibleGroups.map((group, index) => (
+              visibleGroups.map((group) => (
                 <StatusRing
                   key={group.user.id}
                   user={group.user}

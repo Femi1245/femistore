@@ -74,7 +74,6 @@ export function useDeepARVideoEffect(
   enabled: boolean,
 ): { status: DeepARStatus; error: string | null } {
   const effectRef = useRef(effect);
-  effectRef.current = effect;
 
   const deepARRef = useRef<DeepAR | null>(null);
   const pipelineActiveRef = useRef(false);

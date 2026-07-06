@@ -20,7 +20,10 @@ function SnakeMobile() {
   const [over, setOver] = useState(false);
   const [run, setRun] = useState(false);
   const dirRef = useRef(dir);
-  dirRef.current = dir;
+
+  useEffect(() => {
+    dirRef.current = dir;
+  }, [dir]);
 
   const reset = useCallback(() => {
     setSnake([{ x: 7, y: 7 }]);
@@ -153,6 +156,11 @@ function MemoryMobile() {
 
 type Cell = "X" | "O" | null;
 
+function pickComputerMove(board: Cell[]): number {
+  const empty = board.map((v, j) => (v ? -1 : j)).filter((j) => j >= 0);
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
 function TicTacToeMobile() {
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [msg, setMsg] = useState("Your turn (X)");
@@ -171,8 +179,7 @@ function TicTacToeMobile() {
     n[i] = "X";
     if (lines(n)) { setBoard(n); setMsg("You win!"); return; }
     if (n.every((x) => x)) { setBoard(n); setMsg("Draw"); return; }
-    const empty = n.map((v, j) => (v ? -1 : j)).filter((j) => j >= 0);
-    n[empty[Math.floor(Math.random() * empty.length)]] = "O";
+    n[pickComputerMove(n)] = "O";
     const w = lines(n);
     setBoard(n);
     setMsg(w ? "Computer wins" : n.every((x) => x) ? "Draw" : "Your turn (X)");

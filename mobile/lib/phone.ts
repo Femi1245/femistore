@@ -1,19 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile } from "./types";
+import { formatPhoneE164, phoneFormatHint } from "./format-phone-e164";
 
 export function normalizePhone(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  let digits = trimmed.replace(/[^\d+]/g, "");
-  if (!digits.startsWith("+")) {
-    digits = `+${digits.replace(/^\+/, "")}`;
-  }
-
-  const numCount = digits.replace(/\D/g, "").length;
-  if (numCount < 8) return null;
-
-  return digits;
+  return formatPhoneE164(input);
 }
 
 export function maskPhone(phone: string): string {
@@ -28,16 +18,14 @@ export async function sendPhoneVerificationOtp(
 ): Promise<{ error?: string }> {
   const normalized = normalizePhone(phone);
   if (!normalized) {
-    return { error: "Enter a valid phone number with country code (e.g. +2348012345678)." };
+    return { error: `Enter a valid phone number. ${phoneFormatHint()}` };
   }
 
   const { error } = await supabase.auth.updateUser({ phone: normalized });
   if (error) {
-    if (error.message.toLowerCase().includes("phone")) {
-      return {
-        error:
-          "Phone sign-in is not enabled. In Supabase: Authentication → Providers → Phone.",
-      };
+    const lower = error.message.toLowerCase();
+    if (lower.includes("e.164") || lower.includes("invalid phone")) {
+      return { error: `${error.message} ${phoneFormatHint()}` };
     }
     return { error: error.message };
   }

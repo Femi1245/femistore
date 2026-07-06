@@ -1,9 +1,18 @@
 import Link from "next/link";
-import { GamesHub } from "@/components/games/GamesHub";
+import nextDynamic from "next/dynamic";
 import { AppShell } from "@/components/layout/AppShell";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+const GamesHub = nextDynamic(
+  () => import("@/components/games/GamesHub").then((m) => m.GamesHub),
+  {
+    loading: () => (
+      <div className="vintage-card min-h-[320px] animate-pulse" aria-hidden />
+    ),
+  },
+);
 
 export default async function GamesPage() {
   const supabase = await createClient();

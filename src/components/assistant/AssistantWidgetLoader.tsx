@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { useIdleMount } from "@/hooks/use-idle-mount";
 import { createClient } from "@/lib/supabase/client";
 
 const AssistantWidget = dynamic(
@@ -10,10 +11,12 @@ const AssistantWidget = dynamic(
 );
 
 export function AssistantWidgetLoader() {
+  const idleReady = useIdleMount(4000);
   const [enabled, setEnabled] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!idleReady) return;
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
@@ -28,8 +31,8 @@ export function AssistantWidgetLoader() {
       setEnabled(data?.ai_assistant_enabled !== false);
       setReady(true);
     });
-  }, []);
+  }, [idleReady]);
 
-  if (!ready || !enabled) return null;
+  if (!idleReady || !ready || !enabled) return null;
   return <AssistantWidget />;
 }

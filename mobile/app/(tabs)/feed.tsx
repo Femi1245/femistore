@@ -1,32 +1,38 @@
 import { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, Text, View } from "react-native";
+import { FlatList, RefreshControl, Text } from "react-native";
 import { CreatePost } from "@/components/CreatePost";
 import { PostCard } from "@/components/PostCard";
 import { Loader, Screen, Subtitle, Title } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadFeed } from "@/lib/social";
 import { getSupabase } from "@/lib/supabase";
-import type { PostWithMeta } from "@/lib/types";
+import type { PostWithMeta, Profile } from "@/lib/types";
 
 export default function FeedScreen() {
-  const { profile } = useAuth();
+  const { session, profile, profileLoading } = useAuth();
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const userId = profile?.id ?? session?.user?.id;
 
   const refresh = useCallback(async () => {
-    if (!profile) return;
-    const data = await loadFeed(getSupabase(), profile.id);
+    if (!userId) return;
+    const data = await loadFeed(getSupabase(), userId);
     setPosts(data);
     setLoading(false);
     setRefreshing(false);
-  }, [profile]);
+  }, [userId]);
 
   useEffect(() => {
+    if (!userId) return;
     refresh();
-  }, [refresh]);
+  }, [refresh, userId]);
 
-  if (!profile) return <Loader />;
+  if (!userId) return <Loader />;
+
+  const viewer =
+    profile ??
+    ({ id: userId, username: "", display_name: "", avatar_url: null } as Profile);
 
   return (
     <Screen style={{ paddingBottom: 0 }}>
@@ -35,10 +41,20 @@ export default function FeedScreen() {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); refresh(); }} />
         }
-        ListHeaderComponent={<CreatePost user={profile} onPosted={refresh} />}
+        ListHeaderComponent={
+          profile ? (
+            <CreatePost user={profile} onPosted={refresh} />
+          ) : profileLoading ? (
+            <Loader />
+          ) : null
+        }
         ListEmptyComponent={
           loading ? (
             <Loader />
@@ -49,7 +65,7 @@ export default function FeedScreen() {
           )
         }
         renderItem={({ item }) => (
-          <PostCard post={item} currentUser={profile} onUpdate={refresh} />
+          <PostCard post={item} currentUser={viewer} onUpdate={refresh} />
         )}
       />
     </Screen>

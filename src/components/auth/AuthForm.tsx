@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -42,15 +42,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [accountType, setAccountType] = useState<"personal" | "business">("personal");
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState("Other");
-  const [error, setError] = useState<string | null>(urlError);
+  const [error, setError] = useState<string | null>(
+    urlError ? formatOAuthError(urlError) : null,
+  );
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthUiProvider | null>(null);
-
-  useEffect(() => {
-    if (urlError) setError(formatOAuthError(urlError));
-  }, [urlError]);
 
   async function handleOAuthSignIn(provider: OAuthUiProvider) {
     setError(null);
@@ -60,11 +58,20 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
+      const redirectTo = authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: supabaseProvider,
         options: {
-          redirectTo: authCallbackUrl(nextAfterAuth),
-          skipBrowserRedirect: false,
+          redirectTo,
+          skipBrowserRedirect: true,
+          ...(provider === "google"
+            ? {
+                queryParams: {
+                  access_type: "offline",
+                  prompt: "consent",
+                },
+              }
+            : {}),
         },
       });
 
@@ -76,12 +83,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       if (data?.url) {
         window.location.assign(data.url);
-      } else {
-        setError("Could not start X sign-in. Check Supabase → Authentication → Providers.");
-        setOauthLoading(null);
+        return;
       }
+
+      setError(
+        `${provider === "twitter" ? "X" : provider === "github" ? "GitHub" : "Google"} sign-in could not start. Enable the provider in Supabase → Authentication → Providers.`,
+      );
+      setOauthLoading(null);
     } catch {
-      setError("Could not start sign in. Check your Supabase and X Developer settings.");
+      setError("Could not start sign in. Check your connection and Supabase auth settings.");
       setOauthLoading(null);
     }
   }

@@ -1,24 +1,27 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
-import { RegisterServiceWorker } from "@/components/pwa/RegisterServiceWorker";
 import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
 import { CallProviderLoader } from "@/components/chat/CallProviderLoader";
 import { ChunkRecovery } from "@/components/ChunkRecovery";
+import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import "./globals.css";
 
 const display = Playfair_Display({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+  display: "swap",
 });
 
 const body = DM_Sans({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
+
+const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 export const metadata: Metadata = {
   title: "Zumelia — Connection, crafted",
@@ -57,14 +60,21 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
+      <head>
+        {supabaseOrigin ? (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        ) : null}
+      </head>
       <body className="app-body min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
-          <RegisterServiceWorker />
           <ChunkRecovery />
           <CallProviderLoader>
             {children}
           </CallProviderLoader>
-          <InstallAppPrompt />
+          <DeferredClientWidgets />
           <AssistantWidgetLoader />
         </ThemeProvider>
       </body>

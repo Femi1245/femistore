@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { BusinessSetupForm } from "@/components/business/BusinessSetupForm";
-import { getBusinessProfileUrl, hasBusinessProfile } from "@/lib/business";
+import { getBusinessProfileUrl } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 

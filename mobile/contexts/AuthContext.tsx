@@ -15,6 +15,10 @@ import type { Profile } from "@/lib/types";
 type AuthContextValue = {
   session: Session | null;
   profile: Profile | null;
+  /** Session restored from device storage */
+  authReady: boolean;
+  /** Profile row still loading after sign-in */
+  profileLoading: boolean;
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
@@ -26,7 +30,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshProfile = useCallback(async () => {
@@ -48,11 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      setLoading(false);
+      setAuthReady(true);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
+      setAuthReady(true);
     });
 
     return () => sub.subscription.unsubscribe();
@@ -61,9 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!session?.user) {
       setProfile(null);
+      setProfileLoading(false);
       return;
     }
-    refreshProfile();
+    let cancelled = false;
+    setProfileLoading(true);
+    refreshProfile().finally(() => {
+      if (!cancelled) setProfileLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when user id changes only
   }, [session?.user?.id, refreshProfile]);
 
   const signOut = useCallback(async () => {
@@ -76,12 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       profile,
-      loading,
+      authReady,
+      profileLoading,
+      loading: !authReady,
       error,
       refreshProfile,
       signOut,
     }),
-    [session, profile, loading, error, refreshProfile, signOut],
+    [session, profile, authReady, profileLoading, error, refreshProfile, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

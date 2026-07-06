@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Loader2,
   Maximize,
   Minimize,
   Pause,
@@ -118,6 +117,9 @@ export function NativeVideoPlayer({
             onClick={(e) => seekToClientX(e.clientX, e.currentTarget)}
             role="slider"
             aria-label="Seek"
+            aria-valuemin={0}
+            aria-valuemax={duration}
+            aria-valuenow={currentTime}
             tabIndex={0}
           >
             <div

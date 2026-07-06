@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, Square } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2, Square } from "lucide-react";
 
 export function VoiceRecorder({
   onRecorded,
@@ -19,16 +19,7 @@ export function VoiceRecorder({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startRef = useRef<number>(0);
 
-  useEffect(() => {
-    start();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      mediaRef.current?.stop();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function start() {
+  const start = useCallback(async () => {
     if (disabled) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -54,7 +45,15 @@ export function VoiceRecorder({
     } catch {
       onCancel();
     }
-  }
+  }, [disabled, onCancel, onRecorded]);
+
+  useEffect(() => {
+    void start();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      mediaRef.current?.stop();
+    };
+  }, [start]);
 
   function stop() {
     if (timerRef.current) {

@@ -17,9 +17,11 @@ export function Avatar({
 
   if (avatarUrl) {
     return (
+      // eslint-disable-next-line jsx-a11y/alt-text -- React Native Image uses accessibilityLabel
       <Image
         source={{ uri: avatarUrl }}
         style={{ width: px, height: px, borderRadius: px / 2 }}
+        accessibilityLabel={name ? `${name} avatar` : "User avatar"}
       />
     );
   }

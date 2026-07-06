@@ -212,6 +212,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- batch translate when message list or theme changes
   }, [messages, chatTheme?.translation_enabled, chatTheme?.translation_target_lang, currentUser.id]);
 
   useEffect(() => {
@@ -316,7 +317,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeChat?.convId, getSupabase, loadMessages, refreshConversations]);
+  }, [activeChat?.convId, activeChat?.isSecret, getSupabase, loadMessages, refreshConversations]);
 
   useEffect(() => {
     if (!activeChat?.otherUser) return;
@@ -344,7 +345,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     refreshPresence();
     const interval = window.setInterval(refreshPresence, 30_000);
     return () => window.clearInterval(interval);
-  }, [activeChat?.otherUser?.id, getSupabase]);
+  }, [activeChat?.otherUser, getSupabase]);
 
   async function openConversationById(convId: string) {
     setChatError(null);
@@ -1230,7 +1231,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           {tab === "phone" && (
             <div className="flex-1 overflow-y-auto p-3">
               <p className="mb-3 text-xs text-vintage-ink-muted">
-                Verify your phone in Profile → Settings, then search by number.
+                Verify your phone in Profile → Edit profile, then search by number.
               </p>
               <form onSubmit={searchByPhone} className="mb-4 space-y-2">
                 <input

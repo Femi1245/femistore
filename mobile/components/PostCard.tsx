@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,14 +13,13 @@ import {
 import { getSupabase } from "@/lib/supabase";
 import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 
-export function PostCard({
+export const PostCard = memo(function PostCard({
   post,
   currentUser,
-  onUpdate,
 }: {
   post: PostWithMeta;
   currentUser: Profile;
-  onUpdate: () => void;
+  onUpdate?: () => void;
 }) {
   const [engagement, setEngagement] = useState(post.engagement);
   const [showComments, setShowComments] = useState(false);
@@ -74,7 +73,13 @@ export function PostCard({
       ) : null}
       {target.content ? <Text style={styles.body}>{target.content}</Text> : null}
       {target.media_url && target.media_type === "image" ? (
-        <Image source={{ uri: target.media_url }} style={styles.media} resizeMode="cover" />
+        // eslint-disable-next-line jsx-a11y/alt-text -- React Native Image uses accessibilityLabel
+        <Image
+          source={{ uri: target.media_url }}
+          style={styles.media}
+          resizeMode="cover"
+          accessibilityLabel="Post image"
+        />
       ) : null}
 
       <View style={styles.actions}>
@@ -116,7 +121,7 @@ export function PostCard({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

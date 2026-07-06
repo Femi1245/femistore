@@ -202,12 +202,12 @@ export function CallProvider({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: incomingCall.id }),
     });
-    const data = await res.json();
     if (!res.ok) {
       setIncomingCall(null);
       setIncomingCaller(null);
       return;
     }
+    await res.json();
 
     const chat = await loadActiveChat(getSupabase(), userId, incomingCall.conversation_id);
     setActiveCall({

@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { Audio } from "expo-av";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Avatar } from "@/components/Avatar";
 import { Btn, Loader, Screen, Subtitle, Title } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
@@ -131,6 +131,7 @@ export default function ChatScreen() {
     return () => {
       getSupabase().removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resubscribe only when conversation id changes
   }, [activeChat?.convId, refreshConversations]);
 
   async function openById(convId: string) {
@@ -231,7 +232,7 @@ export default function ChatScreen() {
     setRecording(null);
     if (!uri) return;
     const duration =
-      status.isLoaded && "durationMillis" in status
+      "durationMillis" in status && typeof status.durationMillis === "number"
         ? status.durationMillis / 1000
         : 1;
     const { error } = await sendVoiceMessageFromUri(
@@ -361,8 +362,8 @@ export default function ChatScreen() {
       <Title>Chat</Title>
       <Subtitle>DMs, groups, channels & phone</Subtitle>
       <View style={styles.createRow}>
-        <Btn label="Group" onPress={() => router.push("/chat/create-group")} variant="outline" />
-        <Btn label="Channel" onPress={() => router.push("/chat/create-channel")} variant="outline" />
+        <Btn label="Group" onPress={() => router.push("/chat/create-group" as Href)} variant="outline" />
+        <Btn label="Channel" onPress={() => router.push("/chat/create-channel" as Href)} variant="outline" />
       </View>
       {chatError ? <Text style={styles.error}>{chatError}</Text> : null}
       <View style={styles.tabs}>

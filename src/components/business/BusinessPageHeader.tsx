@@ -29,7 +29,7 @@ import {
   getPersonalProfileUrl,
   isBusinessPrimaryAccount,
 } from "@/lib/business";
-import { getFollowCounts, isFollowing, toggleFollow } from "@/lib/social";
+import { getFollowCounts, toggleFollow } from "@/lib/social";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 

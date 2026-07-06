@@ -18,20 +18,42 @@ export function formatOAuthError(message: string): string {
 
   const lower = text.toLowerCase();
 
-  if (lower.includes("invalid_client")) {
-    return "X sign-in credentials are wrong in Supabase. Use the OAuth 2.0 Client ID and Client Secret from developer.x.com (Keys and tokens), not the legacy API Key / API Secret.";
+  if (
+    lower.includes("pkce") ||
+    lower.includes("code verifier") ||
+    lower.includes("auth code and code verifier")
+  ) {
+    return "Sign-in could not finish in this browser. Start again from the same tab and allow cookies for this site. If you use localhost, make sure Supabase redirect URLs include http://localhost:3000/auth/callback.";
   }
 
   if (
-    lower.includes("redirect is requested") ||
-    lower.includes("invalid_request") ||
-    lower.includes("oauth state parameter")
+    lower.includes("redirect") &&
+    (lower.includes("not allowed") ||
+      lower.includes("mismatch") ||
+      lower.includes("uri") ||
+      lower.includes("requested"))
   ) {
-    return "X sign-in could not complete. In Supabase, enable “X / Twitter (OAuth 2.0)” (not the legacy Twitter provider) and set the callback URL in the X Developer Portal to your Supabase auth callback.";
+    return "This sign-in URL is not allowed in Supabase. Open Authentication → URL Configuration and add your site callback, e.g. https://itunes-mu.vercel.app/auth/callback and http://localhost:3000/auth/callback.";
   }
 
   if (lower.includes("provider is not enabled") || lower.includes("unsupported provider")) {
-    return "X sign-in is not turned on in Supabase yet. Open your project → Authentication → Providers → enable “X / Twitter (OAuth 2.0)”, paste your Client ID and Client Secret from developer.x.com, then Save.";
+    return "That sign-in provider is not enabled in Supabase yet. Open Authentication → Providers, turn on Google / GitHub / X, and save your OAuth client ID and secret.";
+  }
+
+  if (lower.includes("invalid_client")) {
+    return "OAuth client credentials are wrong in Supabase. For X, use OAuth 2.0 Client ID and Secret from developer.x.com (not legacy API keys). For Google/GitHub, paste the client ID and secret from their developer consoles.";
+  }
+
+  if (
+    lower.includes("invalid_request") ||
+    lower.includes("oauth state parameter") ||
+    lower.includes("access_denied")
+  ) {
+    return "Sign-in was cancelled or could not complete. Try again, or use email and password instead.";
+  }
+
+  if (lower.includes("email") && lower.includes("not confirmed")) {
+    return "Confirm your email first, then sign in again.";
   }
 
   return text;

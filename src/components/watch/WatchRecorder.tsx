@@ -14,7 +14,7 @@ export function WatchRecorder({
 }) {
   useEffect(() => {
     recordWatchHistory(createClient(), userId, video).catch(() => {});
-  }, [userId, video.videoKey, video.source, video.title]);
+  }, [userId, video]);
 
   return null;
 }

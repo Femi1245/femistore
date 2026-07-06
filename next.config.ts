@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@supabase/supabase-js",
+      "livekit-client",
+      "@livekit/components-react",
+    ],
+  },
   images: {
     remotePatterns: [
       {
