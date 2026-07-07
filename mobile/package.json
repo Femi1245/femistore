@@ -4,8 +4,12 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:apk:prod": "eas build --platform android --profile production",
+    "build:configure": "eas build:configure"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^56.0.14",
+    "eas-cli": "^16.28.0",
     "typescript": "~6.0.3"
   },
   "private": true

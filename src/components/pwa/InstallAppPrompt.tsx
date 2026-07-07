@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Share, X } from "lucide-react";
+import { isCapacitorNative } from "@/lib/native-shell";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -27,7 +28,7 @@ export function InstallAppPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    if (isStandalone()) return;
+    if (isStandalone() || isCapacitorNative()) return;
 
     const dismissed = localStorage.getItem("zumelia-install-dismissed");
     if (dismissed) return;

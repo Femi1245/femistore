@@ -16,7 +16,8 @@
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
-    "mobile": "cd mobile && npm start"
+    "mobile": "cd mobile && npm start",
+    "mobile:apk": "cd mobile && npm run build:apk"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",
