@@ -2,6 +2,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { ensureProfile } from "@/lib/auth";
+import { requestWelcomeEmail } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -86,6 +87,10 @@ export async function signInWithOAuthProvider(
   if (user) {
     const profileResult = await ensureProfile(supabase, user);
     if (profileResult.error) return { error: profileResult.error };
+    if (profileResult.isNewUser) {
+      const { data } = await supabase.auth.getSession();
+      void requestWelcomeEmail(data.session?.access_token);
+    }
   }
 
   return {};

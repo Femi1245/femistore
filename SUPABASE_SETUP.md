@@ -109,3 +109,31 @@ This adds follows, posts, likes, comments, reshares, and storage for avatars/med
 4. Post on `/feed`, follow users via **Connect** on their profile
 
 If sign-up fails, check the yellow setup banner on the login/signup page.
+
+## 6. Email automation (welcome + inactive reminders)
+
+Run in SQL Editor (after `email-notifications-schema.sql`):
+
+- `supabase/email-notifications-schema.sql` — email log table
+- `supabase/email-automation-schema.sql` — adds `welcome` and `reengagement` types
+
+In **Vercel** (or `.env.local` for local API tests), set:
+
+```env
+RESEND_API_KEY=re_your-resend-api-key
+EMAIL_FROM=Zumelia <notifications@yourdomain.com>
+CRON_SECRET=your-long-random-string
+```
+
+| Email | When it sends |
+|-------|----------------|
+| **Welcome** | Once, when a new user signs up (email or OAuth) |
+| **Re-engagement** | Daily cron if inactive 3, 7, or 14 days |
+| **Birthday** | Daily cron on the user's birthday |
+
+Cron routes (protected by `CRON_SECRET`):
+
+- `/api/cron/birthday-emails` — 9:00 UTC daily
+- `/api/cron/reengagement-emails` — 10:00 UTC daily
+
+Test welcome manually while signed in: `POST /api/email/welcome`

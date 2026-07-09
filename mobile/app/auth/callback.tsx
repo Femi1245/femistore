@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { Loader } from "@/components/ui";
 import { createSessionFromUrl } from "@/lib/oauth";
 import { ensureProfile } from "@/lib/auth";
+import { requestWelcomeEmail } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { colors } from "@/constants/theme";
 
@@ -19,7 +20,11 @@ export default function AuthCallbackScreen() {
           data: { user },
         } = await getSupabase().auth.getUser();
         if (user) {
-          await ensureProfile(getSupabase(), user);
+          const { isNewUser } = await ensureProfile(getSupabase(), user);
+          if (isNewUser) {
+            const { data } = await getSupabase().auth.getSession();
+            void requestWelcomeEmail(data.session?.access_token);
+          }
         }
         router.replace("/(tabs)/chat");
       } catch (e) {

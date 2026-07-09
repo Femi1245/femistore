@@ -26,7 +26,8 @@
 -- ║   17. opportunities-schema.sql                                           ║
 -- ║   17. trust-safety-schema.sql                                            ║
 -- ║   18. replies-schema.sql                                               ║
--- ║   19. email-notifications-schema.sql (birthday + purchase emails)    ║
+-- ║   19. email-notifications-schema.sql (transactional email log)       ║
+-- ║   20. email-automation-schema.sql (welcome + re-engagement types)    ║
 -- ║   20. business-posts-schema.sql (personal vs business posts)         ║
 -- ║   21. opportunities-board-schema.sql (jobs / gigs board)             ║
 -- ║   22. voice-close-friends-payments-schema.sql                        ║

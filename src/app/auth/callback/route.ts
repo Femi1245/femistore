@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/app-url";
 import { ensureProfile } from "@/lib/auth";
+import { sendWelcomeEmailIfNeeded } from "@/lib/email-notifications";
 import { formatOAuthError } from "@/lib/oauth-providers";
 import {
   createRouteHandlerClient,
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const { profile, error: profileError } = await ensureProfile(
+    const { profile, error: profileError, isNewUser } = await ensureProfile(
       supabase,
       data.user,
     );
@@ -68,6 +69,15 @@ export async function GET(request: Request) {
         ),
         applied,
       );
+    }
+
+    if (isNewUser && data.user.email) {
+      void sendWelcomeEmailIfNeeded({
+        userId: data.user.id,
+        displayName: profile.display_name,
+        email: data.user.email,
+        accountKind: profile.account_kind === "business" ? "business" : "personal",
+      });
     }
 
     const dest = profile.date_of_birth

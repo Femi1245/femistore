@@ -4,6 +4,7 @@ import type { Profile } from "./types";
 export type ProfileResult = {
   profile: Profile | null;
   error?: string;
+  isNewUser?: boolean;
 };
 
 function mapProfileError(message: string, code?: string): string {
@@ -36,7 +37,9 @@ export async function ensureProfile(
     };
   }
 
-  if (existing) return { profile: existing as Profile };
+  if (existing) {
+    return { profile: existing as Profile, isNewUser: false };
+  }
 
   const meta = user.user_metadata ?? {};
   const emailPrefix = user.email?.split("@")[0] ?? `user_${user.id.slice(0, 8)}`;
@@ -93,5 +96,5 @@ export async function ensureProfile(
     };
   }
 
-  return { profile: created as Profile };
+  return { profile: created as Profile, isNewUser: true };
 }

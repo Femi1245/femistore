@@ -4,6 +4,8 @@ import type { AccountKind, AccountMode, Profile } from "./types";
 export type ProfileResult = {
   profile: Profile | null;
   error?: string;
+  /** True when a profiles row was just created for this user. */
+  isNewUser?: boolean;
 };
 
 export function normalizeProfile(row: Record<string, unknown>): Profile {
@@ -80,7 +82,12 @@ export async function ensureProfile(
     };
   }
 
-  if (existing) return { profile: normalizeProfile(existing as Record<string, unknown>) };
+  if (existing) {
+    return {
+      profile: normalizeProfile(existing as Record<string, unknown>),
+      isNewUser: false,
+    };
+  }
 
   const meta = user.user_metadata ?? {};
   const emailPrefix = user.email?.split("@")[0] ?? `user_${user.id.slice(0, 8)}`;
@@ -153,5 +160,8 @@ export async function ensureProfile(
     };
   }
 
-  return { profile: normalizeProfile(created as Record<string, unknown>) };
+  return {
+    profile: normalizeProfile(created as Record<string, unknown>),
+    isNewUser: true,
+  };
 }

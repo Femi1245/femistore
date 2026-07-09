@@ -221,13 +221,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
         }
 
         if (data.session) {
-          const { profile, error: profileError } = await ensureProfile(
+          const { profile, error: profileError, isNewUser } = await ensureProfile(
             supabase,
             data.user,
           );
           if (!profile) {
             setError(profileError ?? "Could not create your profile.");
             return;
+          }
+
+          if (isNewUser) {
+            void fetch("/api/email/welcome", { method: "POST" });
           }
 
           if (!profile.date_of_birth && !dateOfBirth) {

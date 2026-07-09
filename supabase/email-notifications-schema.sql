@@ -5,7 +5,7 @@ create table if not exists public.email_notification_log (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   notification_type text not null
-    check (notification_type in ('birthday', 'purchase')),
+    check (notification_type in ('birthday', 'purchase', 'welcome', 'reengagement')),
   reference_key text not null,
   sent_at timestamptz not null default now(),
   unique (user_id, notification_type, reference_key)

@@ -76,6 +76,16 @@ export async function endLiveStream(roomName: string, accessToken: string) {
   });
 }
 
+/** Fire-and-forget welcome email after signup (idempotent on server). */
+export async function requestWelcomeEmail(accessToken?: string | null) {
+  const token = accessToken ?? (await getAccessToken());
+  if (!token) return;
+  void apiFetch("/api/email/welcome", {
+    method: "POST",
+    token,
+  });
+}
+
 export async function startCall(
   conversationId: string,
   callType: "audio" | "video",

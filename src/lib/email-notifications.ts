@@ -4,11 +4,18 @@ import { sendTransactionalEmail } from "./email";
 import {
   birthdayWishEmail,
   purchaseConfirmationEmail,
+  reengagementEmail,
+  welcomeEmail,
+  type ReengagementStage,
 } from "./email-templates";
 import { createAdminClient } from "./supabase/admin";
 import type { Profile, SentGift } from "./types";
 
-export type EmailNotificationType = "birthday" | "purchase";
+export type EmailNotificationType =
+  | "birthday"
+  | "purchase"
+  | "welcome"
+  | "reengagement";
 
 function adminClient(): SupabaseClient {
   return createAdminClient();
@@ -147,6 +154,140 @@ export async function sendPurchaseConfirmationEmail(
 
   await logEmailSent(admin, gift.sender_id, "purchase", referenceKey);
   return { sent: true };
+}
+
+export async function sendWelcomeEmailIfNeeded(input: {
+  userId: string;
+  displayName: string;
+  email: string;
+  accountKind?: "personal" | "business";
+}): Promise<{ sent: boolean; error?: string }> {
+  const admin = adminClient();
+  const referenceKey = "once";
+
+  if (await wasEmailSent(admin, input.userId, "welcome", referenceKey)) {
+    return { sent: false };
+  }
+
+  const template = welcomeEmail(
+    input.displayName,
+    input.accountKind ?? "personal",
+  );
+  const result = await sendTransactionalEmail({
+    to: input.email,
+    ...template,
+    tags: [
+      { name: "type", value: "welcome" },
+      { name: "user_id", value: input.userId },
+    ],
+  });
+
+  if (!result.ok) return { sent: false, error: result.error };
+
+  await logEmailSent(admin, input.userId, "welcome", referenceKey);
+  return { sent: true };
+}
+
+export async function sendReengagementEmailIfNeeded(
+  admin: SupabaseClient,
+  profile: Pick<
+    Profile,
+    "id" | "display_name" | "last_seen_at" | "created_at" | "account_kind"
+  >,
+  stage: ReengagementStage,
+): Promise<{ sent: boolean; error?: string }> {
+  const referenceKey = stage;
+  if (await wasEmailSent(admin, profile.id, "reengagement", referenceKey)) {
+    return { sent: false };
+  }
+
+  const email = await getUserEmail(admin, profile.id);
+  if (!email) return { sent: false, error: "No email on account" };
+
+  const template = reengagementEmail(profile.display_name, stage);
+  const result = await sendTransactionalEmail({
+    to: email,
+    ...template,
+    tags: [
+      { name: "type", value: "reengagement" },
+      { name: "stage", value: stage },
+      { name: "user_id", value: profile.id },
+    ],
+  });
+
+  if (!result.ok) return { sent: false, error: result.error };
+
+  await logEmailSent(admin, profile.id, "reengagement", referenceKey);
+  return { sent: true };
+}
+
+function daysAgo(days: number): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d;
+}
+
+function lastActiveAt(
+  profile: Pick<Profile, "last_seen_at" | "created_at">,
+): Date {
+  const raw = profile.last_seen_at ?? profile.created_at;
+  return new Date(raw);
+}
+
+const REENGAGEMENT_STAGES: { stage: ReengagementStage; inactiveDays: number }[] =
+  [
+    { stage: "14d", inactiveDays: 14 },
+    { stage: "7d", inactiveDays: 7 },
+    { stage: "3d", inactiveDays: 3 },
+  ];
+
+export async function runReengagementEmails(
+  admin: SupabaseClient,
+): Promise<{ checked: number; sent: number; errors: string[] }> {
+  const { data: profiles, error } = await admin
+    .from("profiles")
+    .select("id, display_name, last_seen_at, created_at, account_kind");
+
+  if (error) {
+    return { checked: 0, sent: 0, errors: [error.message] };
+  }
+
+  let sent = 0;
+  const errors: string[] = [];
+  const rows = (profiles ?? []) as Pick<
+    Profile,
+    "id" | "display_name" | "last_seen_at" | "created_at" | "account_kind"
+  >[];
+
+  for (const profile of rows) {
+    const activeAt = lastActiveAt(profile);
+    const accountAgeDays =
+      (Date.now() - new Date(profile.created_at).getTime()) /
+      (1000 * 60 * 60 * 24);
+
+    if (accountAgeDays < 3) continue;
+
+    let emailed = false;
+    for (const { stage, inactiveDays } of REENGAGEMENT_STAGES) {
+      if (activeAt > daysAgo(inactiveDays)) continue;
+
+      const result = await sendReengagementEmailIfNeeded(
+        admin,
+        profile,
+        stage,
+      );
+      if (result.sent) {
+        sent += 1;
+        emailed = true;
+        break;
+      }
+      if (result.error) errors.push(`${profile.id}/${stage}: ${result.error}`);
+    }
+
+    if (emailed) continue;
+  }
+
+  return { checked: rows.length, sent, errors };
 }
 
 export async function runDailyBirthdayEmails(

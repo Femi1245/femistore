@@ -5,6 +5,7 @@ import { OAuthButtons } from "@/components/OAuthButtons";
 import { Btn, ErrorText, Input, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { validateAuthForm, cleanUsername } from "@/lib/auth-validation";
+import { requestWelcomeEmail } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 
 export default function SignupScreen() {
@@ -53,6 +54,7 @@ export default function SignupScreen() {
     }
 
     if (data.session) {
+      void requestWelcomeEmail(data.session.access_token);
       router.replace("/(tabs)/chat");
       return;
     }
