@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Briefcase,
   Gift,
@@ -44,6 +45,7 @@ export function BusinessPageHeader({
   initialCounts: FollowCounts;
   initialFollowing: boolean;
 }) {
+  const router = useRouter();
   const isOwn = profile.id === currentUser.id;
   const [counts, setCounts] = useState(initialCounts);
   const [following, setFollowing] = useState(initialFollowing);
@@ -94,7 +96,7 @@ export function BusinessPageHeader({
       setMessageError(error);
       return;
     }
-    if (convId) window.location.href = "/chat";
+    if (convId) router.push(`/chat?c=${encodeURIComponent(convId)}`);
   }
 
   return (

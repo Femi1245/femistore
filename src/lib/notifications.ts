@@ -108,14 +108,21 @@ export function getNotificationHref(
     case "follow":
       return actorUsername ? `/profile/${actorUsername}` : "/feed";
     case "like":
-    case "comment":
     case "reshare":
     case "new_post":
-      return "/feed";
+      return notification.entity_id
+        ? `/post/${notification.entity_id}`
+        : "/feed";
+    case "comment":
+      return notification.entity_id
+        ? `/post/${notification.entity_id}?comments=1`
+        : "/feed";
     case "new_status":
-      return "/feed";
+      return actorUsername ? `/profile/${actorUsername}` : "/feed";
     case "message":
-      return "/chat";
+      return notification.entity_id
+        ? `/chat?c=${encodeURIComponent(notification.entity_id)}`
+        : "/chat";
     case "live_started":
       return `/live/${notification.entity_id}`;
     case "live_ended":

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { BackButton } from "@/components/layout/BackButton";
 import { BusinessSetupForm } from "@/components/business/BusinessSetupForm";
-import { getBusinessProfileUrl } from "@/lib/business";
+import { getBusinessProfileUrl, getPersonalProfileUrl } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -19,14 +20,21 @@ export default async function BusinessSetupPage() {
 
   return (
     <AppShell user={user} wide>
-      <div className="vintage-card p-6">
-        <h1 className="font-display mb-2 text-2xl font-bold text-vintage-ink">
-          Create business profile
-        </h1>
-        <p className="mb-6 text-sm text-vintage-ink-muted">
-          Upgrade your personal account to advertise and showcase what you do.
-        </p>
-        <BusinessSetupForm profile={user} mode="create" />
+      <div className="space-y-4">
+        <BackButton
+          fallbackHref={getPersonalProfileUrl(user.username)}
+          label="Back to profile"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-vintage-rust hover:underline"
+        />
+        <div className="vintage-card p-6">
+          <h1 className="font-display mb-2 text-2xl font-bold text-vintage-ink">
+            Create business profile
+          </h1>
+          <p className="mb-6 text-sm text-vintage-ink-muted">
+            Upgrade your personal account to advertise and showcase what you do.
+          </p>
+          <BusinessSetupForm profile={user} mode="create" />
+        </div>
       </div>
     </AppShell>
   );

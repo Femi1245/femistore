@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
   Globe,
@@ -103,6 +104,9 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const getSupabase = useCallback(() => createClient(), []);
   const { startCall: startCallSession } = useCalls();
   const isSeller = hasBusinessProfile(currentUser);
+  const searchParams = useSearchParams();
+  const deepLinkConvId = searchParams.get("c");
+  const openedDeepLink = useRef<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
@@ -373,6 +377,15 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     await markConversationRead(getSupabase(), currentUser.id, convId);
     await refreshConversations();
   }
+
+  useEffect(() => {
+    if (!deepLinkConvId) return;
+    if (openedDeepLink.current === deepLinkConvId) return;
+    openedDeepLink.current = deepLinkConvId;
+    void openConversationById(deepLinkConvId);
+    // Intentionally only when the deep-link id changes; openConversationById is stable enough via refs/state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkConvId]);
 
   async function openDm(other: Profile, convId?: string, secret = false) {
     setChatError(null);

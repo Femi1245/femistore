@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,19 +16,26 @@ import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 export const PostCard = memo(function PostCard({
   post,
   currentUser,
+  initialShowComments = false,
 }: {
   post: PostWithMeta;
   currentUser: Profile;
   onUpdate?: () => void;
+  initialShowComments?: boolean;
 }) {
   const [engagement, setEngagement] = useState(post.engagement);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(initialShowComments);
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState("");
 
   const author = post.author;
   const target = post.original_post ?? post;
   const rootId = post.reshare_of ?? post.id;
+
+  useEffect(() => {
+    if (!initialShowComments) return;
+    void loadComments(getSupabase(), rootId).then(setComments);
+  }, [initialShowComments, rootId]);
 
   async function handleLike() {
     const supabase = getSupabase();

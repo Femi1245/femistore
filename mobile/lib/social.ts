@@ -185,6 +185,23 @@ export async function enrichPosts(
   }));
 }
 
+export async function loadPostById(
+  supabase: SupabaseClient,
+  postId: string,
+  currentUserId: string,
+): Promise<PostWithMeta | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", postId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const [enriched] = await enrichPosts(supabase, [data as Post], currentUserId);
+  return enriched ?? null;
+}
+
 export async function loadFeed(
   supabase: SupabaseClient,
   userId: string,

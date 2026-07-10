@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Briefcase,
   Clock,
   ExternalLink,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/opportunities";
 import type { Opportunity, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { BackButton } from "@/components/layout/BackButton";
 import { OpportunityAttachments } from "@/components/opportunities/OpportunityAttachments";
 import { getBusinessProfileUrl, getPersonalProfileUrl, hasBusinessProfile } from "@/lib/business";
 
@@ -102,7 +102,7 @@ export function OpportunityDetailView({
           }),
         });
       }
-      router.push("/chat");
+      router.push(`/chat?c=${encodeURIComponent(convId)}`);
     }
   }
 
@@ -123,13 +123,11 @@ export function OpportunityDetailView({
 
   return (
     <div className="space-y-4">
-      <Link
-        href={backHref}
-        className="inline-flex items-center gap-1 text-sm font-medium text-vintage-ink-muted hover:text-vintage-rust"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {backLabel}
-      </Link>
+      <BackButton
+        fallbackHref={backHref}
+        label={backLabel}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-vintage-ink-muted hover:text-vintage-rust"
+      />
 
       <article className="vintage-card p-5 sm:p-8">
         <div className="mb-4 flex flex-wrap items-center gap-2">

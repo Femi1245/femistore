@@ -1,4 +1,5 @@
 import nextDynamic from "next/dynamic";
+import { Suspense } from "react";
 import { ChatSkeleton } from "@/components/skeletons/ChatSkeleton";
 import { NavSkeleton } from "@/components/skeletons/NavSkeleton";
 import { requireUser } from "@/lib/session";
@@ -19,5 +20,16 @@ const ChatApp = nextDynamic(
 
 export default async function ChatPage() {
   const user = await requireUser();
-  return <ChatApp currentUser={user} />;
+  return (
+    <Suspense
+      fallback={
+        <div className="vintage-page min-h-screen">
+          <NavSkeleton />
+          <ChatSkeleton />
+        </div>
+      }
+    >
+      <ChatApp currentUser={user} />
+    </Suspense>
+  );
 }

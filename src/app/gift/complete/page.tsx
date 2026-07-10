@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { BackButton } from "@/components/layout/BackButton";
 
 export const metadata = {
   title: "Gift — Zumelia",
@@ -37,10 +38,12 @@ export default async function GiftCompletePage({
             : "We couldn't confirm your payment. You weren't charged. Please try again."}
         </p>
 
-        <div className="mt-6 flex justify-center gap-3">
-          <Link href="/chat" className="vintage-btn px-5 py-2.5 text-sm">
-            Back to chat
-          </Link>
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <BackButton
+            fallbackHref="/chat"
+            label="Open chat"
+            className="vintage-btn inline-flex items-center gap-1.5 px-5 py-2.5 text-sm"
+          />
           <Link href="/feed" className="vintage-btn-outline px-5 py-2.5 text-sm">
             Go to feed
           </Link>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { UserPlus, UserMinus, MessageCircle, Gift, Briefcase, ImageIcon } from "lucide-react";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ export function ProfileHeader({
   initialFollowing: boolean;
   variant?: "personal" | "business";
 }) {
+  const router = useRouter();
   const isOwn = profile.id === currentUser.id;
   const [counts, setCounts] = useState(initialCounts);
   const [, setFollowing] = useState(initialFollowing);
@@ -138,7 +140,7 @@ export function ProfileHeader({
       setMessageError(error);
       return;
     }
-    if (convId) window.location.href = "/chat";
+    if (convId) router.push(`/chat?c=${encodeURIComponent(convId)}`);
   }
 
   const birthdate = formatBirthdate(profile.date_of_birth);

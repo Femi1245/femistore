@@ -11,16 +11,19 @@ export function Logo({
   size = "md",
   compact = false,
   showWordmark = false,
+  href = "/",
 }: {
   size?: "sm" | "md" | "lg";
   compact?: boolean;
   showWordmark?: boolean;
+  /** Where the mark links. App chrome should use `/feed`. */
+  href?: string;
 }) {
   const px = imageSizes[size];
 
   return (
     <Link
-      href="/"
+      href={href}
       className="inline-flex shrink-0 items-center gap-2 font-display font-bold"
     >
       <NextImage

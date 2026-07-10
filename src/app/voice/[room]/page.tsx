@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
+import { BackButton } from "@/components/layout/BackButton";
 import { VoiceRoomView } from "@/components/voice/VoiceRoomView";
 import { loadVoiceRoomByName } from "@/lib/voice-rooms";
 import { requireUser } from "@/lib/session";
@@ -23,12 +23,11 @@ export default async function VoiceRoomPage({ params }: Props) {
 
   return (
     <AppShell user={user} wide>
-      <Link
-        href="/live?tab=voice"
-        className="mb-4 inline-block text-sm text-vintage-ink-muted hover:text-vintage-rust"
-      >
-        ← All lounges
-      </Link>
+      <BackButton
+        fallbackHref="/live?tab=voice"
+        label="All lounges"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-vintage-ink-muted hover:text-vintage-rust"
+      />
       <VoiceRoomView roomName={decoded} room={room} currentUser={user} />
     </AppShell>
   );

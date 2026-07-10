@@ -179,7 +179,7 @@ export function AppNav({ user }: { user: Profile }) {
       <header className="vintage-nav sticky top-0 z-50 hidden md:block">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 lg:gap-4 lg:px-6">
           <div className="shrink-0">
-            <Logo size="sm" showWordmark />
+            <Logo size="sm" showWordmark href="/feed" />
           </div>
 
           <nav

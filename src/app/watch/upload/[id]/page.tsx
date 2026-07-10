@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Radio } from "lucide-react";
+import { Radio } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { BackButton } from "@/components/layout/BackButton";
 import { AddToPlaylistButton } from "@/components/watch/AddToPlaylistButton";
 import { NativeVideoPlayer } from "@/components/watch/NativeVideoPlayer";
 import { WatchRecorder } from "@/components/watch/WatchRecorder";
@@ -38,13 +38,11 @@ export default async function WatchUploadPage({
 
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/watch"
+          <BackButton
+            fallbackHref="/watch"
+            label="Back to library"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-vintage-ink-muted hover:text-vintage-rust"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to library
-          </Link>
+          />
           <AddToPlaylistButton userId={user.id} video={watchVideo} />
         </div>
 

@@ -36,7 +36,7 @@ export function BusinessContactButton({
       setError(convError);
       return;
     }
-    if (convId) router.push("/chat");
+    if (convId) router.push(`/chat?c=${encodeURIComponent(convId)}`);
   }
 
   return (

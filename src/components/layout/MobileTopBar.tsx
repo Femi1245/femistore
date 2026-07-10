@@ -19,7 +19,7 @@ export function MobileTopBar({ user }: { user: Profile }) {
   return (
     <header className="mobile-top-bar vintage-nav sticky top-0 z-50 border-b border-vintage-border-strong/60 md:hidden">
       <div className="flex h-14 items-center justify-between gap-2 px-4">
-        <Logo size="sm" showWordmark />
+        <Logo size="sm" showWordmark href="/feed" />
         <div className="flex items-center gap-1">
           {hasBusinessProfile(user) && (
             <AccountModeSwitcher user={user} compact />

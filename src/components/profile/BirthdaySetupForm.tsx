@@ -13,6 +13,7 @@ import {
 } from "@/lib/birthday";
 import { formatBirthdate } from "@/lib/social";
 import type { Profile } from "@/lib/types";
+import { BackButton } from "@/components/layout/BackButton";
 
 export function BirthdaySetupForm({
   profile,
@@ -156,12 +157,11 @@ export function BirthdaySetupForm({
           </Link>
         )}
 
-        <Link
-          href={`/profile/${profile.username}`}
-          className="block text-center text-sm font-medium text-vintage-rust hover:underline"
-        >
-          Back to profile
-        </Link>
+        <BackButton
+          fallbackHref={`/profile/${profile.username}`}
+          label="Back to profile"
+          className="mx-auto block text-sm font-medium text-vintage-rust hover:underline"
+        />
       </form>
     </div>
   );

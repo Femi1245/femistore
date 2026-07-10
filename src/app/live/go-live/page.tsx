@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { BackButton } from "@/components/layout/BackButton";
 import { GoLiveForm } from "@/components/live/GoLiveForm";
 import { requireUser } from "@/lib/session";
 
@@ -11,12 +11,11 @@ export default async function GoLivePage() {
   return (
     <AppShell user={user} wide>
       <div className="space-y-4">
-        <Link
-          href="/live"
-          className="text-sm font-medium text-vintage-rust hover:underline"
-        >
-          ← Back to live streams
-        </Link>
+        <BackButton
+          fallbackHref="/live"
+          label="Back to live streams"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-vintage-rust hover:underline"
+        />
         <GoLiveForm />
       </div>
     </AppShell>

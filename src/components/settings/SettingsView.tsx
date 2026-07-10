@@ -27,6 +27,7 @@ import { MobileAppearanceSection } from "@/components/settings/MobileAppearanceS
 import { VerificationRequestSection } from "@/components/settings/VerificationRequestSection";
 import { ChatModeSettings } from "@/components/chat/ChatModeSettings";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
+import { BackButton } from "@/components/layout/BackButton";
 import { canAccessPersonalProfile } from "@/lib/business";
 import type { AccountAppeal, KeywordMute, NotificationType, Profile } from "@/lib/types";
 
@@ -433,9 +434,11 @@ export function SettingsView({ profile }: { profile: Profile }) {
           Includes profile, posts, and notifications. To delete your account, contact support via
           appeal or email support@zumelia.app.
         </p>
-        <Link href="/profile/edit" className="text-sm font-semibold text-vintage-rust hover:underline">
-          ← Back to edit profile
-        </Link>
+        <BackButton
+          fallbackHref="/profile/edit"
+          label="Back to edit profile"
+          className="text-sm font-semibold text-vintage-rust hover:underline"
+        />
       </section>
 
       {saving && (

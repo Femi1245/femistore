@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Heart,
@@ -77,13 +77,15 @@ export function PostCard({
   post,
   currentUser,
   onUpdate,
+  initialShowComments = false,
 }: {
   post: PostWithMeta;
   currentUser: Profile;
   onUpdate: () => void;
+  initialShowComments?: boolean;
 }) {
   const [engagement, setEngagement] = useState(post.engagement);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(initialShowComments);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
@@ -110,6 +112,12 @@ export function PostCard({
     setComments(list);
     setLoadingComments(false);
   }, [rootId]);
+
+  useEffect(() => {
+    if (initialShowComments) {
+      void loadCommentsList();
+    }
+  }, [initialShowComments, loadCommentsList]);
 
   async function handleLike() {
     const supabase = createClient();

@@ -214,6 +214,23 @@ export async function enrichPosts(
   }));
 }
 
+export async function loadPostById(
+  supabase: SupabaseClient,
+  postId: string,
+  currentUserId: string,
+): Promise<PostWithMeta | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("id", postId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const [enriched] = await enrichPosts(supabase, [data as Post], currentUserId);
+  return enriched ?? null;
+}
+
 export type FeedMode = "friends" | "following" | "close_friends";
 
 export async function loadFeed(

@@ -57,6 +57,7 @@ export async function updateSession(request: NextRequest) {
   const protectedPrefixes = [
     "/chat",
     "/feed",
+    "/post",
     "/profile",
     "/business",
     "/live",
@@ -65,6 +66,8 @@ export async function updateSession(request: NextRequest) {
     "/discover",
     "/opportunities",
     "/voice",
+    "/games",
+    "/admin",
   ];
   const isProtected = protectedPrefixes.some((p) =>
     request.nextUrl.pathname.startsWith(p),

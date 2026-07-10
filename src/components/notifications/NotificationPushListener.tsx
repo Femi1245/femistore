@@ -97,7 +97,7 @@ export function NotificationPushListener({ userId }: { userId: string }) {
           });
           notification.onclick = () => {
             window.focus();
-            window.location.href = href;
+            window.location.assign(href);
             notification.close();
           };
         },

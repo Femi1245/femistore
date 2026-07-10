@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { Audio } from "expo-av";
-import { router, type Href } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import { Avatar } from "@/components/Avatar";
 import { Btn, Loader, Screen, Subtitle, Title } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
@@ -37,6 +37,7 @@ type Tab = "chats" | "secret" | "discover" | "phone" | "channels";
 
 export default function ChatScreen() {
   const { profile } = useAuth();
+  const { c: deepLinkConvId } = useLocalSearchParams<{ c?: string }>();
   const [tab, setTab] = useState<Tab>("chats");
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [secretChats, setSecretChats] = useState<ConversationPreview[]>([]);
@@ -145,6 +146,12 @@ export default function ChatScreen() {
     setActiveChat(chat);
     setTab("chats");
   }
+
+  useEffect(() => {
+    if (!profile || !deepLinkConvId) return;
+    void openById(deepLinkConvId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when deep-link id is present
+  }, [profile?.id, deepLinkConvId]);
 
   async function openDm(other: Profile, convId?: string, secret = false) {
     if (!profile) return;

@@ -259,7 +259,19 @@ export function LiveRoom({
         <p className="font-display text-lg font-semibold">This stream has ended</p>
         <button
           type="button"
-          onClick={() => router.push("/live")}
+          onClick={() => {
+            if (typeof window !== "undefined" && document.referrer) {
+              try {
+                if (new URL(document.referrer).origin === window.location.origin) {
+                  router.back();
+                  return;
+                }
+              } catch {
+                /* fall through */
+              }
+            }
+            router.push("/live");
+          }}
           className="vintage-btn mt-4 px-6 py-2"
         >
           Browse live streams
