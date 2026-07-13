@@ -102,15 +102,36 @@ export const PostCard = memo(function PostCard({
           <Ionicons name="chatbubble-outline" size={20} color={colors.inkMuted} />
           <Text style={styles.actionText}>{engagement.comments}</Text>
         </Pressable>
+        {post.user_id === currentUser.id ? (
+          <Pressable
+            style={styles.action}
+            onPress={() =>
+              router.push({
+                pathname: "/post/[id]",
+                params: { id: post.id, analytics: "1" },
+              })
+            }
+          >
+            <Ionicons name="stats-chart-outline" size={20} color={colors.inkMuted} />
+            <Text style={styles.actionText}>Analytics</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {showComments && (
         <View style={styles.comments}>
           {comments.map((c) => (
-            <Text key={c.id} style={styles.comment}>
-              <Text style={styles.commentAuthor}>{c.author?.display_name ?? "User"}: </Text>
-              {c.content}
-            </Text>
+            <Pressable
+              key={c.id}
+              onPress={() =>
+                c.author?.username && router.push(`/profile/${c.author.username}`)
+              }
+            >
+              <Text style={styles.comment}>
+                <Text style={styles.commentAuthor}>{c.author?.display_name ?? "User"}: </Text>
+                {c.content}
+              </Text>
+            </Pressable>
           ))}
           <View style={styles.commentRow}>
             <TextInput

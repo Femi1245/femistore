@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  BarChart3,
   Briefcase,
   Check,
   Copy,
@@ -26,6 +27,7 @@ const SLIDE_ICONS: Record<MarketingMockupSlideId, typeof Briefcase> = {
   storefront: Store,
   calls: Phone,
   live: Radio,
+  "post-analytics": BarChart3,
 };
 
 function PhoneFrame({ children, label }: { children: React.ReactNode; label: string }) {
@@ -186,21 +188,36 @@ function CallsMock() {
 
 function LiveMock() {
   return (
-    <div className="relative min-h-[380px] bg-vintage-ink">
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
-      <div className="relative flex items-center justify-between p-3">
-        <span className="rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold text-white">LIVE</span>
-        <span className="text-[9px] text-white/80">1.2k watching</span>
+    <div className="relative min-h-[380px] overflow-hidden bg-zinc-900">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(185,92,56,0.35),_transparent_55%)]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/50" />
+      <div className="relative flex items-start justify-between gap-2 p-3">
+        <div>
+          <span className="rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
+            LIVE
+          </span>
+          <p className="mt-1 text-[10px] font-bold text-white">Behind the scenes drop</p>
+          <p className="text-[8px] text-white/70">{DEMO_PERSONAS.seller.name}</p>
+        </div>
+        <span className="rounded-full bg-black/40 px-2 py-0.5 text-[8px] text-white/80">
+          1.2k
+        </span>
       </div>
-      <div className="absolute bottom-16 left-3 right-3 space-y-1">
-        <p className="text-[8px] text-white/90">user12: This AR filter 🔥</p>
-        <p className="text-[8px] text-white/90">maya: Just sent a gift!</p>
+      <div className="absolute bottom-16 left-3 right-14 space-y-1.5">
+        <div className="max-w-[85%] rounded-2xl bg-black/45 px-2 py-1">
+          <p className="text-[8px] font-semibold text-white">user12</p>
+          <p className="text-[8px] text-white/90">This AR filter 🔥</p>
+        </div>
+        <div className="max-w-[85%] rounded-2xl bg-black/45 px-2 py-1">
+          <p className="text-[8px] font-semibold text-white">maya</p>
+          <p className="text-[8px] text-white/90">Just sent a gift!</p>
+        </div>
       </div>
       <div className="absolute bottom-3 left-3 right-3 flex gap-2">
         <div className="flex-1 rounded-full bg-white/15 px-3 py-1.5 text-[8px] text-white/60">
           Say something…
         </div>
-        <div className="rounded-full bg-vintage-rust px-3 py-1.5 text-[8px] font-bold text-on-rust">
+        <div className="rounded-full bg-red-500 px-3 py-1.5 text-[8px] font-bold text-white">
           Gift
         </div>
       </div>
@@ -228,6 +245,55 @@ function StorefrontMock() {
   );
 }
 
+function PostAnalyticsMock() {
+  return (
+    <div className="min-h-[380px] bg-vintage-cream px-3 py-3">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-vintage-rust">
+        Post analytics
+      </p>
+      <p className="mt-1 text-[11px] font-semibold text-vintage-ink">
+        Only you can see this
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {[
+          ["Views", "128"],
+          ["Likes", "34"],
+          ["Comments", "12"],
+          ["Reshares", "5"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-sm border border-vintage-border bg-vintage-paper px-2 py-2 text-center">
+            <p className="text-sm font-bold text-vintage-ink">{value}</p>
+            <p className="text-[8px] uppercase text-vintage-ink-muted">{label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-sm border border-vintage-border bg-vintage-paper px-2 py-2">
+        <span className="text-[9px] font-semibold text-vintage-ink">Engagement rate</span>
+        <span className="text-sm font-bold text-vintage-ink">39.8%</span>
+      </div>
+      <div className="mt-3 flex h-16 items-end gap-1">
+        {[20, 45, 30, 70, 55, 90, 40].map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-sm bg-vintage-rust/80"
+            style={{ height: `${h}%` }}
+          />
+        ))}
+      </div>
+      <div className="mt-3 space-y-1.5">
+        <p className="text-[8px] font-bold uppercase text-vintage-ink-muted">Recent viewers</p>
+        <div className="flex items-center gap-2">
+          <Avatar name={DEMO_PERSONAS.buyer.name} color="#8f4528" />
+          <div>
+            <p className="text-[10px] font-semibold">{DEMO_PERSONAS.buyer.name}</p>
+            <p className="text-[8px] text-vintage-ink-muted">2h ago</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   "seller-inbox": <SellerInboxMock />,
   "service-gig": <GigListingMock />,
@@ -235,6 +301,7 @@ const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   storefront: <StorefrontMock />,
   calls: <CallsMock />,
   live: <LiveMock />,
+  "post-analytics": <PostAnalyticsMock />,
 };
 
 export function SocialMockups() {

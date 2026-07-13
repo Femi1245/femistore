@@ -101,6 +101,8 @@ Run `supabase/social-schema.sql` in the SQL Editor (after `schema.sql`).
 
 This adds follows, posts, likes, comments, reshares, and storage for avatars/media.
 
+**Post analytics (optional):** run `supabase/post-analytics-schema.sql` after social schema. Owners see views, engagement rate, and recent viewers on their posts (`/post/[id]` → Analytics).
+
 ## 5. Test
 
 1. Visit http://localhost:3000/signup

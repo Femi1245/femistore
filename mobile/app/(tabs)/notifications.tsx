@@ -148,22 +148,38 @@ export default function NotificationsScreen() {
           )
         }
         renderItem={({ item }) => (
-          <Pressable
-            style={[styles.item, !item.read_at && styles.unread]}
-            onPress={() => openItem(item)}
-          >
-            {item.actor ? (
+          <View style={[styles.item, !item.read_at && styles.unread]}>
+            {item.actor?.username ? (
+              <Pressable
+                onPress={async () => {
+                  if (!profile) return;
+                  if (!item.read_at) {
+                    await markNotificationRead(getSupabase(), item.id, profile.id);
+                    setItems((prev) =>
+                      prev.map((n) =>
+                        n.id === item.id
+                          ? { ...n, read_at: new Date().toISOString() }
+                          : n,
+                      ),
+                    );
+                  }
+                  router.push(`/profile/${item.actor!.username}`);
+                }}
+              >
+                <Avatar name={item.actor.display_name} avatarUrl={item.actor.avatar_url} />
+              </Pressable>
+            ) : item.actor ? (
               <Avatar name={item.actor.display_name} avatarUrl={item.actor.avatar_url} />
             ) : (
               <View style={styles.iconWrap}>
                 <Ionicons name={icons[item.type]} size={20} color={colors.rust} />
               </View>
             )}
-            <View style={styles.itemText}>
+            <Pressable style={styles.itemText} onPress={() => openItem(item)}>
               <Text style={styles.itemBody}>{getNotificationText(item)}</Text>
               <Text style={styles.time}>{formatNotificationTime(item.created_at)}</Text>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         )}
       />
     </Screen>

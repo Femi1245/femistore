@@ -48,12 +48,12 @@ Rotate mockups and text. Check off each week.
 | Day | Type | Content |
 |-----|------|---------|
 | **Mon** | 🖼️ Mockup | `seller-inbox` — Seller vs personal inbox |
-| **Tue** | Text | Build-in-public: what you shipped this week |
+| **Tue** | Text / 📱 | Build-in-public *or* mockup `post-analytics` |
 | **Wed** | 🖼️ Mockup | `service-gig` or `storefront` |
 | **Thu** | Text | Ask a question / poll your audience |
 | **Fri** | 🖼️ Mockup | `auto-reply` or `calls` |
 | **Sat** | 🖼️ Mockup | `live` |
-| **Sun** | Text | Thank followers / vibe coder lesson |
+| **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` |
 
 ---
 

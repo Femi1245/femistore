@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  BarChart3,
   Heart,
   MessageCircle,
   Repeat2,
@@ -233,7 +234,12 @@ export function PostCard({
                 Listing
               </span>
             )}
-            <span className="text-vintage-ink-muted">@{author.username}</span>
+            <Link
+              href={authorHref}
+              className="text-vintage-ink-muted hover:text-vintage-rust"
+            >
+              @{author.username}
+            </Link>
             <span className="text-xs text-vintage-ink-muted/70">
               · {formatPostDate(post.created_at)}
               {editedAt ? " · edited" : ""}
@@ -332,6 +338,16 @@ export function PostCard({
             <Repeat2 className="h-4 w-4" />
             {engagement.reshares || ""}
           </button>
+          {isOwnPost && (
+            <Link
+              href={`/post/${post.id}?analytics=1`}
+              className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
+              title="Post analytics"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Analytics</span>
+            </Link>
+          )}
         </div>
 
         {reshareOpen && !engagement.reshared_by_me && (
@@ -356,17 +372,40 @@ export function PostCard({
             {loadingComments ? (
               <p className="text-sm text-vintage-ink-muted">Loading comments…</p>
             ) : (
-              comments.map((c) => (
+              comments.map((c) => {
+                const commentAuthorHref = c.author?.username
+                  ? getPersonalProfileUrl(c.author.username)
+                  : null;
+                return (
                 <div key={c.id} className="flex gap-2.5">
-                  <Avatar
-                    name={c.author?.display_name ?? "?"}
-                    avatarUrl={c.author?.avatar_url}
-                    size="sm"
-                  />
+                  {commentAuthorHref ? (
+                    <Link href={commentAuthorHref} className="shrink-0">
+                      <Avatar
+                        name={c.author?.display_name ?? "?"}
+                        avatarUrl={c.author?.avatar_url}
+                        size="sm"
+                      />
+                    </Link>
+                  ) : (
+                    <Avatar
+                      name={c.author?.display_name ?? "?"}
+                      avatarUrl={c.author?.avatar_url}
+                      size="sm"
+                    />
+                  )}
                   <div className="vintage-card-inset flex min-w-0 flex-1 flex-col gap-1.5 px-3 py-2.5 text-sm">
-                    <p className="font-display font-semibold leading-tight text-vintage-rust">
-                      {c.author?.display_name}
-                    </p>
+                    {commentAuthorHref ? (
+                      <Link
+                        href={commentAuthorHref}
+                        className="font-display font-semibold leading-tight text-vintage-rust hover:underline"
+                      >
+                        {c.author?.display_name}
+                      </Link>
+                    ) : (
+                      <p className="font-display font-semibold leading-tight text-vintage-rust">
+                        {c.author?.display_name}
+                      </p>
+                    )}
                     {c.reply_to && (
                       <ReplyQuote
                         label={c.reply_to.author?.display_name ?? "Comment"}
@@ -385,7 +424,8 @@ export function PostCard({
                     </button>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
             {replyingToComment && (
               <div className="flex items-center justify-between gap-2 rounded-lg vintage-card-inset px-3 py-2 text-sm">

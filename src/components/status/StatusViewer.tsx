@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getPersonalProfileUrl } from "@/lib/business";
 import { markStatusViewed, statusTimeLeft } from "@/lib/status";
 import type { StatusGroup, StatusUpdate } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
@@ -124,17 +126,23 @@ export function StatusViewer({
         </div>
 
         <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between p-4 pt-6">
-          <div className="flex items-center gap-2">
+          <Link
+            href={getPersonalProfileUrl(group.user.username)}
+            onClick={onClose}
+            className="flex min-w-0 items-center gap-2 rounded-lg pr-2 hover:bg-white/10"
+          >
             <Avatar
               name={group.user.display_name}
               avatarUrl={group.user.avatar_url}
               size="sm"
             />
-            <div>
-              <p className="text-sm font-semibold text-white">{group.user.display_name}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">
+                {group.user.display_name}
+              </p>
               <p className="text-xs text-white/70">{statusTimeLeft(item.expires_at)}</p>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-1">
             {group.isOwn && onAddStatus && (
               <button

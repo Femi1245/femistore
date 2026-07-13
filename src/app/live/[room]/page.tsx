@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { BackButton } from "@/components/layout/BackButton";
 import { LiveRoom } from "@/components/live/LiveRoom";
 import { requireUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
@@ -26,12 +25,7 @@ export default async function LiveRoomPage({
   if (!stream) notFound();
 
   return (
-    <AppShell user={currentUser}>
-      <BackButton
-        fallbackHref="/live"
-        label="All live streams"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-vintage-rust hover:underline"
-      />
+    <AppShell user={currentUser} immersive>
       <LiveRoom
         roomName={room}
         stream={stream as LiveStream}

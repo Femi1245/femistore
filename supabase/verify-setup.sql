@@ -32,6 +32,7 @@
 -- ║   21. opportunities-board-schema.sql (jobs / gigs board)             ║
 -- ║   22. voice-close-friends-payments-schema.sql                        ║
 -- ║   23. opportunities-service-gigs-schema.sql (list products/services) ║
+-- ║   24. post-analytics-schema.sql (post views / owner insights)        ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 drop table if exists __zumelia_diag;
@@ -43,7 +44,7 @@ select 'table', t,
   case when to_regclass('public.' || t) is not null then 'OK' else 'MISSING' end
 from unnest(array[
   'profiles','conversations','conversation_members','messages',
-  'follows','posts','post_likes','comments','post_reshares',
+  'follows','posts','post_likes','comments','post_reshares','post_views',
   'notifications','status_updates','status_views',
   'live_streams','live_chat_messages','live_stream_viewers','live_stream_join_requests','live_stream_guests',
   'watch_history','playlists','playlist_items','user_videos',

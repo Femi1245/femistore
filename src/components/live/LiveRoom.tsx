@@ -6,12 +6,27 @@ import {
   LiveKitRoom,
   RoomAudioRenderer,
   useLocalParticipant,
+  useParticipants,
+  useRoomContext,
   useTracks,
   VideoTrack,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Track, type LocalVideoTrack } from "livekit-client";
-import { Loader2, Mic, MicOff, Radio, Video, VideoOff } from "lucide-react";
+import { RoomEvent, Track, type LocalVideoTrack } from "livekit-client";
+import {
+  ArrowLeft,
+  Eye,
+  Gift,
+  Loader2,
+  Mic,
+  MicOff,
+  Radio,
+  Sparkles,
+  UserPlus,
+  Video,
+  VideoOff,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LiveAREffect, LiveEffectMode } from "@/lib/deepar-config";
 import { defaultLiveEffectMode } from "@/lib/deepar-config";
@@ -20,10 +35,65 @@ import type { LiveStream, Profile } from "@/lib/types";
 import { LiveChat } from "@/components/live/LiveChat";
 import { LiveEffectPicker } from "@/components/live/LiveEffectPicker";
 import { LiveStagePanel } from "@/components/live/LiveStagePanel";
-import { LiveViewersPanel } from "@/components/live/LiveViewersPanel";
 import { useLiveStreamEffects } from "@/components/live/useLiveStreamEffects";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { LiveGiftFeed } from "@/components/gifts/LiveGiftFeed";
+
+/** If LiveKit connected but camera stayed muted/off, re-enable once. */
+function EnsurePublisherCamera({ active }: { active: boolean }) {
+  const room = useRoomContext();
+  const { localParticipant } = useLocalParticipant();
+
+  useEffect(() => {
+    if (!active) return;
+
+    let cancelled = false;
+    const enable = async () => {
+      try {
+        if (!localParticipant.isCameraEnabled) {
+          await localParticipant.setCameraEnabled(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("[Live] camera enable failed:", err);
+        }
+      }
+    };
+
+    void enable();
+    const onConnected = () => {
+      void enable();
+    };
+    room.on(RoomEvent.Connected, onConnected);
+    room.on(RoomEvent.LocalTrackPublished, onConnected);
+
+    const timer = window.setTimeout(() => {
+      if (!cancelled && !localParticipant.isCameraEnabled) {
+        void enable();
+      }
+    }, 800);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      room.off(RoomEvent.Connected, onConnected);
+      room.off(RoomEvent.LocalTrackPublished, onConnected);
+    };
+  }, [active, localParticipant, room]);
+
+  return null;
+}
+
+function ViewerCountBadge() {
+  const participants = useParticipants();
+  const count = Math.max(1, participants.length);
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+      <Eye className="h-3.5 w-3.5" />
+      {count}
+    </span>
+  );
+}
 
 function StageVideo() {
   const tracks = useTracks(
@@ -41,21 +111,103 @@ function StageVideo() {
 
   if (cameraTracks.length === 0) {
     return (
-      <div className="flex aspect-video items-center justify-center vintage-card-inset">
-        <p className="text-vintage-ink-muted">Waiting for host video…</p>
+      <div className="flex h-full w-full items-center justify-center bg-zinc-950">
+        <p className="text-sm text-white/60">Waiting for host video…</p>
       </div>
     );
   }
 
+  if (cameraTracks.length === 1) {
+    return (
+      <VideoTrack
+        trackRef={cameraTracks[0]}
+        className="h-full w-full object-cover"
+      />
+    );
+  }
+
   return (
-    <div className={`grid gap-2 ${cameraTracks.length > 1 ? "sm:grid-cols-2" : ""}`}>
+    <div className="grid h-full w-full grid-cols-2 gap-0.5 bg-black">
       {cameraTracks.map((track) => (
         <VideoTrack
           key={track.publication.trackSid}
           trackRef={track}
-          className="aspect-video w-full rounded-sm object-cover"
+          className="h-full w-full object-cover"
         />
       ))}
+    </div>
+  );
+}
+
+function PublisherControls({
+  showEffects,
+  effectsOpen,
+  onToggleEffects,
+  endLabel,
+  onEnd,
+}: {
+  showEffects: boolean;
+  effectsOpen: boolean;
+  onToggleEffects: () => void;
+  endLabel?: string;
+  onEnd?: () => void;
+}) {
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
+    useLocalParticipant();
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      <button
+        type="button"
+        onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+        aria-label={isMicrophoneEnabled ? "Mute" : "Unmute"}
+      >
+        {isMicrophoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void (async () => {
+            try {
+              await localParticipant.setCameraEnabled(!isCameraEnabled);
+            } catch (err) {
+              console.error("[Live] camera toggle failed:", err);
+              try {
+                await localParticipant.setCameraEnabled(false);
+                await localParticipant.setCameraEnabled(true);
+              } catch (retryErr) {
+                console.error("[Live] camera restart failed:", retryErr);
+              }
+            }
+          })();
+        }}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+        aria-label={isCameraEnabled ? "Camera off" : "Camera on"}
+      >
+        {isCameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+      </button>
+      {showEffects && (
+        <button
+          type="button"
+          onClick={onToggleEffects}
+          className={`inline-flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-md ${
+            effectsOpen ? "bg-red-500 text-white" : "bg-black/55 text-white"
+          }`}
+          aria-label="Effects"
+        >
+          <Sparkles className="h-5 w-5" />
+        </button>
+      )}
+      {onEnd && endLabel && (
+        <button
+          type="button"
+          onClick={onEnd}
+          className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white"
+        >
+          End
+        </button>
+      )}
     </div>
   );
 }
@@ -67,9 +219,7 @@ function PublisherStage({
   onVideoEffectChange,
   arEffect,
   onArEffectChange,
-  showEffects,
-  endLabel,
-  onEnd,
+  showEffectsPicker,
 }: {
   effectMode: LiveEffectMode;
   onEffectModeChange: (mode: LiveEffectMode) => void;
@@ -77,11 +227,9 @@ function PublisherStage({
   onVideoEffectChange: (e: LiveVideoEffect) => void;
   arEffect: LiveAREffect;
   onArEffectChange: (e: LiveAREffect) => void;
-  showEffects: boolean;
-  endLabel?: string;
-  onEnd?: () => void;
+  showEffectsPicker: boolean;
 }) {
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+  const { isCameraEnabled } = useLocalParticipant();
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
     { onlySubscribed: false },
@@ -100,62 +248,38 @@ function PublisherStage({
     effectMode,
     videoEffect,
     arEffect,
-    showEffects && !!videoTrack && isCameraEnabled,
+    !!videoTrack && isCameraEnabled,
   );
 
   return (
-    <div className="space-y-4">
-      <div className="overflow-hidden rounded-sm border-2 border-vintage-border bg-black">
-        <div className="aspect-video">
-          {localCam && localCam.publication ? (
-            <VideoTrack trackRef={localCam} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full min-h-[240px] items-center justify-center text-sm text-vintage-ink-muted">
-              Camera is off
-            </div>
-          )}
+    <>
+      <div className="absolute inset-0">
+        {localCam && localCam.publication && isCameraEnabled ? (
+          <VideoTrack trackRef={localCam} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-zinc-950">
+            <p className="text-sm text-white/60">Camera is off</p>
+          </div>
+        )}
+      </div>
+      {showEffectsPicker && (
+        <div className="absolute inset-x-0 bottom-[7.5rem] z-30 mx-auto max-h-[40vh] w-full max-w-lg overflow-y-auto px-3">
+          <div className="rounded-2xl bg-black/70 p-3 backdrop-blur-md">
+            <LiveEffectPicker
+              mode={effectMode}
+              onModeChange={onEffectModeChange}
+              videoEffect={videoEffect}
+              onVideoEffectChange={onVideoEffectChange}
+              arEffect={arEffect}
+              onArEffectChange={onArEffectChange}
+              arStatus={arStatus}
+              arError={arError}
+              disabled={!isCameraEnabled}
+            />
+          </div>
         </div>
-      </div>
-
-      {showEffects && (
-        <LiveEffectPicker
-          mode={effectMode}
-          onModeChange={onEffectModeChange}
-          videoEffect={videoEffect}
-          onVideoEffectChange={onVideoEffectChange}
-          arEffect={arEffect}
-          onArEffectChange={onArEffectChange}
-          arStatus={arStatus}
-          arError={arError}
-          disabled={!isCameraEnabled}
-        />
       )}
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
-          className="vintage-btn-outline inline-flex flex-1 items-center justify-center gap-2 py-2.5 text-sm"
-        >
-          {isMicrophoneEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-          {isMicrophoneEnabled ? "Mute" : "Unmute"}
-        </button>
-        <button
-          type="button"
-          onClick={() => void localParticipant.setCameraEnabled(!isCameraEnabled)}
-          className="vintage-btn-outline inline-flex flex-1 items-center justify-center gap-2 py-2.5 text-sm"
-        >
-          {isCameraEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-          {isCameraEnabled ? "Camera off" : "Camera on"}
-        </button>
-      </div>
-
-      {onEnd && endLabel && (
-        <button type="button" onClick={onEnd} className="vintage-btn w-full py-3">
-          {endLabel}
-        </button>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -182,6 +306,9 @@ export function LiveRoom({
   const [loading, setLoading] = useState(true);
   const [host, setHost] = useState<Profile | null>(stream.host ?? null);
   const [showGift, setShowGift] = useState(false);
+  const [effectsOpen, setEffectsOpen] = useState(false);
+  const [stageOpen, setStageOpen] = useState(false);
+  const [giftsOpen, setGiftsOpen] = useState(false);
 
   const fetchToken = useCallback(async () => {
     setLoading(true);
@@ -223,6 +350,20 @@ export function LiveRoom({
     void fetchToken();
   }, [fetchToken, isHost]);
 
+  function leaveLive() {
+    if (typeof window !== "undefined" && document.referrer) {
+      try {
+        if (new URL(document.referrer).origin === window.location.origin) {
+          router.back();
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    router.push("/live");
+  }
+
   async function handleEndLive() {
     await fetch("/api/live/end", {
       method: "POST",
@@ -235,44 +376,45 @@ export function LiveRoom({
 
   if (loading && !token) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-vintage-rust" />
-        <p className="text-vintage-ink-muted">Connecting to live room…</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3 bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-red-400" />
+        <p className="text-white/70">Connecting to live room…</p>
       </div>
     );
   }
 
   if (error || !token || !serverUrl) {
     return (
-      <div className="vintage-card p-6 text-center">
-        <p className="text-vintage-rust">{error ?? "Connection failed"}</p>
-        <button type="button" onClick={() => void fetchToken()} className="vintage-btn-outline mt-4 px-4 py-2">
-          Try again
-        </button>
+      <div className="flex h-full flex-col items-center justify-center gap-4 bg-black px-6 text-center">
+        <p className="text-red-400">{error ?? "Connection failed"}</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={leaveLive}
+            className="rounded-full border border-white/30 px-4 py-2 text-sm text-white"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={() => void fetchToken()}
+            className="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!stream.is_live) {
     return (
-      <div className="vintage-card p-8 text-center">
-        <p className="font-display text-lg font-semibold">This stream has ended</p>
+      <div className="flex h-full flex-col items-center justify-center gap-4 bg-black px-6 text-center">
+        <p className="font-display text-lg font-semibold text-white">This stream has ended</p>
         <button
           type="button"
-          onClick={() => {
-            if (typeof window !== "undefined" && document.referrer) {
-              try {
-                if (new URL(document.referrer).origin === window.location.origin) {
-                  router.back();
-                  return;
-                }
-              } catch {
-                /* fall through */
-              }
-            }
-            router.push("/live");
-          }}
-          className="vintage-btn mt-4 px-6 py-2"
+          onClick={leaveLive}
+          className="rounded-full bg-red-500 px-6 py-2.5 text-sm font-semibold text-white"
         >
           Browse live streams
         </button>
@@ -281,15 +423,7 @@ export function LiveRoom({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1.5 rounded-sm bg-vintage-rust px-2 py-1 text-xs font-bold text-on-rust">
-          <Radio className="h-3 w-3 animate-pulse" />
-          LIVE
-        </span>
-        <h1 className="font-display text-xl font-bold text-vintage-ink">{stream.title}</h1>
-      </div>
-
+    <div className="relative h-full w-full overflow-hidden bg-black">
       <LiveKitRoom
         key={roomKey}
         token={token}
@@ -297,43 +431,121 @@ export function LiveRoom({
         connect
         video={canPublish}
         audio={canPublish}
+        onMediaDeviceFailure={(failure) => {
+          const reason = String(failure ?? "");
+          const message =
+            reason.includes("PermissionDenied") || reason.includes("NotAllowed")
+              ? "Camera or mic permission was blocked. Allow access in your browser, then try again."
+              : reason.includes("NotFound")
+                ? "No camera was found on this device."
+                : "Could not start the camera. Check permissions and try again.";
+          setError(message);
+        }}
+        onError={(err) => {
+          console.error("[Live] room error:", err);
+          setError(err.message || "Live connection error");
+        }}
         onDisconnected={() => {
           if (isHost) router.push("/live");
         }}
-        className="livekit-room"
+        className="absolute inset-0 h-full w-full"
       >
         <RoomAudioRenderer />
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <div>
-            {canPublish ? (
-              <PublisherStage
-                effectMode={effectMode}
-                onEffectModeChange={setEffectMode}
-                videoEffect={videoEffect}
-                onVideoEffectChange={setVideoEffect}
-                arEffect={arEffect}
-                onArEffectChange={setArEffect}
-                showEffects={isHost}
-                endLabel={isHost ? "End live stream" : undefined}
-                onEnd={isHost ? handleEndLive : undefined}
-              />
-            ) : (
-              <StageVideo />
-            )}
+        {canPublish && <EnsurePublisherCamera active={canPublish} />}
 
-            {!canPublish && (
-              <p className="mt-3 text-center text-sm text-vintage-ink-muted">
-                You are watching {stream.host_id === currentUser.id ? "your" : "a"} live stream
-              </p>
-            )}
+        {/* Full-bleed camera */}
+        {canPublish ? (
+          <PublisherStage
+            effectMode={effectMode}
+            onEffectModeChange={setEffectMode}
+            videoEffect={videoEffect}
+            onVideoEffectChange={setVideoEffect}
+            arEffect={arEffect}
+            onArEffectChange={setArEffect}
+            showEffectsPicker={isHost && effectsOpen}
+          />
+        ) : (
+          <div className="absolute inset-0">
+            <StageVideo />
           </div>
+        )}
 
-          <div className="flex flex-col gap-4">
-            <LiveViewersPanel
-              roomName={roomName}
-              currentUserId={currentUser.id}
-              hostId={stream.host_id}
-            />
+        {/* Top gradient + header */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/70 via-black/25 to-transparent pb-16 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <div className="pointer-events-auto flex items-start gap-3 px-3 sm:px-4">
+            <button
+              type="button"
+              onClick={leaveLive}
+              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm"
+              aria-label="Leave live"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-sm bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                  <Radio className="h-3 w-3 animate-pulse" />
+                  Live
+                </span>
+                <ViewerCountBadge />
+              </div>
+              <h1 className="mt-1 truncate font-display text-base font-bold text-white drop-shadow sm:text-lg">
+                {stream.title}
+              </h1>
+              {host && (
+                <p className="truncate text-xs text-white/80">{host.display_name}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={leaveLive}
+              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm md:hidden"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right-side actions */}
+        <div className="absolute right-3 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-3 sm:right-4">
+          {host && currentUser.id !== host.id && (
+            <button
+              type="button"
+              onClick={() => setShowGift(true)}
+              className="inline-flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
+              aria-label="Send gift"
+            >
+              <Gift className="h-5 w-5" />
+            </button>
+          )}
+          {host && currentUser.id === host.id && (
+            <button
+              type="button"
+              onClick={() => setGiftsOpen((v) => !v)}
+              className={`inline-flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md ${
+                giftsOpen ? "bg-red-500 text-white" : "bg-black/50 text-white"
+              }`}
+              aria-label="Gifts"
+            >
+              <Gift className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setStageOpen((v) => !v)}
+            className={`inline-flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md ${
+              stageOpen ? "bg-red-500 text-white" : "bg-black/50 text-white"
+            }`}
+            aria-label="Stage"
+          >
+            <UserPlus className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Side panels */}
+        {stageOpen && (
+          <div className="absolute bottom-36 right-3 z-30 w-[min(100%-1.5rem,20rem)] overflow-hidden rounded-2xl shadow-xl sm:right-4">
             <LiveStagePanel
               roomName={roomName}
               currentUser={currentUser}
@@ -342,21 +554,39 @@ export function LiveRoom({
               isGuest={isGuest}
               onGuestApproved={handleGuestApproved}
             />
-            {host && (
-              <LiveGiftFeed
-                roomName={roomName}
-                host={host}
-                currentUser={currentUser}
-                onSendGift={() => setShowGift(true)}
-              />
-            )}
-            <LiveChat
+          </div>
+        )}
+        {giftsOpen && host && (
+          <div className="absolute bottom-36 right-3 z-30 w-[min(100%-1.5rem,20rem)] overflow-hidden rounded-2xl shadow-xl sm:right-4">
+            <LiveGiftFeed
               roomName={roomName}
+              host={host}
               currentUser={currentUser}
-              hostId={stream.host_id}
-              isLive={stream.is_live}
+              onSendGift={() => setShowGift(true)}
             />
           </div>
+        )}
+
+        {/* Bottom: host controls + chat */}
+        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-24">
+          {canPublish && (
+            <div className="mb-2 px-3">
+              <PublisherControls
+                showEffects={isHost}
+                effectsOpen={effectsOpen}
+                onToggleEffects={() => setEffectsOpen((v) => !v)}
+                endLabel={isHost ? "End live stream" : undefined}
+                onEnd={isHost ? handleEndLive : undefined}
+              />
+            </div>
+          )}
+          <LiveChat
+            roomName={roomName}
+            currentUser={currentUser}
+            hostId={stream.host_id}
+            isLive={stream.is_live}
+            variant="overlay"
+          />
         </div>
       </LiveKitRoom>
 

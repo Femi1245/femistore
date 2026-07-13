@@ -298,6 +298,30 @@ export type PostWithMeta = Post & {
   engagement: PostEngagement;
 };
 
+export type PostViewDay = {
+  date: string;
+  views: number;
+};
+
+export type PostAnalyticsViewer = {
+  viewerId: string;
+  viewedAt: string;
+  profile?: Profile;
+};
+
+export type PostAnalytics = {
+  postId: string;
+  views: number;
+  likes: number;
+  comments: number;
+  reshares: number;
+  /** Interactions / views as a percentage (0–100+). */
+  engagementRate: number;
+  viewsByDay: PostViewDay[];
+  recentViewers: PostAnalyticsViewer[];
+  schemaMissing?: boolean;
+};
+
 export type Comment = {
   id: string;
   post_id: string;

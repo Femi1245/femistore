@@ -20,7 +20,8 @@ export type MarketingMockupSlideId =
   | "auto-reply"
   | "storefront"
   | "calls"
-  | "live";
+  | "live"
+  | "post-analytics";
 
 export type MarketingMockupSlide = {
   id: MarketingMockupSlideId;
@@ -112,6 +113,25 @@ Zumelia: DMs, voice notes, and crystal-clear video calls — when the conversati
 
 Not another boring stream. A stage. 🟠`,
     hashtags: "#livestreaming #creators #Zumelia",
+  },
+  {
+    id: "post-analytics",
+    title: "Post analytics",
+    feature: "Owner-only post insights — views, engagement, recent viewers",
+    planDayRefs: ["Ongoing Tue", "Ongoing Sun"],
+    shippedAt: "2026-07",
+    caption: `You posted. Now you can see who actually showed up.
+
+Zumelia post analytics:
+→ Unique views
+→ Likes, comments, reshares
+→ Engagement rate
+→ Recent viewers
+
+Creators deserve receipts. 🟠
+
+Try it: ${MARKETING_APP_URL}`,
+    hashtags: "#buildinpublic #creators #Zumelia",
   },
 ];
 

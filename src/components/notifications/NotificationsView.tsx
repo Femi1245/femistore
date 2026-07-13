@@ -263,50 +263,70 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
                   isUnread ? "bg-vintage-rust/5" : ""
                 }`}
               >
-                <Link
-                  href={href}
-                  onClick={() => handleClick(notification)}
-                  className="flex min-w-0 flex-1 gap-3 px-4 py-3 transition-colors hover:bg-vintage-surface/60"
-                >
-                  <div className="relative shrink-0">
-                    {notification.actor ? (
+                <div className="flex min-w-0 flex-1 items-stretch gap-3 px-4 py-3 transition-colors hover:bg-vintage-surface/60">
+                  {notification.actor?.username ? (
+                    <Link
+                      href={`/profile/${notification.actor.username}`}
+                      onClick={() => handleClick(notification)}
+                      className="relative shrink-0 self-start"
+                      title={`View ${actorName}'s profile`}
+                    >
                       <Avatar
                         name={actorName}
                         avatarUrl={notification.actor.avatar_url}
                         size="md"
                       />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full vintage-card-inset">
-                        <Icon className="h-5 w-5 text-vintage-rust" />
-                      </div>
-                    )}
-                    <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-vintage-rust text-[var(--vintage-btn-text)]">
-                      <Icon className="h-3 w-3" />
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={`text-sm leading-snug ${
-                        isUnread
-                          ? "font-semibold text-vintage-ink"
-                          : "text-vintage-ink"
-                      }`}
-                    >
-                      {getNotificationText(notification)}
-                    </p>
-                    <p className="mt-1 text-xs text-vintage-ink-muted">
-                      {formatNotificationTime(notification.created_at)}
-                    </p>
-                  </div>
-
-                  {isUnread && (
-                    <span
-                      className="mt-2 h-2 w-2 shrink-0 rounded-full bg-vintage-rust"
-                      aria-hidden
-                    />
+                      <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-vintage-rust text-[var(--vintage-btn-text)]">
+                        <Icon className="h-3 w-3" />
+                      </span>
+                    </Link>
+                  ) : (
+                    <div className="relative shrink-0 self-start">
+                      {notification.actor ? (
+                        <Avatar
+                          name={actorName}
+                          avatarUrl={notification.actor.avatar_url}
+                          size="md"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full vintage-card-inset">
+                          <Icon className="h-5 w-5 text-vintage-rust" />
+                        </div>
+                      )}
+                      <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-vintage-rust text-[var(--vintage-btn-text)]">
+                        <Icon className="h-3 w-3" />
+                      </span>
+                    </div>
                   )}
-                </Link>
+
+                  <Link
+                    href={href}
+                    onClick={() => handleClick(notification)}
+                    className="flex min-w-0 flex-1 gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-sm leading-snug ${
+                          isUnread
+                            ? "font-semibold text-vintage-ink"
+                            : "text-vintage-ink"
+                        }`}
+                      >
+                        {getNotificationText(notification)}
+                      </p>
+                      <p className="mt-1 text-xs text-vintage-ink-muted">
+                        {formatNotificationTime(notification.created_at)}
+                      </p>
+                    </div>
+
+                    {isUnread && (
+                      <span
+                        className="mt-2 h-2 w-2 shrink-0 rounded-full bg-vintage-rust"
+                        aria-hidden
+                      />
+                    )}
+                  </Link>
+                </div>
 
                 <div className="flex shrink-0 items-center pr-2">
                   {isUnread ? (

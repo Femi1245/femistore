@@ -8,6 +8,36 @@ import {
   startVideoFrameLoop,
 } from "@/lib/live-video-gl";
 
+async function waitForVideoFrames(
+  video: HTMLVideoElement,
+  timeoutMs = 5000,
+): Promise<void> {
+  if (video.videoWidth > 0 && video.videoHeight > 0) return;
+
+  await new Promise<void>((resolve) => {
+    const done = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        cleanup();
+        resolve();
+      }
+    };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, timeoutMs);
+    const cleanup = () => {
+      video.removeEventListener("loadeddata", done);
+      video.removeEventListener("loadedmetadata", done);
+      video.removeEventListener("resize", done);
+      window.clearTimeout(timer);
+    };
+    video.addEventListener("loadeddata", done);
+    video.addEventListener("loadedmetadata", done);
+    video.addEventListener("resize", done);
+    done();
+  });
+}
+
 /**
  * TikTok-style real-time video pipeline:
  * - WebGL GPU shaders per frame (not CSS/photo filters)
@@ -20,7 +50,6 @@ export function useLiveVideoEffect(
   enabled: boolean,
 ) {
   const effectRef = useRef(effect);
-
   const pipelineActiveRef = useRef(false);
 
   useEffect(() => {
@@ -51,13 +80,22 @@ export function useLiveVideoEffect(
       } catch {
         // Track may need a moment to produce frames
       }
-      if (cancelled) return;
+      await waitForVideoFrames(video);
+      if (cancelled || video.videoWidth <= 0) return;
+
+      if (!glPipeline) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
 
       stopLoop = startVideoFrameLoop(video, (timeMs) => {
         if (glPipeline) {
           glPipeline.render(video, effectRef.current, timeMs);
         } else if (ctx2d && video.videoWidth > 0) {
-          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          if (
+            canvas.width !== video.videoWidth ||
+            canvas.height !== video.videoHeight
+          ) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
           }
@@ -65,16 +103,24 @@ export function useLiveVideoEffect(
         }
       });
 
-      const fps = 60;
-      const stream = canvas.captureStream(fps);
-      outputTrack = stream.getVideoTracks()[0];
+      // Draw at least one frame before publishing the canvas track.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      if (cancelled) return;
+
+      const stream = canvas.captureStream(60);
+      outputTrack = stream.getVideoTracks()[0] ?? null;
       if (!outputTrack || cancelled) return;
 
       try {
+        // userProvided=true so LiveKit does not stop our canvas track.
         await track.replaceTrack(outputTrack, true);
         pipelineActiveRef.current = true;
       } catch {
         pipelineActiveRef.current = false;
+        outputTrack.stop();
+        outputTrack = null;
       }
     };
 
@@ -85,12 +131,21 @@ export function useLiveVideoEffect(
       stopLoop?.();
       video.pause();
       video.srcObject = null;
-      outputTrack?.stop();
       glPipeline?.destroy();
 
-      if (pipelineActiveRef.current) {
-        void track.replaceTrack(original, true).catch(() => undefined);
-        pipelineActiveRef.current = false;
+      const canvasTrack = outputTrack;
+      const wasActive = pipelineActiveRef.current;
+      pipelineActiveRef.current = false;
+
+      if (wasActive) {
+        // Restore SDK-managed camera BEFORE stopping the canvas track.
+        // Stopping first muted the published track permanently.
+        void track
+          .replaceTrack(original, false)
+          .catch(() => undefined)
+          .finally(() => canvasTrack?.stop());
+      } else {
+        canvasTrack?.stop();
       }
     };
   }, [track, enabled]);

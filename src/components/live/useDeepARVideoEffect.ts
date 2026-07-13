@@ -169,6 +169,9 @@ export function useDeepARVideoEffect(
         console.error("[DeepAR] init failed:", err);
         setStatus("error");
         setError(message);
+        outputTrack?.stop();
+        outputTrack = null;
+        pipelineActiveRef.current = false;
       }
     };
 
@@ -178,13 +181,25 @@ export function useDeepARVideoEffect(
       cancelled = true;
       video.pause();
       video.srcObject = null;
-      outputTrack?.stop();
-      deepAR?.shutdown();
+
+      const canvasTrack = outputTrack;
+      const wasActive = pipelineActiveRef.current;
+      pipelineActiveRef.current = false;
       deepARRef.current = null;
 
-      if (pipelineActiveRef.current) {
-        void track.replaceTrack(original, true).catch(() => undefined);
-        pipelineActiveRef.current = false;
+      // Restore camera first, then tear down DeepAR / canvas (same bug as WebGL path).
+      const teardown = () => {
+        deepAR?.shutdown();
+        canvasTrack?.stop();
+      };
+
+      if (wasActive) {
+        void track
+          .replaceTrack(original, false)
+          .catch(() => undefined)
+          .finally(teardown);
+      } else {
+        teardown();
       }
 
       setStatus("idle");
