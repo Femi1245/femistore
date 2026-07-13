@@ -8,7 +8,6 @@ import { markPostViewed } from "@/lib/post-analytics";
 import { loadPostById } from "@/lib/social";
 import type { PostWithMeta, Profile } from "@/lib/types";
 import { BackButton } from "@/components/layout/BackButton";
-import { PostAnalyticsPanel } from "@/components/social/PostAnalyticsPanel";
 import { PostCard } from "@/components/social/PostCard";
 import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 
@@ -81,20 +80,14 @@ export function PostDetailView({
           />
         </div>
       ) : (
-        <div className="space-y-4">
-          {isOwn && (
-            <div id="post-analytics">
-              <PostAnalyticsPanel postId={post.id} ownerId={currentUser.id} />
-            </div>
-          )}
-          <div className="divide-y divide-vintage-border">
-            <PostCard
-              post={post}
-              currentUser={currentUser}
-              onUpdate={refresh}
-              initialShowComments={openComments}
-            />
-          </div>
+        <div className="divide-y divide-vintage-border">
+          <PostCard
+            post={post}
+            currentUser={currentUser}
+            onUpdate={refresh}
+            initialShowComments={openComments}
+            initialShowAnalytics={focusAnalytics && isOwn}
+          />
         </div>
       )}
     </div>

@@ -38,9 +38,12 @@ function formatViewedAt(iso: string): string {
 export function PostAnalyticsPanel({
   postId,
   ownerId,
+  compact = false,
 }: {
   postId: string;
   ownerId: string;
+  /** Inline under a post card (no outer card chrome). */
+  compact?: boolean;
 }) {
   const [data, setData] = useState<PostAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,9 +81,15 @@ export function PostAnalyticsPanel({
     [data],
   );
 
+  const shell = compact
+    ? "overflow-hidden rounded-lg border border-vintage-border/80 bg-vintage-paper-dark/40"
+    : "vintage-card overflow-hidden";
+
   if (loading) {
     return (
-      <div className="vintage-card flex items-center justify-center gap-2 px-4 py-10 text-sm text-vintage-ink-muted">
+      <div
+        className={`${shell} flex items-center justify-center gap-2 px-4 py-8 text-sm text-vintage-ink-muted`}
+      >
         <Loader2 className="h-4 w-4 animate-spin text-vintage-rust" />
         Loading analytics…
       </div>
@@ -89,7 +98,7 @@ export function PostAnalyticsPanel({
 
   if (error || !data) {
     return (
-      <div className="vintage-card px-4 py-6 text-center text-sm text-vintage-ink-muted">
+      <div className={`${shell} px-4 py-5 text-center text-sm text-vintage-ink-muted`}>
         {error ?? "No analytics available."}
       </div>
     );
@@ -97,7 +106,7 @@ export function PostAnalyticsPanel({
 
   if (data.schemaMissing) {
     return (
-      <div className="vintage-card px-4 py-6 text-sm text-vintage-ink-muted">
+      <div className={`${shell} px-4 py-5 text-sm text-vintage-ink-muted`}>
         Post views are not set up yet. Run{" "}
         <code className="text-xs">supabase/post-analytics-schema.sql</code> in
         the Supabase SQL Editor, then refresh.
@@ -113,51 +122,72 @@ export function PostAnalyticsPanel({
   ];
 
   return (
-    <section className="vintage-card overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-vintage-border px-4 py-3">
-        <BarChart3 className="h-4 w-4 text-vintage-rust" />
-        <h2 className="font-display text-sm font-bold text-vintage-ink">
-          Post analytics
-        </h2>
-        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted">
-          Only you can see this
-        </span>
-      </div>
+    <section className={shell}>
+      {!compact && (
+        <div className="flex items-center gap-2 border-b border-vintage-border px-4 py-3">
+          <BarChart3 className="h-4 w-4 text-vintage-rust" />
+          <h2 className="font-display text-sm font-bold text-vintage-ink">
+            Post analytics
+          </h2>
+          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted">
+            Only you can see this
+          </span>
+        </div>
+      )}
+
+      {compact && (
+        <div className="flex items-center gap-2 border-b border-vintage-border/70 px-3 py-2">
+          <BarChart3 className="h-3.5 w-3.5 text-vintage-rust" />
+          <p className="text-xs font-semibold text-vintage-ink">Your analytics</p>
+          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted">
+            Only you
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-px bg-vintage-border sm:grid-cols-4">
         {stats.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-vintage-paper px-3 py-4 text-center">
-            <Icon className="mx-auto mb-1.5 h-4 w-4 text-vintage-rust" />
-            <p className="font-display text-xl font-bold tabular-nums text-vintage-ink">
+          <div
+            key={label}
+            className={`bg-vintage-paper text-center ${compact ? "px-2 py-3" : "px-3 py-4"}`}
+          >
+            <Icon className="mx-auto mb-1 h-3.5 w-3.5 text-vintage-rust" />
+            <p
+              className={`font-display font-bold tabular-nums text-vintage-ink ${
+                compact ? "text-lg" : "text-xl"
+              }`}
+            >
               {value}
             </p>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-vintage-ink-muted">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted">
               {label}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-vintage-border px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-t border-vintage-border px-3 py-2.5 sm:px-4 sm:py-3">
         <div className="flex items-center gap-2 text-sm text-vintage-ink">
           <TrendingUp className="h-4 w-4 text-vintage-olive" />
           <span className="font-semibold">Engagement rate</span>
         </div>
-        <p className="font-display text-lg font-bold tabular-nums text-vintage-ink">
+        <p className="font-display text-base font-bold tabular-nums text-vintage-ink sm:text-lg">
           {data.views === 0 ? "—" : `${data.engagementRate}%`}
         </p>
       </div>
 
-      <div className="border-t border-vintage-border px-4 py-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-vintage-ink-muted">
+      <div className="border-t border-vintage-border px-3 py-3 sm:px-4 sm:py-4">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted sm:mb-3 sm:text-xs">
           Views · last 7 days
         </p>
-        <div className="flex h-24 items-end gap-1.5">
+        <div className={`flex items-end gap-1.5 ${compact ? "h-16" : "h-24"}`}>
           {data.viewsByDay.map((day) => (
             <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[10px] tabular-nums text-vintage-ink-muted">
-                {day.views || ""}
-              </span>
+              {!compact && (
+                <span className="text-[10px] tabular-nums text-vintage-ink-muted">
+                  {day.views || ""}
+                </span>
+              )}
               <div
                 className="w-full rounded-sm bg-vintage-rust/80"
                 style={{
@@ -175,8 +205,8 @@ export function PostAnalyticsPanel({
         </div>
       </div>
 
-      <div className="border-t border-vintage-border px-4 py-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-vintage-ink-muted">
+      <div className="border-t border-vintage-border px-3 py-3 sm:px-4 sm:py-4">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-vintage-ink-muted sm:mb-3 sm:text-xs">
           Recent viewers
         </p>
         {data.recentViewers.length === 0 ? (
@@ -185,44 +215,53 @@ export function PostAnalyticsPanel({
           </p>
         ) : (
           <ul className="space-y-2">
-            {data.recentViewers.map((v) => {
-              const name = v.profile?.display_name ?? "Viewer";
-              const href = v.profile?.username
-                ? getPersonalProfileUrl(v.profile.username)
-                : null;
-              return (
-                <li key={`${v.viewerId}-${v.viewedAt}`} className="flex items-center gap-2.5">
-                  {href ? (
-                    <Link href={href} className="shrink-0">
+            {(compact ? data.recentViewers.slice(0, 5) : data.recentViewers).map(
+              (v) => {
+                const name = v.profile?.display_name ?? "Viewer";
+                const href = v.profile?.username
+                  ? getPersonalProfileUrl(v.profile.username)
+                  : null;
+                return (
+                  <li
+                    key={`${v.viewerId}-${v.viewedAt}`}
+                    className="flex items-center gap-2.5"
+                  >
+                    {href ? (
+                      <Link href={href} className="shrink-0">
+                        <Avatar
+                          name={name}
+                          avatarUrl={v.profile?.avatar_url}
+                          size="sm"
+                        />
+                      </Link>
+                    ) : (
                       <Avatar
                         name={name}
                         avatarUrl={v.profile?.avatar_url}
                         size="sm"
                       />
-                    </Link>
-                  ) : (
-                    <Avatar name={name} avatarUrl={v.profile?.avatar_url} size="sm" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    {href ? (
-                      <Link
-                        href={href}
-                        className="block truncate text-sm font-semibold text-vintage-ink hover:text-vintage-rust"
-                      >
-                        {name}
-                      </Link>
-                    ) : (
-                      <p className="truncate text-sm font-semibold text-vintage-ink">
-                        {name}
-                      </p>
                     )}
-                    <p className="text-[11px] text-vintage-ink-muted">
-                      {formatViewedAt(v.viewedAt)}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
+                    <div className="min-w-0 flex-1">
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="block truncate text-sm font-semibold text-vintage-ink hover:text-vintage-rust"
+                        >
+                          {name}
+                        </Link>
+                      ) : (
+                        <p className="truncate text-sm font-semibold text-vintage-ink">
+                          {name}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-vintage-ink-muted">
+                        {formatViewedAt(v.viewedAt)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              },
+            )}
           </ul>
         )}
       </div>

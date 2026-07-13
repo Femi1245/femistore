@@ -33,6 +33,7 @@ import {
 import type { Comment, PostWithMeta, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { PostAnalyticsPanel } from "@/components/social/PostAnalyticsPanel";
 
 function PostBody({
   post,
@@ -79,14 +80,17 @@ export function PostCard({
   currentUser,
   onUpdate,
   initialShowComments = false,
+  initialShowAnalytics = false,
 }: {
   post: PostWithMeta;
   currentUser: Profile;
   onUpdate: () => void;
   initialShowComments?: boolean;
+  initialShowAnalytics?: boolean;
 }) {
   const [engagement, setEngagement] = useState(post.engagement);
   const [showComments, setShowComments] = useState(initialShowComments);
+  const [showAnalytics, setShowAnalytics] = useState(initialShowAnalytics);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [replyingToComment, setReplyingToComment] = useState<Comment | null>(null);
@@ -104,6 +108,7 @@ export function PostCard({
   const author = post.author;
   const rootId = post.reshare_of ?? post.id;
   const isOwnPost = post.user_id === currentUser.id;
+  const canShowAnalytics = isOwnPost && !post.reshare_of;
   const canEdit =
     isOwnPost && canEditWithinWindow(post.created_at);
 
@@ -338,17 +343,32 @@ export function PostCard({
             <Repeat2 className="h-4 w-4" />
             {engagement.reshares || ""}
           </button>
-          {isOwnPost && (
-            <Link
-              href={`/post/${post.id}?analytics=1`}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-vintage-rust/10 px-3 py-1.5 text-sm font-semibold text-vintage-rust transition hover:bg-vintage-rust/20"
+          {canShowAnalytics && (
+            <button
+              type="button"
+              onClick={() => setShowAnalytics((v) => !v)}
+              className={`ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                showAnalytics
+                  ? "bg-vintage-rust text-[var(--vintage-btn-text)]"
+                  : "bg-vintage-rust/10 text-vintage-rust hover:bg-vintage-rust/20"
+              }`}
               title="Post analytics"
             >
               <BarChart3 className="h-4 w-4" />
               Analytics
-            </Link>
+            </button>
           )}
         </div>
+
+        {canShowAnalytics && showAnalytics && (
+          <div id="post-analytics" className="mt-3">
+            <PostAnalyticsPanel
+              postId={post.id}
+              ownerId={currentUser.id}
+              compact
+            />
+          </div>
+        )}
 
         {reshareOpen && !engagement.reshared_by_me && (
           <div className="mt-3 flex gap-2">
