@@ -341,11 +341,11 @@ export function PostCard({
           {isOwnPost && (
             <Link
               href={`/post/${post.id}?analytics=1`}
-              className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-vintage-ink-muted transition hover:bg-vintage-rust/10 hover:text-vintage-rust"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-vintage-rust/10 px-3 py-1.5 text-sm font-semibold text-vintage-rust transition hover:bg-vintage-rust/20"
               title="Post analytics"
             >
               <BarChart3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Analytics</span>
+              Analytics
             </Link>
           )}
         </div>
