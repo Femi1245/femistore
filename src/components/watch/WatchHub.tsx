@@ -16,6 +16,7 @@ import { VideoCard } from "@/components/watch/VideoCard";
 import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
 import { VideoUploadForm } from "@/components/watch/VideoUploadForm";
 import type { VideoResult } from "@/lib/youtube";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 type Tab = "search" | "history" | "playlists" | "uploads";
 
@@ -109,6 +110,8 @@ export function WatchHub({ user }: { user: Profile }) {
           Search, upload, save playlists, and pick up where you left off on Zumelia.
         </p>
       </div>
+
+      <SectionTipBanner section="watch" />
 
       <div className="flex flex-wrap gap-2">
         {tabs.map(({ id, label, icon: Icon }) => (

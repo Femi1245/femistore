@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { formatPhoneE164 } from "@/lib/format-phone-e164";
 import {
   maskPhone,
   sendPhoneVerificationOtp,
   verifyPhoneOtp,
 } from "@/lib/phone";
+import { PHONE_COUNTRIES, dialCodeForCountry } from "@/lib/phone-countries";
 import type { Profile } from "@/lib/types";
 
 export function PhoneVerification({
@@ -18,6 +20,9 @@ export function PhoneVerification({
   onVerified?: () => void;
 }) {
   const [phone, setPhone] = useState(profile.phone_e164 ?? "");
+  const [dialCode, setDialCode] = useState(
+    () => dialCodeForCountry(profile.country) ?? "+234",
+  );
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"idle" | "otp">("idle");
   const [loading, setLoading] = useState(false);
@@ -25,13 +30,21 @@ export function PhoneVerification({
   const [success, setSuccess] = useState<string | null>(null);
 
   const verified = !!profile.phone_verified_at && !!profile.phone_e164;
+  const preview = useMemo(
+    () => formatPhoneE164(phone, dialCode),
+    [phone, dialCode],
+  );
 
   async function handleSendOtp() {
     setLoading(true);
     setError(null);
     setSuccess(null);
 
-    const { error: sendError } = await sendPhoneVerificationOtp(createClient(), phone);
+    const { error: sendError } = await sendPhoneVerificationOtp(
+      createClient(),
+      phone,
+      dialCode,
+    );
     setLoading(false);
 
     if (sendError) {
@@ -40,14 +53,23 @@ export function PhoneVerification({
     }
 
     setStep("otp");
-    setSuccess("Verification code sent. Check your SMS.");
+    setSuccess(
+      preview
+        ? `Verification code sent to ${preview}. Check your SMS.`
+        : "Verification code sent. Check your SMS.",
+    );
   }
 
   async function handleVerifyOtp() {
     setLoading(true);
     setError(null);
 
-    const { error: verifyError } = await verifyPhoneOtp(createClient(), phone, otp);
+    const { error: verifyError } = await verifyPhoneOtp(
+      createClient(),
+      phone,
+      otp,
+      dialCode,
+    );
     setLoading(false);
 
     if (verifyError) {
@@ -75,8 +97,9 @@ export function PhoneVerification({
         </div>
       ) : (
         <p className="text-xs text-vintage-ink-muted">
-          Verify your number to find and message friends by phone. Use +234… not 080….
-          If SMS still fails, connect Twilio under Supabase → Authentication → Providers → Phone.
+          Verify your number to find and message friends by phone. Pick your
+          country, then enter your local number — we add the country code for
+          you.
         </p>
       )}
 
@@ -84,25 +107,41 @@ export function PhoneVerification({
         <>
           {step === "idle" ? (
             <div className="space-y-3">
+              <select
+                value={dialCode}
+                onChange={(e) => setDialCode(e.target.value)}
+                className="vintage-input w-full px-3 py-2 text-sm"
+                aria-label="Country code"
+              >
+                {PHONE_COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.dial}>
+                    {c.name} ({c.dial})
+                  </option>
+                ))}
+              </select>
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    if (!loading && phone.trim()) handleSendOtp();
+                    if (!loading && phone.trim() && preview) handleSendOtp();
                   }
                 }}
-                placeholder="+2348012345678"
+                placeholder="e.g. 08012345678"
+                inputMode="tel"
+                autoComplete="tel"
                 className="vintage-input w-full px-3 py-2 text-sm"
               />
               <p className="text-[11px] text-vintage-ink-muted">
-                International format with country code. Nigerian local 080… is converted automatically.
+                {preview
+                  ? `Will send to: ${preview}`
+                  : "Enter your local number. Example for Nigeria: 08012345678"}
               </p>
               <button
                 type="button"
                 onClick={handleSendOtp}
-                disabled={loading || !phone.trim()}
+                disabled={loading || !phone.trim() || !preview}
                 className="vintage-btn w-full py-2 text-sm disabled:opacity-50"
               >
                 {loading ? "Sending…" : "Send verification code"}
@@ -121,8 +160,13 @@ export function PhoneVerification({
                 }}
                 placeholder="6-digit code"
                 maxLength={6}
+                inputMode="numeric"
                 className="vintage-input w-full px-3 py-2 text-sm"
               />
+              <p className="text-[11px] text-vintage-ink-muted">
+                Didn&apos;t get a code? Check the number is correct, wait a
+                minute, then go back and resend.
+              </p>
               <div className="flex gap-2">
                 <button
                   type="button"

@@ -67,6 +67,8 @@ export type Profile = {
   business_dm_policy?: DmPolicy | null;
   show_last_seen: boolean;
   show_read_receipts: boolean;
+  /** Show date of birth on the public profile (default true). */
+  show_birthday?: boolean | null;
   ai_assistant_enabled: boolean;
   digest_mode: boolean;
   quiet_hours_start: string | null;

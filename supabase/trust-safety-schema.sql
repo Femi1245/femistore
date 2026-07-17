@@ -18,6 +18,9 @@ alter table public.profiles
   add column if not exists show_read_receipts boolean not null default true;
 
 alter table public.profiles
+  add column if not exists show_birthday boolean not null default true;
+
+alter table public.profiles
   add column if not exists ai_assistant_enabled boolean not null default true;
 
 alter table public.profiles

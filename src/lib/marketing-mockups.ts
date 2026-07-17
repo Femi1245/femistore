@@ -21,7 +21,9 @@ export type MarketingMockupSlideId =
   | "storefront"
   | "calls"
   | "live"
-  | "post-analytics";
+  | "post-analytics"
+  | "section-tips"
+  | "privacy-controls";
 
 export type MarketingMockupSlide = {
   id: MarketingMockupSlideId;
@@ -132,6 +134,38 @@ Creators deserve receipts. 🟠
 
 Try it: ${MARKETING_APP_URL}`,
     hashtags: "#buildinpublic #creators #Zumelia",
+  },
+  {
+    id: "section-tips",
+    title: "In-app navigation tips",
+    feature: "First-visit tip banners on Feed, Chat, Live, Watch, and more",
+    planDayRefs: ["Ongoing Wed", "Ongoing Fri"],
+    shippedAt: "2026-07",
+    caption: `New to Zumelia? Every section now greets you with a tip.
+
+Feed, Chat, Live, Watch, Opportunities, Profile, Notifications —
+short guidance + a clear next step. Dismiss once and you're set. 🟠
+
+Try it: ${MARKETING_APP_URL}`,
+    hashtags: "#buildinpublic #UX #Zumelia",
+  },
+  {
+    id: "privacy-controls",
+    title: "Privacy controls",
+    feature: "Hide your birthday, go private, verify your phone from any country",
+    planDayRefs: ["Ongoing Thu"],
+    shippedAt: "2026-07",
+    caption: `Your profile, your rules.
+
+New on Zumelia:
+→ Hide your birthday with one toggle
+→ Private account = followers-only posts
+→ Phone verification for every country, not just one
+
+Privacy shouldn't be a premium feature. 🟠
+
+Try it: ${MARKETING_APP_URL}`,
+    hashtags: "#privacy #buildinpublic #Zumelia",
   },
 ];
 

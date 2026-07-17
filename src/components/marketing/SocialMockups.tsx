@@ -5,7 +5,9 @@ import {
   BarChart3,
   Briefcase,
   Check,
+  Compass,
   Copy,
+  Lock,
   MessageCircle,
   Phone,
   Radio,
@@ -28,6 +30,8 @@ const SLIDE_ICONS: Record<MarketingMockupSlideId, typeof Briefcase> = {
   calls: Phone,
   live: Radio,
   "post-analytics": BarChart3,
+  "section-tips": Compass,
+  "privacy-controls": Lock,
 };
 
 function PhoneFrame({ children, label }: { children: React.ReactNode; label: string }) {
@@ -294,6 +298,98 @@ function PostAnalyticsMock() {
   );
 }
 
+function SectionTipsMock() {
+  return (
+    <div className="min-h-[380px] bg-vintage-cream px-3 py-3">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-vintage-rust">
+        Today
+      </p>
+      <p className="mt-1 font-display text-sm font-bold text-vintage-ink">Your circle</p>
+      <div className="mt-3 rounded-sm border border-vintage-border bg-vintage-paper p-2.5">
+        <div className="flex gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-vintage-rust/15 text-[10px] font-bold text-vintage-rust">
+            Tip
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-vintage-ink">Your circle, your feed</p>
+            <p className="mt-0.5 text-[8px] leading-relaxed text-vintage-ink-muted">
+              Switch Friends, Close, or Following. Connect in Chat → Discover.
+            </p>
+            <div className="mt-2 flex gap-1.5">
+              <span className="rounded-sm bg-vintage-rust px-2 py-0.5 text-[7px] font-bold text-on-rust">
+                Discover people
+              </span>
+              <span className="px-1 py-0.5 text-[7px] font-semibold text-vintage-ink-muted">
+                Got it
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {["Feed", "Chat", "Live"].map((label) => (
+          <div
+            key={label}
+            className="rounded-sm border border-vintage-border/70 bg-vintage-paper px-2 py-1.5 text-[9px] font-semibold text-vintage-ink-muted"
+          >
+            Tip on {label} · dismiss once
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PrivacyControlsMock() {
+  const toggles = [
+    { label: "Private account", on: true, hint: "Followers-only posts" },
+    { label: "Show birthday on my profile", on: false, hint: "Hidden from everyone" },
+    { label: "Show last seen", on: true, hint: "" },
+  ];
+  return (
+    <div className="min-h-[380px] bg-vintage-cream px-3 py-3">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-vintage-rust">
+        Settings
+      </p>
+      <p className="mt-1 font-display text-sm font-bold text-vintage-ink">Privacy</p>
+      <div className="mt-3 space-y-2">
+        {toggles.map((t) => (
+          <div
+            key={t.label}
+            className="rounded-sm border border-vintage-border bg-vintage-paper px-2.5 py-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold text-vintage-ink">{t.label}</p>
+              <span
+                className={`flex h-3.5 w-6 items-center rounded-full px-0.5 ${
+                  t.on ? "justify-end bg-vintage-rust" : "justify-start bg-vintage-ink/20"
+                }`}
+              >
+                <span className="h-2.5 w-2.5 rounded-full bg-white" />
+              </span>
+            </div>
+            {t.hint && (
+              <p className="mt-0.5 text-[8px] text-vintage-ink-muted">{t.hint}</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-sm border border-vintage-border bg-vintage-paper p-2.5">
+        <p className="text-[9px] font-bold text-vintage-ink">Phone number</p>
+        <div className="mt-1.5 rounded-sm border border-vintage-border/70 px-2 py-1 text-[9px] text-vintage-ink">
+          United Kingdom (+44) ▾
+        </div>
+        <div className="mt-1.5 rounded-sm border border-vintage-border/70 px-2 py-1 text-[9px] text-vintage-ink-muted">
+          7911 123456
+        </div>
+        <p className="mt-1 text-[7px] text-vintage-ink-muted">
+          Every country supported — code added automatically
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   "seller-inbox": <SellerInboxMock />,
   "service-gig": <GigListingMock />,
@@ -302,6 +398,8 @@ const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   calls: <CallsMock />,
   live: <LiveMock />,
   "post-analytics": <PostAnalyticsMock />,
+  "section-tips": <SectionTipsMock />,
+  "privacy-controls": <PrivacyControlsMock />,
 };
 
 export function SocialMockups() {

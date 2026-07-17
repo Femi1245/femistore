@@ -36,6 +36,8 @@ A day-by-day "build in public" posting plan for launching the Zumelia brand as a
 | `calls` | Voice & video calls | Ongoing Thu |
 | `auto-reply` | Seller auto-reply settings | Ongoing Fri |
 | `live` | Go live + gifts | Ongoing Sat |
+| `post-analytics` | Owner post insights | Ongoing Tue, Ongoing Sun |
+| `section-tips` | In-app navigation tips | Ongoing Wed, Ongoing Fri |
 
 When you ship a **new feature**, add a row here + a new slide in `marketing-mockups.ts` (agent rule in `.cursor/rules/marketing-mockups.mdc`).
 
@@ -49,9 +51,9 @@ Rotate mockups and text. Check off each week.
 |-----|------|---------|
 | **Mon** | 🖼️ Mockup | `seller-inbox` — Seller vs personal inbox |
 | **Tue** | Text / 📱 | Build-in-public *or* mockup `post-analytics` |
-| **Wed** | 🖼️ Mockup | `service-gig` or `storefront` |
-| **Thu** | Text | Ask a question / poll your audience |
-| **Fri** | 🖼️ Mockup | `auto-reply` or `calls` |
+| **Wed** | 🖼️ Mockup | `service-gig`, `storefront`, or `section-tips` |
+| **Thu** | Text / 📱 | Ask a question / poll *or* mockup `privacy-controls` |
+| **Fri** | 🖼️ Mockup | `auto-reply`, `calls`, or `section-tips` |
 | **Sat** | 🖼️ Mockup | `live` |
 | **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` |
 

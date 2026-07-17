@@ -39,7 +39,7 @@ import { useLiveStreamEffects } from "@/components/live/useLiveStreamEffects";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { LiveGiftFeed } from "@/components/gifts/LiveGiftFeed";
 
-/** If LiveKit connected but camera stayed muted/off, re-enable once. */
+/** If LiveKit connected but camera stayed muted/off/dead, recover it. */
 function EnsurePublisherCamera({ active }: { active: boolean }) {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
@@ -48,15 +48,30 @@ function EnsurePublisherCamera({ active }: { active: boolean }) {
     if (!active) return;
 
     let cancelled = false;
+    let recovering = false;
+
+    const cameraMst = () =>
+      localParticipant.getTrackPublication(Track.Source.Camera)?.track
+        ?.mediaStreamTrack ?? null;
+
     const enable = async () => {
+      if (cancelled || recovering) return;
+      recovering = true;
       try {
         if (!localParticipant.isCameraEnabled) {
           await localParticipant.setCameraEnabled(true);
+        } else if (cameraMst()?.readyState === "ended") {
+          // Camera claims to be on but the track is dead (e.g. after an
+          // effects pipeline teardown). Toggle off→on to reacquire it.
+          await localParticipant.setCameraEnabled(false);
+          if (!cancelled) await localParticipant.setCameraEnabled(true);
         }
       } catch (err) {
         if (!cancelled) {
           console.error("[Live] camera enable failed:", err);
         }
+      } finally {
+        recovering = false;
       }
     };
 
@@ -67,15 +82,28 @@ function EnsurePublisherCamera({ active }: { active: boolean }) {
     room.on(RoomEvent.Connected, onConnected);
     room.on(RoomEvent.LocalTrackPublished, onConnected);
 
-    const timer = window.setTimeout(() => {
+    const startupTimer = window.setTimeout(() => {
       if (!cancelled && !localParticipant.isCameraEnabled) {
         void enable();
       }
     }, 800);
 
+    // Watchdog: only recovers a dead track while the camera is meant to be on,
+    // so it never fights the host intentionally turning the camera off.
+    const watchdog = window.setInterval(() => {
+      if (cancelled) return;
+      if (
+        localParticipant.isCameraEnabled &&
+        cameraMst()?.readyState === "ended"
+      ) {
+        void enable();
+      }
+    }, 2000);
+
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
+      window.clearTimeout(startupTimer);
+      window.clearInterval(watchdog);
       room.off(RoomEvent.Connected, onConnected);
       room.off(RoomEvent.LocalTrackPublished, onConnected);
     };
@@ -257,8 +285,19 @@ function PublisherStage({
         {localCam && localCam.publication && isCameraEnabled ? (
           <VideoTrack trackRef={localCam} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-zinc-950">
-            <p className="text-sm text-white/60">Camera is off</p>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-zinc-950">
+            {!localCam?.publication ? (
+              <>
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+                <p className="text-sm text-white/60">Starting camera…</p>
+                <p className="max-w-xs text-center text-xs text-white/40">
+                  If this takes long, allow camera access in your browser and
+                  check no other app is using the camera.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-white/60">Camera is off</p>
+            )}
           </div>
         )}
       </div>

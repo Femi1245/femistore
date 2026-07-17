@@ -23,6 +23,7 @@ import { isBirthdayToday } from "@/lib/birthday";
 import type { FollowCounts, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedName } from "@/components/VerifiedBadge";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 export function ProfileHeader({
   profile,
@@ -143,8 +144,9 @@ export function ProfileHeader({
     if (convId) router.push(`/chat?c=${encodeURIComponent(convId)}`);
   }
 
-  const birthdate = formatBirthdate(profile.date_of_birth);
-  const birthdayToday = isBirthdayToday(profile.date_of_birth);
+  const birthdayVisible = isOwn || profile.show_birthday !== false;
+  const birthdate = birthdayVisible ? formatBirthdate(profile.date_of_birth) : null;
+  const birthdayToday = birthdayVisible && isBirthdayToday(profile.date_of_birth);
   const showBusiness = hasBusinessProfile(profile);
   const personalView = variant === "personal";
   const showCover = !personalView && showBusiness && !!profile.business_cover_url;
@@ -158,7 +160,9 @@ export function ProfileHeader({
       : undefined;
 
   return (
-    <div className="vintage-card overflow-hidden">
+    <div className="space-y-4">
+      {isOwn && <SectionTipBanner section="profile" />}
+      <div className="vintage-card overflow-hidden">
       <div className="relative">
         <div
           className={`relative z-0 h-32 sm:h-44 ${showCover ? "" : "profile-cover-editorial"}`}
@@ -368,6 +372,7 @@ export function ProfileHeader({
             ) : null}
           </div>
         </div>
+      </div>
       </div>
 
       {showGift && !isOwn && (

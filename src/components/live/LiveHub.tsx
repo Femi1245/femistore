@@ -7,6 +7,7 @@ import { Mic2, Radio } from "lucide-react";
 import { LiveSetupNotice } from "@/components/live/LiveSetupNotice";
 import { LiveStreamList } from "@/components/live/LiveStreamList";
 import { VoiceRoomList } from "@/components/voice/VoiceRoomList";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 type LiveTab = "video" | "voice";
 
@@ -42,6 +43,8 @@ export function LiveHub() {
           </Link>
         )}
       </header>
+
+      <SectionTipBanner section="live" />
 
       <div className="editorial-segmented w-full sm:w-auto">
         <button

@@ -142,6 +142,11 @@ export function useLiveVideoEffect(
         // Stopping first muted the published track permanently.
         void track
           .replaceTrack(original, false)
+          .then(() => {
+            // If the original camera track died while the pipeline ran,
+            // reacquire a fresh one so the camera doesn't stay black/off.
+            if (original.readyState === "ended") return track.restartTrack();
+          })
           .catch(() => undefined)
           .finally(() => canvasTrack?.stop());
       } else {

@@ -44,7 +44,24 @@ export function ConnectionRequestsPanel({
     onChanged?.();
   }
 
-  if (!requests.length) return null;
+  if (!requests.length) {
+    return (
+      <section className="mb-4">
+        <div className="vintage-card-inset flex flex-col items-start gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-center gap-2 text-sm text-vintage-ink-muted">
+            <UserPlus className="h-4 w-4 shrink-0 text-vintage-rust" />
+            Connection requests from other users appear here.
+          </p>
+          <Link
+            href="/chat"
+            className="text-xs font-semibold text-vintage-rust hover:underline"
+          >
+            Discover people in Chat
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-6">

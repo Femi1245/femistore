@@ -1,17 +1,29 @@
 /** Normalize user input to E.164 for Supabase Auth (+country + number, max 15 digits). */
-export function formatPhoneE164(input: string): string | null {
+export function formatPhoneE164(
+  input: string,
+  dialCode?: string | null,
+): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
+  // Keep a leading +, drop spaces/dashes/parens everywhere else.
   let digits = trimmed.replace(/[^\d+]/g, "");
+  if (digits.includes("+")) {
+    digits = `+${digits.replace(/\+/g, "")}`;
+  }
 
-  // Local NG mobile: 08012345678 → +2348012345678
-  if (digits.startsWith("0") && digits.length >= 10) {
-    digits = `+234${digits.slice(1)}`;
-  } else if (digits.startsWith("234") && !digits.startsWith("+")) {
-    digits = `+${digits}`;
-  } else if (!digits.startsWith("+")) {
-    digits = `+${digits.replace(/^\+/, "")}`;
+  if (!digits.startsWith("+")) {
+    const dial = dialCode?.replace(/\D/g, "");
+    if (dial) {
+      // Local number for the selected country: drop leading zeros, prefix dial code.
+      const local = digits.replace(/^0+/, "");
+      digits = local.startsWith(dial) ? `+${local}` : `+${dial}${local}`;
+    } else if (digits.startsWith("0") && digits.length >= 10) {
+      // Legacy fallback when no country was selected (Nigerian local format).
+      digits = `+234${digits.slice(1)}`;
+    } else {
+      digits = `+${digits}`;
+    }
   }
 
   const numeric = digits.slice(1).replace(/\D/g, "");
@@ -22,5 +34,5 @@ export function formatPhoneE164(input: string): string | null {
 }
 
 export function phoneFormatHint(): string {
-  return "Use international format with country code, e.g. +2348012345678 (not 080…).";
+  return "Pick your country and enter your local number, or use international format like +14155550123.";
 }

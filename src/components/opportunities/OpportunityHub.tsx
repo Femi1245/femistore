@@ -24,6 +24,7 @@ import type {
 } from "@/lib/types";
 import { OpportunityCard } from "@/components/opportunities/OpportunityCard";
 import { SearchWithSuggestions } from "@/components/search/SearchWithSuggestions";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 type Tab = "all" | "services" | "hiring" | "mine";
 
@@ -75,6 +76,8 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
 
   return (
     <div className="space-y-6">
+      <SectionTipBanner section="opportunities" />
+
       <div className="vintage-card p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

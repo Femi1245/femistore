@@ -3,8 +3,11 @@ import { normalizeProfile } from "@/lib/auth";
 import { formatPhoneE164, phoneFormatHint } from "@/lib/format-phone-e164";
 import type { Profile } from "@/lib/types";
 
-export function normalizePhone(input: string): string | null {
-  return formatPhoneE164(input);
+export function normalizePhone(
+  input: string,
+  dialCode?: string | null,
+): string | null {
+  return formatPhoneE164(input, dialCode);
 }
 
 export function maskPhone(phone: string): string {
@@ -37,8 +40,9 @@ function mapPhoneAuthError(message: string): string {
 export async function sendPhoneVerificationOtp(
   supabase: SupabaseClient,
   phone: string,
+  dialCode?: string | null,
 ): Promise<{ error?: string }> {
-  const normalized = normalizePhone(phone);
+  const normalized = normalizePhone(phone, dialCode);
   if (!normalized) {
     return { error: `Enter a valid phone number. ${phoneFormatHint()}` };
   }
@@ -55,8 +59,9 @@ export async function verifyPhoneOtp(
   supabase: SupabaseClient,
   phone: string,
   token: string,
+  dialCode?: string | null,
 ): Promise<{ error?: string }> {
-  const normalized = normalizePhone(phone);
+  const normalized = normalizePhone(phone, dialCode);
   if (!normalized) return { error: "Invalid phone number." };
 
   const { error } = await supabase.auth.verifyOtp({

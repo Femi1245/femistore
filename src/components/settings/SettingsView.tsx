@@ -223,6 +223,18 @@ export function SettingsView({ profile }: { profile: Profile }) {
           When private, only followers can see your full profile and posts.
         </p>
         <label className="flex items-center justify-between gap-4">
+          <span className="text-sm text-vintage-ink">Show birthday on my profile</span>
+          <input
+            type="checkbox"
+            checked={privacy.show_birthday}
+            onChange={(e) => void savePrivacy({ show_birthday: e.target.checked })}
+            className="h-4 w-4 accent-vintage-rust"
+          />
+        </label>
+        <p className="text-xs text-vintage-ink-muted">
+          Turn off to hide your date of birth from everyone. Only you will see it.
+        </p>
+        <label className="flex items-center justify-between gap-4">
           <span className="text-sm text-vintage-ink">Zumelia AI assistant</span>
           <input
             type="checkbox"

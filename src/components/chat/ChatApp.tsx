@@ -93,6 +93,7 @@ import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
 import type { ChatFolder } from "@/lib/types";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 import {
   ASSISTANT_DISPLAY_NAME,
   isAssistantProfile,
@@ -755,6 +756,11 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     >
       <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
+      {!activeChat && (
+        <div className="border-b border-vintage-border bg-vintage-paper px-3 py-2 md:px-4">
+          <SectionTipBanner section="chat" />
+        </div>
+      )}
       {modal && (
         <CreateConversationModal
           mode={modal}

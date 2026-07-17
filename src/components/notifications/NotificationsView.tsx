@@ -34,6 +34,7 @@ import { CHAT_UNREAD_REFRESH_EVENT } from "@/components/chat/useUnreadChatCount"
 import { NOTIFICATION_UNREAD_REFRESH_EVENT } from "@/components/notifications/useUnreadNotificationCount";
 import type { Notification, NotificationType, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 const iconMap: Record<
   NotificationType,
@@ -222,6 +223,8 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
         )}
       </div>
 
+      <SectionTipBanner section="notifications" />
+
       <ConnectionRequestsPanel userId={currentUser.id} onChanged={refresh} />
 
       {loading ? (
@@ -234,7 +237,9 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
         </div>
       ) : notifications.length === 0 ? (
         <div className="vintage-card flex flex-col items-center gap-3 p-10 text-center">
-          <Bell className="h-10 w-10 text-vintage-ink-muted" />
+          <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-vintage-rust/10 text-vintage-rust">
+            <Bell className="h-7 w-7" />
+          </div>
           <p className="font-display text-lg font-bold text-vintage-ink">
             No notifications yet
           </p>
@@ -242,6 +247,14 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
             When someone connects with you, likes your post, comments, goes live,
             or sends a message, you&apos;ll see it here instantly.
           </p>
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            <Link href="/feed" className="vintage-btn px-4 py-2 text-sm">
+              Go to feed
+            </Link>
+            <Link href="/chat" className="vintage-btn-outline px-4 py-2 text-sm">
+              Discover people
+            </Link>
+          </div>
         </div>
       ) : (
         <ul className="vintage-card divide-y divide-vintage-border overflow-hidden">

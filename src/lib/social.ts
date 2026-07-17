@@ -195,12 +195,15 @@ export async function enrichPosts(
   posts: Post[],
   currentUserId: string,
 ): Promise<PostWithMeta[]> {
-  const withAuthors = await attachAuthors(supabase, posts);
-  const engagement = await getEngagement(
-    supabase,
-    withAuthors.map((p) => p.id),
-    currentUserId,
-  );
+  // Authors and engagement are independent — fetch them in parallel.
+  const [withAuthors, engagement] = await Promise.all([
+    attachAuthors(supabase, posts),
+    getEngagement(
+      supabase,
+      posts.map((p) => p.id),
+      currentUserId,
+    ),
+  ]);
 
   return withAuthors.map((p) => ({
     ...p,
@@ -238,33 +241,41 @@ export async function loadFeed(
   userId: string,
   mode: FeedMode = "friends",
 ): Promise<PostWithMeta[]> {
-  const { loadBlockedIds, loadMutedIds } = await import("@/lib/safety");
-  const { loadKeywordMutes, filterPostsByKeywords } = await import("@/lib/content-filters");
+  // Safety lists and feed-source ids are independent — load them in parallel.
+  const safetyPromise = (async () => {
+    const { loadBlockedIds, loadMutedIds } = await import("@/lib/safety");
+    const { loadKeywordMutes } = await import("@/lib/content-filters");
+    return Promise.all([
+      loadBlockedIds(supabase, userId),
+      loadMutedIds(supabase, userId),
+      loadKeywordMutes(supabase, userId),
+    ]);
+  })();
 
-  const [blockedIds, mutedIds, keywordRows] = await Promise.all([
-    loadBlockedIds(supabase, userId),
-    loadMutedIds(supabase, userId),
-    loadKeywordMutes(supabase, userId),
-  ]);
-  const keywords = keywordRows.map((k) => k.keyword);
-
-  let ids: string[] = [userId];
-
-  if (mode === "friends") {
-    const { loadMutualFriends } = await import("@/lib/chat");
-    const friends = await loadMutualFriends(supabase, userId);
-    ids = [userId, ...friends.map((f) => f.id)];
-  } else if (mode === "close_friends") {
-    const { loadCloseFriendIds } = await import("@/lib/close-friends");
-    const closeIds = await loadCloseFriendIds(supabase, userId);
-    ids = [userId, ...closeIds];
-  } else {
+  const idsPromise = (async (): Promise<string[]> => {
+    if (mode === "friends") {
+      const { loadMutualFriends } = await import("@/lib/chat");
+      const friends = await loadMutualFriends(supabase, userId);
+      return [userId, ...friends.map((f) => f.id)];
+    }
+    if (mode === "close_friends") {
+      const { loadCloseFriendIds } = await import("@/lib/close-friends");
+      const closeIds = await loadCloseFriendIds(supabase, userId);
+      return [userId, ...closeIds];
+    }
     const { data: following } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId);
-    ids = [userId, ...(following?.map((f) => f.following_id) ?? [])];
-  }
+    return [userId, ...(following?.map((f) => f.following_id) ?? [])];
+  })();
+
+  const [[blockedIds, mutedIds, keywordRows], ids] = await Promise.all([
+    safetyPromise,
+    idsPromise,
+  ]);
+  const { filterPostsByKeywords } = await import("@/lib/content-filters");
+  const keywords = keywordRows.map((k) => k.keyword);
 
   if (ids.length === 0) return [];
 

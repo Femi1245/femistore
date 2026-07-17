@@ -11,6 +11,7 @@ import { CreatePost } from "@/components/social/CreatePost";
 import { PostCard } from "@/components/social/PostCard";
 import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 import { VibePromptBanner } from "@/components/social/VibePromptBanner";
+import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 export function FeedView({ currentUser }: { currentUser: Profile }) {
   const [posts, setPosts] = useState<PostWithMeta[]>([]);
@@ -75,6 +76,8 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
           </div>
         </div>
       </header>
+
+      <SectionTipBanner section="feed" />
 
       {inBusinessMode ? (
         <div className="vintage-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">

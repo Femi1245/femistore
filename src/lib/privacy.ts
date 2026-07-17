@@ -6,6 +6,7 @@ export type PrivacySettings = {
   dm_policy: DmPolicy;
   show_last_seen: boolean;
   show_read_receipts: boolean;
+  show_birthday: boolean;
   ai_assistant_enabled: boolean;
   digest_mode: boolean;
   quiet_hours_start: string | null;
@@ -35,6 +36,7 @@ export function privacyFromProfile(profile: Profile): PrivacySettings {
     dm_policy: profile.dm_policy ?? "friends",
     show_last_seen: profile.show_last_seen ?? true,
     show_read_receipts: profile.show_read_receipts ?? true,
+    show_birthday: profile.show_birthday ?? true,
     ai_assistant_enabled: profile.ai_assistant_enabled ?? true,
     digest_mode: profile.digest_mode ?? false,
     quiet_hours_start: profile.quiet_hours_start ?? null,

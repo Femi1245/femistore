@@ -196,6 +196,10 @@ export function useDeepARVideoEffect(
       if (wasActive) {
         void track
           .replaceTrack(original, false)
+          .then(() => {
+            // Reacquire the camera if the original track died mid-pipeline.
+            if (original.readyState === "ended") return track.restartTrack();
+          })
           .catch(() => undefined)
           .finally(teardown);
       } else {
