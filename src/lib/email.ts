@@ -13,6 +13,7 @@ export type SendEmailInput = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
   tags?: { name: string; value: string }[];
 };
 
@@ -35,6 +36,7 @@ export async function sendTransactionalEmail(
       subject: input.subject,
       html: input.html,
       text: input.text,
+      reply_to: input.replyTo,
       tags: input.tags,
     }),
   });

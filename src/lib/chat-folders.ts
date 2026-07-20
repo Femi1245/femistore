@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { ChatFolder } from "./types";
+import type { ChatFolder, Profile } from "./types";
 import { upsertMemberSettingsRow } from "./chat-inbox";
+import { userAllowsReadReceipts } from "./read-receipts";
 
 export async function loadChatFolders(
   supabase: SupabaseClient,
@@ -89,7 +90,10 @@ export async function markConversationRead(
   supabase: SupabaseClient,
   userId: string,
   conversationId: string,
+  profile?: Pick<Profile, "show_read_receipts">,
 ): Promise<void> {
+  if (profile && !userAllowsReadReceipts(profile)) return;
+
   await upsertMemberSettingsRow(supabase, userId, conversationId, {
     last_read_at: new Date().toISOString(),
   });

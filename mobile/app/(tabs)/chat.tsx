@@ -18,11 +18,12 @@ import { colors, spacing } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   conversationLabel,
+  filterConversationPreviews,
   findOrCreateConversation,
   formatMessageTime,
   joinChannel,
   loadActiveChat,
-  loadConversations,
+  loadAllConversations,
   loadMutualFriends,
   loadPublicChannels,
   secretMessageExpiry,
@@ -31,6 +32,12 @@ import { findUserByPhone } from "@/lib/phone";
 import { startCall } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { sendVoiceMessageFromUri } from "@/lib/voicemail";
+import { markConversationRead } from "@/lib/chat-read";
+import {
+  isMessageReadByOther,
+  loadConversationReadCursors,
+  otherMemberReadAt as pickOtherMemberReadAt,
+} from "@/lib/read-receipts";
 import type { ActiveChat, ConversationPreview, Message, Profile } from "@/lib/types";
 
 type Tab = "chats" | "secret" | "discover" | "phone" | "channels";
@@ -52,16 +59,14 @@ export default function ChatScreen() {
   const [phoneResult, setPhoneResult] = useState<Profile | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [otherMemberReadAt, setOtherMemberReadAt] = useState<string | null>(null);
 
   const refreshConversations = useCallback(async () => {
     if (!profile) return;
     const supabase = getSupabase();
-    const [regular, secret] = await Promise.all([
-      loadConversations(supabase, profile.id, "regular"),
-      loadConversations(supabase, profile.id, "secret"),
-    ]);
-    setConversations(regular);
-    setSecretChats(secret);
+    const all = await loadAllConversations(supabase, profile.id);
+    setConversations(filterConversationPreviews(all, "regular"));
+    setSecretChats(filterConversationPreviews(all, "secret"));
   }, [profile]);
 
   useEffect(() => {
@@ -134,6 +139,29 @@ export default function ChatScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resubscribe only when conversation id changes
   }, [activeChat?.convId, refreshConversations]);
+
+  useEffect(() => {
+    if (!profile || !activeChat?.convId || activeChat.kind !== "dm" || !activeChat.otherUser) {
+      setOtherMemberReadAt(null);
+      return;
+    }
+
+    const supabase = getSupabase();
+    const refresh = async () => {
+      const cursors = await loadConversationReadCursors(supabase, activeChat.convId);
+      setOtherMemberReadAt(pickOtherMemberReadAt(cursors, activeChat.otherUser!.id));
+    };
+
+    void refresh();
+    void markConversationRead(supabase, profile.id, activeChat.convId, profile);
+    const interval = setInterval(refresh, 4000);
+    return () => clearInterval(interval);
+  }, [profile, activeChat?.convId, activeChat?.kind, activeChat?.otherUser?.id]);
+
+  useEffect(() => {
+    if (!profile || !activeChat?.convId || messages.length === 0) return;
+    void markConversationRead(getSupabase(), profile.id, activeChat.convId, profile);
+  }, [profile, activeChat?.convId, messages.length]);
 
   async function openById(convId: string) {
     if (!profile) return;
@@ -329,7 +357,19 @@ export default function ChatScreen() {
                 ) : (
                   <Text style={mine ? styles.bubbleTextMine : styles.bubbleText}>{item.content}</Text>
                 )}
-                <Text style={styles.time}>{formatMessageTime(item.created_at)}</Text>
+                <View style={styles.timeRow}>
+                  <Text style={[styles.time, mine && styles.timeMine]}>
+                    {formatMessageTime(item.created_at)}
+                  </Text>
+                  {mine &&
+                    activeChat.kind === "dm" &&
+                    activeChat.otherUser &&
+                    !item.deleted_at && (
+                      <Text style={styles.readReceipt}>
+                        {isMessageReadByOther(item, otherMemberReadAt) ? " ✓✓ Read" : " ✓ Sent"}
+                      </Text>
+                    )}
+                </View>
               </View>
             );
           }}
@@ -540,7 +580,10 @@ const styles = StyleSheet.create({
   sender: { fontSize: 10, fontWeight: "700", color: colors.rust, marginBottom: 2 },
   bubbleText: { color: colors.ink },
   bubbleTextMine: { color: colors.btnText },
-  time: { fontSize: 10, marginTop: 4, opacity: 0.7, color: colors.inkMuted },
+  timeRow: { flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 },
+  time: { fontSize: 10, opacity: 0.7, color: colors.inkMuted },
+  timeMine: { color: colors.btnText },
+  readReceipt: { fontSize: 10, color: colors.btnText, opacity: 0.85, fontWeight: "600" },
   readOnly: { textAlign: "center", padding: spacing.md, color: colors.inkMuted, fontSize: 12 },
   composer: { flexDirection: "row", padding: spacing.sm, gap: 8, borderTopWidth: 2, borderTopColor: colors.border, backgroundColor: colors.paper },
   input: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, color: colors.ink },

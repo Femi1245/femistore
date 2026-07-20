@@ -41,11 +41,23 @@ function createExpoConfig({ config }: ConfigContext): ExpoConfig {
       ],
       "expo-web-browser",
       "expo-image",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/icon.png",
+          color: "#c45c3e",
+          sounds: [],
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
     },
-    extra: {},
+    extra: {
+      eas: {
+        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
+      },
+    },
   };
 }
 

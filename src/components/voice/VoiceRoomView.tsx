@@ -11,6 +11,7 @@ import {
 import "@livekit/components-styles";
 import { Loader2, Mic, MicOff, PhoneOff } from "lucide-react";
 import type { Profile, VoiceRoom } from "@/lib/types";
+import { isBenignLiveKitError } from "@/lib/livekit-errors";
 import { hostDisplayName } from "@/lib/voice-rooms";
 
 function VoiceControls({
@@ -151,6 +152,10 @@ export function VoiceRoomView({
         connect
         audio
         video={false}
+        onError={(err) => {
+          if (isBenignLiveKitError(err)) return;
+          setError(err.message || "Could not stay connected to the lounge");
+        }}
         onDisconnected={() => router.push("/live?tab=voice")}
       >
         <RoomAudioRenderer />

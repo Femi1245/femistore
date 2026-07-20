@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const { profile, error: profileError, isNewUser } = await ensureProfile(
+    const { profile, error: profileError } = await ensureProfile(
       supabase,
       data.user,
     );
@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       );
     }
 
-    if (isNewUser && data.user.email) {
+    if (data.user.email) {
       void sendWelcomeEmailIfNeeded({
         userId: data.user.id,
         displayName: profile.display_name,

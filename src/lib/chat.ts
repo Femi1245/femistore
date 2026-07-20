@@ -435,24 +435,6 @@ export async function loadPublicChannels(
     }));
 }
 
-async function getLastMessage(
-  supabase: SupabaseClient,
-  convId: string,
-): Promise<{ content: string | null; created_at: string | null }> {
-  const { data } = await supabase
-    .from("messages")
-    .select("content, created_at")
-    .eq("conversation_id", convId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return {
-    content: data?.content ?? null,
-    created_at: data?.created_at ?? null,
-  };
-}
-
 export type ConversationFilter =
   | "all"
   | "regular"
@@ -462,6 +444,220 @@ export type ConversationFilter =
   | "archived"
   | "unread"
   | "requests";
+
+function sortConversationPreviews(previews: ConversationPreview[]): ConversationPreview[] {
+  return [...previews].sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    return tb - ta;
+  });
+}
+
+/** Client-side filter after a single batched inbox load. */
+export function filterConversationPreviews(
+  previews: ConversationPreview[],
+  userId: string,
+  filter: ConversationFilter,
+  folderId?: string | null,
+): ConversationPreview[] {
+  return previews.filter((preview) => {
+    if (filter === "requests") {
+      if (!preview.is_pending_request) return false;
+    } else if (preview.is_pending_request) {
+      return false;
+    }
+
+    if (folderId !== undefined) {
+      const itemFolder = preview.folder_id ?? null;
+      if (folderId === null) {
+        if (itemFolder !== null) return false;
+      } else if (itemFolder !== folderId) {
+        return false;
+      }
+    }
+
+    if (filter === "archived") {
+      if (!preview.is_archived) return false;
+    } else if (preview.is_archived) {
+      return false;
+    }
+
+    const isSecret = !!preview.is_secret;
+    const sellerGig = !!preview.is_seller_gig;
+
+    if (filter === "regular" || filter === "personal") {
+      if (isSecret || sellerGig) return false;
+    }
+    if (filter === "seller") {
+      if (isSecret || !sellerGig) return false;
+    }
+    if (filter === "secret" && !isSecret) return false;
+    if (filter === "unread" && !preview.is_unread) return false;
+
+    return true;
+  });
+}
+
+/** One batched fetch for every conversation tab (avoids N+1 per row). */
+export async function loadAllConversations(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ConversationPreview[]> {
+  const { loadPendingRequestConvIds } = await import("@/lib/message-requests");
+  const { loadBlockedIds } = await import("@/lib/safety");
+
+  const [pendingRequestIds, blockedIds, { data: memberships }, settingsMap] =
+    await Promise.all([
+      loadPendingRequestConvIds(supabase, userId),
+      loadBlockedIds(supabase, userId),
+      supabase
+        .from("conversation_members")
+        .select("conversation_id, role")
+        .eq("user_id", userId),
+      loadMemberSettingsMap(supabase, userId),
+    ]);
+
+  if (!memberships?.length) return [];
+
+  const convIds = memberships.map((m) => m.conversation_id);
+  const roleByConv = new Map(
+    memberships.map((m) => [m.conversation_id, m.role as MemberRole]),
+  );
+
+  const [{ data: convRows }, { data: memberRows }, { data: recentMsgs }] =
+    await Promise.all([
+      supabase
+        .from("conversations")
+        .select("id, kind, name, is_secret, dm_context, created_by")
+        .in("id", convIds),
+      supabase
+        .from("conversation_members")
+        .select("conversation_id, user_id")
+        .in("conversation_id", convIds),
+      supabase
+        .from("messages")
+        .select("conversation_id, content, created_at")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: false })
+        .limit(Math.min(convIds.length * 3, 400)),
+    ]);
+
+  const lastMsgByConv = new Map<
+    string,
+    { content: string | null; created_at: string | null }
+  >();
+  for (const msg of recentMsgs ?? []) {
+    if (!lastMsgByConv.has(msg.conversation_id)) {
+      lastMsgByConv.set(msg.conversation_id, {
+        content: msg.content,
+        created_at: msg.created_at,
+      });
+    }
+  }
+
+  const membersByConv = new Map<string, string[]>();
+  for (const row of memberRows ?? []) {
+    const list = membersByConv.get(row.conversation_id) ?? [];
+    list.push(row.user_id);
+    membersByConv.set(row.conversation_id, list);
+  }
+
+  const otherUserIds = new Set<string>();
+  for (const conv of convRows ?? []) {
+    if ((conv.kind ?? "dm") !== "dm") continue;
+    const members = membersByConv.get(conv.id) ?? [];
+    const otherId = members.find((id) => id !== userId);
+    if (otherId) otherUserIds.add(otherId);
+  }
+
+  const { data: profileRows } = otherUserIds.size
+    ? await supabase.from("profiles").select("*").in("id", [...otherUserIds])
+    : { data: [] as Profile[] };
+
+  const profileMap = new Map(
+    ((profileRows as Profile[]) ?? []).map((p) => [p.id, p]),
+  );
+
+  const previews: ConversationPreview[] = [];
+
+  for (const conv of convRows ?? []) {
+    const convId = conv.id;
+    const kind = (conv.kind ?? "dm") as ConversationKind;
+    const isSecret = !!conv.is_secret;
+    const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
+    const createdBy = conv.created_by as string | null;
+    const settings = settingsMap.get(convId);
+    const isArchived = settings?.is_archived ?? false;
+    const lastMsg = lastMsgByConv.get(convId) ?? { content: null, created_at: null };
+    const lastRead = settings?.last_read_at;
+    const isUnread =
+      !!lastMsg.created_at &&
+      (!lastRead || new Date(lastMsg.created_at) > new Date(lastRead));
+    const inbox = settings?.inbox ?? "personal";
+    const myRole = roleByConv.get(convId);
+
+    if (kind === "dm") {
+      const members = membersByConv.get(convId) ?? [];
+      const otherId = members.find((id) => id !== userId);
+      if (!otherId) continue;
+
+      const profile = profileMap.get(otherId);
+      if (!profile) continue;
+      if (blockedIds.has(otherId)) continue;
+
+      previews.push({
+        id: convId,
+        kind,
+        name: null,
+        is_secret: isSecret,
+        dm_context: dmContext,
+        other_user: profile,
+        my_role: myRole,
+        last_message: lastMsg.content,
+        last_message_at: lastMsg.created_at,
+        is_pinned: settings?.is_pinned ?? false,
+        is_archived: isArchived,
+        is_unread: isUnread,
+        folder_id: settings?.folder_id ?? null,
+        inbox,
+        is_pending_request: pendingRequestIds.has(convId),
+        is_seller_gig: isSellerGigThread(dmContext, createdBy, userId),
+      });
+    } else {
+      const memberCount = (membersByConv.get(convId) ?? []).length;
+      previews.push({
+        id: convId,
+        kind,
+        name: conv.name,
+        is_secret: false,
+        member_count: memberCount,
+        my_role: myRole,
+        last_message: lastMsg.content,
+        last_message_at: lastMsg.created_at,
+        is_pinned: settings?.is_pinned ?? false,
+        is_archived: isArchived,
+        is_unread: isUnread,
+        folder_id: settings?.folder_id ?? null,
+        is_pending_request: pendingRequestIds.has(convId),
+      });
+    }
+  }
+
+  return sortConversationPreviews(previews);
+}
+
+export async function loadConversations(
+  supabase: SupabaseClient,
+  userId: string,
+  filter: ConversationFilter = "regular",
+  folderId?: string | null,
+): Promise<ConversationPreview[]> {
+  const all = await loadAllConversations(supabase, userId);
+  return sortConversationPreviews(
+    filterConversationPreviews(all, userId, filter, folderId),
+  );
+}
 
 export async function loadMemberSettingsMap(
   supabase: SupabaseClient,
@@ -504,166 +700,19 @@ export async function searchMessages(
   return (data as import("./types").Message[]) ?? [];
 }
 
-export async function loadConversations(
-  supabase: SupabaseClient,
-  userId: string,
-  filter: ConversationFilter = "regular",
-  folderId?: string | null,
-): Promise<ConversationPreview[]> {
-  const { loadPendingRequestConvIds } = await import("@/lib/message-requests");
-  const { loadBlockedIds } = await import("@/lib/safety");
-
-  const pendingRequestIds = await loadPendingRequestConvIds(supabase, userId);
-  const blockedIds = await loadBlockedIds(supabase, userId);
-
-  const { data: memberships } = await supabase
-    .from("conversation_members")
-    .select("conversation_id, role")
-    .eq("user_id", userId);
-
-  if (!memberships?.length) return [];
-
-  const settingsMap = await loadMemberSettingsMap(supabase, userId);
-  const previews: ConversationPreview[] = [];
-
-  for (const membership of memberships) {
-    const convId = membership.conversation_id;
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("kind, name, is_secret, dm_context, created_by")
-      .eq("id", convId)
-      .single();
-
-    if (!conv) continue;
-
-    const isSecret = !!conv.is_secret;
-    const dmContext = (conv.dm_context ?? "personal") as import("./types").DmContext;
-    const createdBy = conv.created_by as string | null;
-    const settings = settingsMap.get(convId);
-    const isArchived = settings?.is_archived ?? false;
-
-    if (filter === "requests") {
-      if (!pendingRequestIds.has(convId)) continue;
-    } else if (pendingRequestIds.has(convId)) {
-      continue;
-    }
-
-    if (folderId !== undefined) {
-      const itemFolder = settings?.folder_id ?? null;
-      if (folderId === null) {
-        if (itemFolder !== null) continue;
-      } else if (itemFolder !== folderId) {
-        continue;
-      }
-    }
-
-    if (filter === "archived") {
-      if (!isArchived) continue;
-    } else if (isArchived) {
-      continue;
-    }
-
-    const inbox = settings?.inbox ?? "personal";
-    const sellerGig = isSellerGigThread(dmContext, createdBy, userId);
-
-    if (filter === "regular" || filter === "personal") {
-      if (isSecret || sellerGig) continue;
-    }
-    if (filter === "seller") {
-      if (isSecret || !sellerGig) continue;
-    }
-    if (filter === "secret" && !isSecret) continue;
-
-    const lastMsg = await getLastMessage(supabase, convId);
-    const lastRead = settings?.last_read_at;
-    const isUnread =
-      !!lastMsg.created_at &&
-      (!lastRead || new Date(lastMsg.created_at) > new Date(lastRead));
-
-    if (filter === "unread" && !isUnread) continue;
-
-    const kind = (conv.kind ?? "dm") as ConversationKind;
-
-    if (kind === "dm") {
-      const { data: members } = await supabase
-        .from("conversation_members")
-        .select("user_id")
-        .eq("conversation_id", convId);
-
-      const otherId = members?.find((m) => m.user_id !== userId)?.user_id;
-      if (!otherId) continue;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", otherId)
-        .single();
-
-      if (!profile) continue;
-      if (blockedIds.has(otherId)) continue;
-
-      previews.push({
-        id: convId,
-        kind,
-        name: null,
-        is_secret: isSecret,
-        dm_context: dmContext,
-        other_user: profile as Profile,
-        my_role: membership.role as MemberRole,
-        last_message: lastMsg.content,
-        last_message_at: lastMsg.created_at,
-        is_pinned: settings?.is_pinned ?? false,
-        is_archived: isArchived,
-        is_unread: isUnread,
-        folder_id: settings?.folder_id ?? null,
-        inbox,
-        is_pending_request: pendingRequestIds.has(convId),
-      });
-    } else {
-      if (filter === "secret") continue;
-
-      const { count } = await supabase
-        .from("conversation_members")
-        .select("*", { count: "exact", head: true })
-        .eq("conversation_id", convId);
-
-      previews.push({
-        id: convId,
-        kind,
-        name: conv.name,
-        is_secret: false,
-        member_count: count ?? 0,
-        my_role: membership.role as MemberRole,
-        last_message: lastMsg.content,
-        last_message_at: lastMsg.created_at,
-        is_pinned: settings?.is_pinned ?? false,
-        is_archived: isArchived,
-        is_unread: isUnread,
-        folder_id: settings?.folder_id ?? null,
-      });
-    }
-  }
-
-  previews.sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-    const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return tb - ta;
-  });
-
-  return previews;
-}
-
 export async function getUnreadChatCount(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<number> {
   const { loadPendingRequests } = await import("@/lib/message-requests");
-  const [unreadChats, pendingRequests] = await Promise.all([
-    loadConversations(supabase, userId, "unread"),
+  const [all, pendingRequests] = await Promise.all([
+    loadAllConversations(supabase, userId),
     loadPendingRequests(supabase, userId),
   ]);
-  return unreadChats.length + pendingRequests.length;
+  const unreadChats = all.filter(
+    (p) => p.is_unread && !p.is_pending_request && !p.is_archived,
+  ).length;
+  return unreadChats + pendingRequests.length;
 }
 
 export async function loadActiveChat(

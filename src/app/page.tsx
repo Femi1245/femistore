@@ -303,7 +303,12 @@ export default async function HomePage({
       <footer className="border-t border-vintage-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-vintage-ink-muted sm:flex-row">
           <Logo size="sm" showWordmark />
-          <p className="font-display text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/support" className="hover:text-vintage-ink">
+              Support
+            </Link>
+          </div>
+          <p className="font-display text-sm" suppressHydrationWarning>
             © {new Date().getFullYear()} Zumelia — connection, crafted.
           </p>
         </div>

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUnreadNotificationCount } from "@/lib/notifications";
 
-const POLL_MS = 30_000;
+const POLL_MS = 45_000;
 
 export const NOTIFICATION_UNREAD_REFRESH_EVENT = "zumelia:notification-unread-refresh";
 
@@ -23,27 +23,33 @@ export function useUnreadNotificationCount(userId: string) {
   }, [userId]);
 
   useEffect(() => {
-    refreshCount();
-  }, [refreshCount, pathname]);
+    const timer = window.setTimeout(() => {
+      if (document.visibilityState === "visible") void refreshCount();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [pathname, refreshCount]);
 
   useEffect(() => {
-    refreshCount();
+    void refreshCount();
 
-    const interval = window.setInterval(refreshCount, POLL_MS);
-    const onRefresh = () => refreshCount();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void refreshCount();
+    }, POLL_MS);
+    const onFocus = () => void refreshCount();
     const onVisible = () => {
-      if (document.visibilityState === "visible") refreshCount();
+      if (document.visibilityState === "visible") void refreshCount();
     };
 
-    window.addEventListener("focus", onRefresh);
+    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener(NOTIFICATION_UNREAD_REFRESH_EVENT, onRefresh);
+    window.addEventListener(NOTIFICATION_UNREAD_REFRESH_EVENT, onFocus);
 
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("focus", onRefresh);
+      window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener(NOTIFICATION_UNREAD_REFRESH_EVENT, onRefresh);
+      window.removeEventListener(NOTIFICATION_UNREAD_REFRESH_EVENT, onFocus);
     };
   }, [refreshCount]);
 

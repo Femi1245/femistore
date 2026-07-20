@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUnreadChatCount } from "@/lib/chat";
 
-const POLL_MS = 30_000;
+const POLL_MS = 45_000;
 
 export const CHAT_UNREAD_REFRESH_EVENT = "zumelia:chat-unread-refresh";
 
@@ -23,16 +23,22 @@ export function useUnreadChatCount(userId: string) {
   }, [userId]);
 
   useEffect(() => {
-    refreshCount();
-  }, [refreshCount, pathname]);
+    const timer = window.setTimeout(() => {
+      if (document.visibilityState === "visible") void refreshCount();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [pathname, refreshCount]);
 
   useEffect(() => {
-    refreshCount();
+    void refreshCount();
 
-    const interval = window.setInterval(refreshCount, POLL_MS);
-    const onFocus = () => refreshCount();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void refreshCount();
+    }, POLL_MS);
+    const onFocus = () => void refreshCount();
     const onVisible = () => {
-      if (document.visibilityState === "visible") refreshCount();
+      if (document.visibilityState === "visible") void refreshCount();
     };
 
     window.addEventListener("focus", onFocus);

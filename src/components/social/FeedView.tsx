@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Briefcase, Compass, Newspaper, Star, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -13,11 +13,18 @@ import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 import { VibePromptBanner } from "@/components/social/VibePromptBanner";
 import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
-export function FeedView({ currentUser }: { currentUser: Profile }) {
-  const [posts, setPosts] = useState<PostWithMeta[]>([]);
-  const [loading, setLoading] = useState(true);
+export function FeedView({
+  currentUser,
+  initialPosts,
+}: {
+  currentUser: Profile;
+  initialPosts?: PostWithMeta[];
+}) {
+  const [posts, setPosts] = useState<PostWithMeta[]>(initialPosts ?? []);
+  const [loading, setLoading] = useState(initialPosts === undefined);
   const [mode, setMode] = useState<FeedMode>("friends");
   const inBusinessMode = getActiveMode(currentUser) === "business";
+  const usedInitial = useRef(initialPosts !== undefined);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -27,8 +34,14 @@ export function FeedView({ currentUser }: { currentUser: Profile }) {
   }, [currentUser.id, mode]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (usedInitial.current && mode === "friends" && initialPosts) {
+      usedInitial.current = false;
+      setPosts(initialPosts);
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [refresh, mode, initialPosts]);
 
   return (
     <div className="space-y-5 md:space-y-8">

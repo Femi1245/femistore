@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuthSession } from "@/hooks/use-auth-session";
 
 export function HomeNavActions() {
   const { loggedIn: isLoggedIn } = useAuthSession();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  const showLoggedIn = mounted && isLoggedIn;
 
   return (
     <div className="flex items-center gap-3">
       <ThemeToggle />
-      {isLoggedIn ? (
+      {showLoggedIn ? (
         <>
           <Link href="/feed" className="vintage-btn px-5 py-2.5 text-sm">
             Open Feed

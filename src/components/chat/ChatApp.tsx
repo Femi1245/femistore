@@ -41,11 +41,12 @@ import {
   editMessage,
   enrichMessagesWithReplies,
   attachReplyFromThread,
+  filterConversationPreviews,
   findOrCreateConversation,
   formatMessageTime,
   joinChannel,
   loadActiveChat,
-  loadConversations,
+  loadAllConversations,
   loadMutualFriends,
   loadPublicChannels,
   secretMessageExpiry,
@@ -91,8 +92,14 @@ import { CreatePollModal } from "@/components/chat/CreatePollModal";
 import { MessageRequestsPanel } from "@/components/chat/MessageRequestsPanel";
 import { UserSafetyMenu } from "@/components/safety/UserSafetyMenu";
 import { markConversationRead, createChatFolder, loadChatFolders } from "@/lib/chat-folders";
+import {
+  isMessageReadByOther,
+  loadConversationReadCursors,
+  otherMemberReadAt as pickOtherMemberReadAt,
+} from "@/lib/read-receipts";
 import type { ChatFolder } from "@/lib/types";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
+import { WelcomeEmailTrigger } from "@/components/auth/WelcomeEmailTrigger";
 import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 import {
   ASSISTANT_DISPLAY_NAME,
@@ -101,21 +108,63 @@ import {
 
 type Tab = "chats" | "seller" | "discover" | "phone" | "channels" | "secret" | "archived" | "requests" | "unread";
 
-export function ChatApp({ currentUser }: { currentUser: Profile }) {
+function splitConversationLists(
+  all: ConversationPreview[],
+  userId: string,
+  isSeller: boolean,
+  folderFilter?: string | null,
+) {
+  return {
+    conversations: filterConversationPreviews(all, userId, "regular", folderFilter),
+    sellerChats: isSeller
+      ? filterConversationPreviews(all, userId, "seller")
+      : [],
+    secretChats: filterConversationPreviews(all, userId, "secret"),
+    archivedChats: filterConversationPreviews(all, userId, "archived"),
+    unreadChats: filterConversationPreviews(all, userId, "unread"),
+  };
+}
+
+export function ChatApp({
+  currentUser,
+  initialConversations,
+  initialChatFolders,
+}: {
+  currentUser: Profile;
+  initialConversations?: ConversationPreview[];
+  initialChatFolders?: ChatFolder[];
+}) {
   const getSupabase = useCallback(() => createClient(), []);
   const { startCall: startCallSession } = useCalls();
   const isSeller = hasBusinessProfile(currentUser);
   const searchParams = useSearchParams();
   const deepLinkConvId = searchParams.get("c");
   const openedDeepLink = useRef<string | null>(null);
+  const initialSplit =
+    initialConversations !== undefined
+      ? splitConversationLists(initialConversations, currentUser.id, isSeller)
+      : null;
+  const usedInitialConversations = useRef(initialConversations !== undefined);
 
   const [tab, setTab] = useState<Tab>("chats");
-  const [conversations, setConversations] = useState<ConversationPreview[]>([]);
-  const [sellerChats, setSellerChats] = useState<ConversationPreview[]>([]);
-  const [secretChats, setSecretChats] = useState<ConversationPreview[]>([]);
-  const [archivedChats, setArchivedChats] = useState<ConversationPreview[]>([]);
-  const [unreadChats, setUnreadChats] = useState<ConversationPreview[]>([]);
-  const [chatFolders, setChatFolders] = useState<ChatFolder[]>([]);
+  const [conversations, setConversations] = useState<ConversationPreview[]>(
+    initialSplit?.conversations ?? [],
+  );
+  const [sellerChats, setSellerChats] = useState<ConversationPreview[]>(
+    initialSplit?.sellerChats ?? [],
+  );
+  const [secretChats, setSecretChats] = useState<ConversationPreview[]>(
+    initialSplit?.secretChats ?? [],
+  );
+  const [archivedChats, setArchivedChats] = useState<ConversationPreview[]>(
+    initialSplit?.archivedChats ?? [],
+  );
+  const [unreadChats, setUnreadChats] = useState<ConversationPreview[]>(
+    initialSplit?.unreadChats ?? [],
+  );
+  const [chatFolders, setChatFolders] = useState<ChatFolder[]>(
+    initialChatFolders ?? [],
+  );
   const [activeFolderId, setActiveFolderId] = useState<string | null | undefined>(undefined);
   const [showPollModal, setShowPollModal] = useState(false);
   const [secretFriends, setSecretFriends] = useState<Profile[]>([]);
@@ -150,6 +199,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [actionMessage, setActionMessage] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [otherMemberReadAt, setOtherMemberReadAt] = useState<string | null>(null);
 
   const isAssistantChat =
     !!activeChat?.otherUser && isAssistantProfile(activeChat.otherUser);
@@ -157,21 +207,21 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   const refreshConversations = useCallback(async () => {
     const supabase = getSupabase();
     const folderFilter = activeFolderId;
-    const [regular, seller, secret, archived, unread, folders] = await Promise.all([
-      loadConversations(supabase, currentUser.id, "regular", folderFilter),
-      isSeller
-        ? loadConversations(supabase, currentUser.id, "seller")
-        : Promise.resolve([] as ConversationPreview[]),
-      loadConversations(supabase, currentUser.id, "secret"),
-      loadConversations(supabase, currentUser.id, "archived"),
-      loadConversations(supabase, currentUser.id, "unread"),
+    const [all, folders] = await Promise.all([
+      loadAllConversations(supabase, currentUser.id),
       loadChatFolders(supabase, currentUser.id),
     ]);
-    setConversations(regular);
-    setSellerChats(seller);
-    setSecretChats(secret);
-    setArchivedChats(archived);
-    setUnreadChats(unread);
+    const split = splitConversationLists(
+      all,
+      currentUser.id,
+      isSeller,
+      folderFilter,
+    );
+    setConversations(split.conversations);
+    setSellerChats(split.sellerChats);
+    setSecretChats(split.secretChats);
+    setArchivedChats(split.archivedChats);
+    setUnreadChats(split.unreadChats);
     setChatFolders(folders);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event(CHAT_UNREAD_REFRESH_EVENT));
@@ -179,8 +229,23 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
   }, [getSupabase, currentUser.id, activeFolderId, isSeller]);
 
   useEffect(() => {
-    refreshConversations();
-  }, [refreshConversations]);
+    if (usedInitialConversations.current && initialConversations) {
+      usedInitialConversations.current = false;
+      const split = splitConversationLists(
+        initialConversations,
+        currentUser.id,
+        isSeller,
+        activeFolderId,
+      );
+      setConversations(split.conversations);
+      setSellerChats(split.sellerChats);
+      setSecretChats(split.secretChats);
+      setArchivedChats(split.archivedChats);
+      setUnreadChats(split.unreadChats);
+      return;
+    }
+    void refreshConversations();
+  }, [refreshConversations, initialConversations, currentUser.id, isSeller, activeFolderId]);
 
   useEffect(() => {
     if (!chatTheme?.translation_enabled) return;
@@ -276,6 +341,38 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     },
     [getSupabase, currentUser.id],
   );
+
+  const refreshReadCursors = useCallback(
+    async (convId: string, otherUserId?: string) => {
+      const cursors = await loadConversationReadCursors(getSupabase(), convId);
+      setOtherMemberReadAt(pickOtherMemberReadAt(cursors, otherUserId));
+    },
+    [getSupabase],
+  );
+
+  useEffect(() => {
+    if (!activeChat?.convId || activeChat.kind !== "dm" || !activeChat.otherUser) {
+      setOtherMemberReadAt(null);
+      return;
+    }
+
+    void refreshReadCursors(activeChat.convId, activeChat.otherUser.id);
+    const interval = window.setInterval(() => {
+      void refreshReadCursors(activeChat.convId, activeChat.otherUser!.id);
+    }, 4000);
+
+    return () => window.clearInterval(interval);
+  }, [activeChat?.convId, activeChat?.kind, activeChat?.otherUser?.id, refreshReadCursors]);
+
+  useEffect(() => {
+    if (!activeChat?.convId || loadingMsgs) return;
+    void markConversationRead(
+      getSupabase(),
+      currentUser.id,
+      activeChat.convId,
+      currentUser,
+    );
+  }, [activeChat?.convId, messages.length, loadingMsgs, getSupabase, currentUser]);
 
   useEffect(() => {
     if (!activeChat?.convId) return;
@@ -375,7 +472,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
     setMessageSearch("");
     setReplyingTo(null);
     await loadMessages(convId, chat.isSecret);
-    await markConversationRead(getSupabase(), currentUser.id, convId);
+    await markConversationRead(getSupabase(), currentUser.id, convId, currentUser);
+    await refreshReadCursors(convId, chat.otherUser?.id);
     await refreshConversations();
   }
 
@@ -754,6 +852,7 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
           : "pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0"
       }`}
     >
+      <WelcomeEmailTrigger />
       <LastSeenUpdater userId={currentUser.id} />
       <AppNav user={currentUser} />
       {!activeChat && (
@@ -1679,6 +1778,8 @@ export function ChatApp({ currentUser }: { currentUser: Profile }) {
                         }}
                         onEditDraftChange={setEditMessageDraft}
                         onReply={setReplyingTo}
+                        showReadReceipt={activeChat.kind === "dm" && !!activeChat.otherUser}
+                        isRead={isMessageReadByOther(msg, otherMemberReadAt)}
                       />
                     );
                   })

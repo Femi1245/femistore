@@ -2,11 +2,15 @@ import { Redirect, Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
 import { Loader } from "@/components/ui";
+import { WelcomeEmailOnAppOpen } from "@/components/WelcomeEmailOnAppOpen";
+import { PushNotificationSetup } from "@/components/PushNotificationSetup";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 import { colors } from "@/constants/theme";
 
 export default function TabsLayout() {
-  const { session, loading } = useAuth();
+  const { session, loading, profile } = useAuth();
+  const { unread, refreshCount } = useUnreadNotificationCount(profile?.id);
 
   if (loading) {
     return (
@@ -19,7 +23,16 @@ export default function TabsLayout() {
   if (!session) return <Redirect href="/(auth)/login" />;
 
   return (
-    <Tabs
+    <>
+      <WelcomeEmailOnAppOpen accessToken={session.access_token} />
+      {profile && (
+        <PushNotificationSetup
+          userId={profile.id}
+          accessToken={session.access_token}
+          onUnreadChange={() => void refreshCount()}
+        />
+      )}
+      <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.paper },
         headerTintColor: colors.ink,
@@ -81,6 +94,7 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: "Alerts",
+          tabBarBadge: unread > 0 ? (unread > 99 ? "99+" : unread) : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications" size={size} color={color} />
           ),
@@ -96,5 +110,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

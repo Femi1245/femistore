@@ -167,6 +167,8 @@ export type ConversationPreview = {
   folder_id?: string | null;
   is_pending_request?: boolean;
   inbox?: ChatInbox;
+  /** Business gig thread for the seller (buyer started the chat). */
+  is_seller_gig?: boolean;
 };
 
 export type ChatFolder = {

@@ -11,7 +11,7 @@ import {
 } from "@/lib/business";
 import { requireUser } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
-import { getFollowCounts, isFollowing } from "@/lib/social";
+import { getFollowCounts, isFollowing, loadUserPosts } from "@/lib/social";
 import { canViewPrivateProfile } from "@/lib/privacy";
 import Link from "next/link";
 import { Briefcase, Lock } from "lucide-react";
@@ -44,12 +44,23 @@ export default async function ProfilePage({
   const showBusinessLink =
     hasBusinessProfile(typedProfile) && !isBusinessPrimaryAccount(typedProfile);
 
-  const [counts, following, canViewContent] = await Promise.all([
+  const canViewPromise = canViewPrivateProfile(
+    supabase,
+    currentUser.id,
+    typedProfile,
+  );
+
+  const [counts, following, canViewContent, initialPosts] = await Promise.all([
     getFollowCounts(supabase, profile.id),
     currentUser.id !== profile.id
       ? isFollowing(supabase, currentUser.id, profile.id)
       : Promise.resolve(false),
-    canViewPrivateProfile(supabase, currentUser.id, typedProfile),
+    canViewPromise,
+    canViewPromise.then((ok) =>
+      ok
+        ? loadUserPosts(supabase, profile.id, currentUser.id, "personal")
+        : Promise.resolve([]),
+    ),
   ]);
 
   return (
@@ -106,7 +117,11 @@ export default async function ProfilePage({
               <h2 className="font-display mb-4 text-lg font-semibold text-vintage-ink">
                 Personal posts
               </h2>
-              <ProfilePosts profileUserId={profile.id} currentUser={currentUser} />
+              <ProfilePosts
+                profileUserId={profile.id}
+                currentUser={currentUser}
+                initialPosts={initialPosts}
+              />
             </div>
           </>
         ) : (

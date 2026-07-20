@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LiveKitRoom,
@@ -12,7 +12,7 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { RoomEvent, Track, type LocalVideoTrack } from "livekit-client";
+import { RoomEvent, Track, type LocalVideoTrack, type Participant } from "livekit-client";
 import {
   ArrowLeft,
   Eye,
@@ -35,9 +35,11 @@ import type { LiveStream, Profile } from "@/lib/types";
 import { LiveChat } from "@/components/live/LiveChat";
 import { LiveEffectPicker } from "@/components/live/LiveEffectPicker";
 import { LiveStagePanel } from "@/components/live/LiveStagePanel";
+import { LiveViewersPanel } from "@/components/live/LiveViewersPanel";
 import { useLiveStreamEffects } from "@/components/live/useLiveStreamEffects";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { LiveGiftFeed } from "@/components/gifts/LiveGiftFeed";
+import { isBenignLiveKitError, logLiveKitError } from "@/lib/livekit-errors";
 
 /** If LiveKit connected but camera stayed muted/off/dead, recover it. */
 function EnsurePublisherCamera({ active }: { active: boolean }) {
@@ -123,10 +125,20 @@ function ViewerCountBadge() {
   );
 }
 
-function StageVideo() {
+function participantLabel(participant: Participant): string {
+  return participant.name?.trim() || participant.identity || "Guest";
+}
+
+function LiveCameraGrid({
+  excludeLocal = false,
+  emptyMessage = "Waiting for host video…",
+}: {
+  excludeLocal?: boolean;
+  emptyMessage?: string;
+}) {
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: false }],
-    { onlySubscribed: true },
+    { onlySubscribed: excludeLocal },
   );
 
   const cameraTracks = tracks.filter(
@@ -134,34 +146,39 @@ function StageVideo() {
       t,
     ): t is (typeof tracks)[number] & {
       publication: NonNullable<(typeof tracks)[number]["publication"]>;
-    } => t.publication?.kind === Track.Kind.Video,
+    } =>
+      t.publication?.kind === Track.Kind.Video &&
+      (!excludeLocal || !t.participant.isLocal),
   );
 
   if (cameraTracks.length === 0) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-zinc-950">
-        <p className="text-sm text-white/60">Waiting for host video…</p>
+        <p className="text-sm text-white/60">{emptyMessage}</p>
       </div>
     );
   }
 
-  if (cameraTracks.length === 1) {
-    return (
-      <VideoTrack
-        trackRef={cameraTracks[0]}
-        className="h-full w-full object-cover"
-      />
-    );
-  }
+  const gridClass =
+    cameraTracks.length === 1
+      ? "relative h-full w-full"
+      : cameraTracks.length === 2
+        ? "grid h-full w-full grid-cols-2 gap-0.5 bg-black"
+        : "grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 bg-black";
 
   return (
-    <div className="grid h-full w-full grid-cols-2 gap-0.5 bg-black">
+    <div className={gridClass}>
       {cameraTracks.map((track) => (
-        <VideoTrack
+        <div
           key={track.publication.trackSid}
-          trackRef={track}
-          className="h-full w-full object-cover"
-        />
+          className="relative h-full min-h-0 w-full overflow-hidden"
+        >
+          <VideoTrack trackRef={track} className="h-full w-full object-cover" />
+          <div className="absolute bottom-2 left-2 rounded bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+            {participantLabel(track.participant)}
+            {track.participant.isLocal ? " (you)" : ""}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -263,6 +280,14 @@ function PublisherStage({
     { onlySubscribed: false },
   );
 
+  const remoteCameras = tracks.filter(
+    (t) =>
+      !t.participant.isLocal &&
+      t.source === Track.Source.Camera &&
+      t.publication?.kind === Track.Kind.Video,
+  );
+  const hasRemotes = remoteCameras.length > 0;
+
   const localCam = tracks.find(
     (t) =>
       t.participant.isLocal &&
@@ -279,11 +304,30 @@ function PublisherStage({
     !!videoTrack && isCameraEnabled,
   );
 
+  const localPreview =
+    localCam && localCam.publication && isCameraEnabled ? (
+      <VideoTrack trackRef={localCam} className="h-full w-full object-cover" />
+    ) : (
+      <div className="flex h-full w-full items-center justify-center bg-zinc-900">
+        <p className="text-[10px] text-white/50">Camera off</p>
+      </div>
+    );
+
   return (
     <>
       <div className="absolute inset-0">
-        {localCam && localCam.publication && isCameraEnabled ? (
-          <VideoTrack trackRef={localCam} className="h-full w-full object-cover" />
+        {hasRemotes ? (
+          <>
+            <LiveCameraGrid excludeLocal emptyMessage="Waiting for others…" />
+            <div className="absolute bottom-28 right-3 z-10 h-40 w-28 overflow-hidden rounded-xl border-2 border-white/40 shadow-2xl sm:bottom-32 sm:h-44 sm:w-32">
+              {localPreview}
+              <div className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                You
+              </div>
+            </div>
+          </>
+        ) : localCam && localCam.publication && isCameraEnabled ? (
+          localPreview
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-zinc-950">
             {!localCam?.publication ? (
@@ -348,6 +392,12 @@ export function LiveRoom({
   const [effectsOpen, setEffectsOpen] = useState(false);
   const [stageOpen, setStageOpen] = useState(false);
   const [giftsOpen, setGiftsOpen] = useState(false);
+  const liveSessionRef = useRef({
+    hasToken: false,
+    canPublish: false,
+    isGuest: false,
+    isHost: false,
+  });
 
   const fetchToken = useCallback(async () => {
     setLoading(true);
@@ -359,13 +409,33 @@ export function LiveRoom({
       setLoading(false);
       return;
     }
+
+    const nextCanPublish = !!data.canPublish;
+    const nextIsGuest = !!data.isGuest;
+    const nextIsHost = !!data.isHost;
+    const prev = liveSessionRef.current;
+    const shouldReconnect =
+      prev.hasToken &&
+      (prev.canPublish !== nextCanPublish ||
+        prev.isGuest !== nextIsGuest ||
+        prev.isHost !== nextIsHost);
+
+    liveSessionRef.current = {
+      hasToken: true,
+      canPublish: nextCanPublish,
+      isGuest: nextIsGuest,
+      isHost: nextIsHost,
+    };
+
     setToken(data.token);
     setServerUrl(data.serverUrl);
-    setIsHost(data.isHost);
-    setIsGuest(!!data.isGuest);
-    setCanPublish(!!data.canPublish);
+    setIsHost(nextIsHost);
+    setIsGuest(nextIsGuest);
+    setCanPublish(nextCanPublish);
     setLoading(false);
-    setRoomKey((k) => k + 1);
+    if (shouldReconnect) {
+      setRoomKey((k) => k + 1);
+    }
   }, [roomName]);
 
   useEffect(() => {
@@ -481,7 +551,8 @@ export function LiveRoom({
           setError(message);
         }}
         onError={(err) => {
-          console.error("[Live] room error:", err);
+          if (isBenignLiveKitError(err)) return;
+          logLiveKitError("Live", err);
           setError(err.message || "Live connection error");
         }}
         onDisconnected={() => {
@@ -505,7 +576,7 @@ export function LiveRoom({
           />
         ) : (
           <div className="absolute inset-0">
-            <StageVideo />
+            <LiveCameraGrid />
           </div>
         )}
 
@@ -552,7 +623,7 @@ export function LiveRoom({
             <button
               type="button"
               onClick={() => setShowGift(true)}
-              className="inline-flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
+              className="inline-flex h-12 w-12 flex-col items-center justify-center rounded-full bg-zinc-900/85 text-white shadow-lg ring-1 ring-white/25 transition active:scale-95 active:bg-zinc-950"
               aria-label="Send gift"
             >
               <Gift className="h-5 w-5" />
@@ -562,8 +633,8 @@ export function LiveRoom({
             <button
               type="button"
               onClick={() => setGiftsOpen((v) => !v)}
-              className={`inline-flex h-12 w-12 items-center justify-center rounded-full backdrop-blur-md ${
-                giftsOpen ? "bg-red-500 text-white" : "bg-black/50 text-white"
+              className={`inline-flex h-12 w-12 items-center justify-center rounded-full shadow-lg ring-1 ring-white/25 transition active:scale-95 ${
+                giftsOpen ? "bg-red-600 text-white" : "bg-zinc-900/85 text-white active:bg-zinc-950"
               }`}
               aria-label="Gifts"
             >
@@ -584,19 +655,26 @@ export function LiveRoom({
 
         {/* Side panels */}
         {stageOpen && (
-          <div className="absolute bottom-36 right-3 z-30 w-[min(100%-1.5rem,20rem)] overflow-hidden rounded-2xl shadow-xl sm:right-4">
-            <LiveStagePanel
+          <div className="absolute bottom-36 right-3 z-30 max-h-[min(70vh,28rem)] w-[min(100%-1.5rem,20rem)] overflow-y-auto rounded-2xl shadow-xl sm:right-4">
+            <LiveViewersPanel
               roomName={roomName}
-              currentUser={currentUser}
+              currentUserId={currentUser.id}
               hostId={stream.host_id}
-              isHost={isHost}
-              isGuest={isGuest}
-              onGuestApproved={handleGuestApproved}
             />
+            <div className="mt-2">
+              <LiveStagePanel
+                roomName={roomName}
+                currentUser={currentUser}
+                hostId={stream.host_id}
+                isHost={isHost}
+                isGuest={isGuest}
+                onGuestApproved={handleGuestApproved}
+              />
+            </div>
           </div>
         )}
         {giftsOpen && host && (
-          <div className="absolute bottom-36 right-3 z-30 w-[min(100%-1.5rem,20rem)] overflow-hidden rounded-2xl shadow-xl sm:right-4">
+          <div className="absolute bottom-36 right-3 z-30 w-[min(100%-1.5rem,20rem)] overflow-hidden rounded-2xl border border-vintage-border bg-vintage-paper shadow-xl sm:right-4">
             <LiveGiftFeed
               roomName={roomName}
               host={host}

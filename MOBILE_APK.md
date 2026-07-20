@@ -66,6 +66,74 @@ npx eas env:create --name EXPO_PUBLIC_API_URL --value "https://itunes-mu.vercel.
 
 Repeat for the `production` environment when you ship to Play Store.
 
+Also add push notification env for cloud builds:
+
+```bash
+npx eas env:create --name EXPO_PUBLIC_EAS_PROJECT_ID --value "your-eas-project-id" --environment preview
+```
+
+Get `your-eas-project-id` from `npx eas init` or [expo.dev](https://expo.dev) → your project.
+
+---
+
+## Phone push notifications
+
+Push alerts (likes, messages, live, etc.) need three pieces:
+
+### 1. Server (Vercel)
+
+Deploy the latest web app, then in **Vercel → Settings → Environment Variables** add:
+
+```
+PUSH_WEBHOOK_SECRET=<same as CRON_SECRET or a new random string>
+```
+
+Run from repo root to verify:
+
+```bash
+npm run push:setup
+```
+
+### 2. Supabase trigger (one-time)
+
+The database trigger is in `supabase/push-dispatch-trigger.sql`. If not applied yet, run it in **Supabase → SQL Editor**.
+
+Then store the webhook secret (use the same value as `PUSH_WEBHOOK_SECRET` in `.env.local`):
+
+```sql
+insert into private.push_config (key, value)
+values ('webhook_secret', 'your-secret-here')
+on conflict (key) do update set value = excluded.value;
+```
+
+New notifications will automatically POST to `https://itunes-mu.vercel.app/api/push/dispatch`.
+
+### 3. Mobile app
+
+Add to `mobile/.env`:
+
+```env
+EXPO_PUBLIC_EAS_PROJECT_ID=your-eas-project-id
+```
+
+Log in and link the Expo project:
+
+```bash
+cd mobile
+npx eas login
+npx eas init
+```
+
+**Rebuild the APK** — push does not work in Expo Go on a real device long-term:
+
+```bash
+npm run mobile:apk
+```
+
+For Android push delivery, configure **FCM credentials** when EAS prompts during build (`eas credentials`).
+
+On first open after install, the app asks for notification permission. Alerts respect quiet hours and per-type settings from the web app.
+
 ---
 
 ## Build the APK
@@ -120,6 +188,8 @@ For Play Store release, use `assembleRelease` with a signing keystore (see [Expo
 | OAuth opens browser but never returns | Add `zumelia://auth/callback` in Supabase redirect URLs |
 | OAuth works in Expo Go but not APK | Expo Go uses `exp://…`; production APK uses `zumelia://` — both URLs can be added in Supabase |
 | Live / calls fail | `EXPO_PUBLIC_API_URL` must point to your deployed Next.js API (Vercel) |
+| No push notifications | Deploy push API routes, set `PUSH_WEBHOOK_SECRET` on Vercel, run SQL in `push-dispatch-trigger.sql`, rebuild APK with `EXPO_PUBLIC_EAS_PROJECT_ID` |
+| Push token error / missing projectId | Run `npx eas init` in `mobile/` and set `EXPO_PUBLIC_EAS_PROJECT_ID` in `.env` + EAS env |
 | Users still told to “install from browser” | That banner is for the **website PWA** only; it is hidden inside native shells |
 
 ---

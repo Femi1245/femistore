@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
-import { router, type Href } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Avatar } from "@/components/Avatar";
 import { Loader, Screen, Subtitle, Title } from "@/components/ui";
@@ -14,6 +14,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/lib/notifications";
+import { navigateFromNotificationHref } from "@/lib/notification-navigation";
 import { getSupabase } from "@/lib/supabase";
 import type { Notification, NotificationType } from "@/lib/types";
 
@@ -86,31 +87,7 @@ export default function NotificationsScreen() {
       );
     }
     const href = getNotificationHref(item, item.actor?.username);
-    if (href.startsWith("/live/")) {
-      router.push(href as `/live/${string}`);
-      return;
-    }
-    if (href.startsWith("/post/")) {
-      router.push(href as Href);
-      return;
-    }
-    if (href.startsWith("/chat")) {
-      const q = href.includes("?") ? href.slice(href.indexOf("?") + 1) : "";
-      const convId = new URLSearchParams(q).get("c");
-      if (convId) {
-        router.push({ pathname: "/(tabs)/chat", params: { c: convId } });
-      } else {
-        router.push("/(tabs)/chat");
-      }
-      return;
-    }
-    if (href === "/feed") {
-      router.push("/(tabs)/feed");
-      return;
-    }
-    if (href.startsWith("/profile/")) {
-      router.push(href as `/profile/${string}`);
-    }
+    navigateFromNotificationHref(href);
   }
 
   if (!profile) return <Loader />;

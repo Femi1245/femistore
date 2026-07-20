@@ -188,6 +188,90 @@ export async function sendWelcomeEmailIfNeeded(input: {
   return { sent: true };
 }
 
+const SKIP_WELCOME_EMAILS = new Set(["zumelia-ai@assistant.zumelia.app"]);
+
+/** Send welcome email to every signed-up user who has not received one yet. */
+export async function runWelcomeEmailBackfill(
+  admin: SupabaseClient,
+): Promise<{
+  checked: number;
+  sent: number;
+  skipped: number;
+  errors: string[];
+}> {
+  const errors: string[] = [];
+  let checked = 0;
+  let sent = 0;
+  let skipped = 0;
+
+  let page = 1;
+  const perPage = 200;
+
+  for (;;) {
+    const { data: list, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      return { checked, sent, skipped, errors: [error.message] };
+    }
+
+    const users = list.users ?? [];
+    if (!users.length) break;
+
+    for (const user of users) {
+      const email = user.email?.trim().toLowerCase();
+      if (!email || SKIP_WELCOME_EMAILS.has(email)) {
+        skipped += 1;
+        continue;
+      }
+
+      checked += 1;
+
+      if (await wasEmailSent(admin, user.id, "welcome", "once")) {
+        skipped += 1;
+        continue;
+      }
+
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("display_name, account_kind")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const displayName =
+        (profile?.display_name as string | undefined) ||
+        String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? "") ||
+        email.split("@")[0];
+
+      const accountKind =
+        (profile?.account_kind as string | undefined) === "business"
+          ? "business"
+          : "personal";
+
+      const result = await sendWelcomeEmailIfNeeded({
+        userId: user.id,
+        displayName,
+        email,
+        accountKind,
+      });
+
+      if (result.sent) {
+        sent += 1;
+      } else if (result.error) {
+        errors.push(`${email}: ${result.error}`);
+      } else {
+        skipped += 1;
+      }
+
+      // Gentle rate limit for Resend (2 req/s on free tier)
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return { checked, sent, skipped, errors };
+}
+
 export async function sendReengagementEmailIfNeeded(
   admin: SupabaseClient,
   profile: Pick<

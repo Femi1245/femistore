@@ -7,6 +7,7 @@ import { Btn, ErrorText, Input, Screen } from "@/components/ui";
 import { colors, spacing } from "@/constants/theme";
 import { ensureProfile } from "@/lib/auth";
 import { validateAuthForm } from "@/lib/auth-validation";
+import { requestWelcomeEmail } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 
 export default function LoginScreen() {
@@ -45,6 +46,7 @@ export default function LoginScreen() {
     if (data.user) {
       const result = await ensureProfile(supabase, data.user);
       if (result.error) setError(result.error);
+      else void requestWelcomeEmail(data.session?.access_token);
     }
 
     setLoading(false);

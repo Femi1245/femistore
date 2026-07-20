@@ -3,6 +3,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { AppShellMain } from "@/components/layout/AppShellMain";
 import { StatusBar } from "@/components/status/StatusBar";
 import { LastSeenUpdater } from "@/components/presence/LastSeenUpdater";
+import { WelcomeEmailTrigger } from "@/components/auth/WelcomeEmailTrigger";
 import type { Profile } from "@/lib/types";
 
 export function AppShell({
@@ -25,6 +26,7 @@ export function AppShell({
   if (immersive) {
     return (
       <div className="fixed inset-0 z-[60] overflow-hidden bg-black">
+        <WelcomeEmailTrigger />
         <LastSeenUpdater userId={user.id} />
         {children}
       </div>
@@ -32,6 +34,7 @@ export function AppShell({
   }
   return (
     <div className="vintage-page min-h-screen pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0">
+      <WelcomeEmailTrigger />
       <LastSeenUpdater userId={user.id} />
       <AppNav user={user} />
       {showStatus && <StatusBar user={user} />}

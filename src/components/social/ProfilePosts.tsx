@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PenLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { loadUserPosts } from "@/lib/social";
@@ -12,13 +12,16 @@ import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
 export function ProfilePosts({
   profileUserId,
   currentUser,
+  initialPosts,
 }: {
   profileUserId: string;
   currentUser: Profile;
+  initialPosts?: PostWithMeta[];
 }) {
-  const [posts, setPosts] = useState<PostWithMeta[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<PostWithMeta[]>(initialPosts ?? []);
+  const [loading, setLoading] = useState(initialPosts === undefined);
   const isOwn = profileUserId === currentUser.id;
+  const usedInitial = useRef(initialPosts !== undefined);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -33,8 +36,14 @@ export function ProfilePosts({
   }, [profileUserId, currentUser.id]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (usedInitial.current && initialPosts) {
+      usedInitial.current = false;
+      setPosts(initialPosts);
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [refresh, initialPosts]);
 
   function focusComposer() {
     const el = document.getElementById("profile-create-post");

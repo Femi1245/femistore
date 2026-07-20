@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { FlatList, RefreshControl, Text } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FlatList, RefreshControl, Text, View } from "react-native";
 import { CreatePost } from "@/components/CreatePost";
 import { PostCard } from "@/components/PostCard";
 import { Loader, Screen, Subtitle, Title } from "@/components/ui";
@@ -57,7 +57,19 @@ export default function FeedScreen() {
         }
         ListEmptyComponent={
           loading ? (
-            <Loader />
+            <View style={{ gap: 12, paddingVertical: 8 }}>
+              {[0, 1, 2].map((i) => (
+                <View
+                  key={i}
+                  style={{
+                    height: 120,
+                    borderRadius: 8,
+                    backgroundColor: "#e8dfd0",
+                    opacity: 0.7,
+                  }}
+                />
+              ))}
+            </View>
           ) : (
             <Text style={{ textAlign: "center", color: "#6b5344", marginTop: 24 }}>
               No posts yet. Follow people or post something!

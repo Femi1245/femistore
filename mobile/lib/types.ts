@@ -8,6 +8,7 @@ export type Profile = {
   date_of_birth: string | null;
   phone_e164: string | null;
   phone_verified_at: string | null;
+  show_read_receipts?: boolean;
   created_at: string;
 };
 
@@ -25,6 +26,7 @@ export type Message = {
   media_url: string | null;
   media_duration_seconds: number | null;
   expires_at: string | null;
+  deleted_at?: string | null;
   created_at: string;
 };
 
