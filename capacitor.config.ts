@@ -8,7 +8,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * Override with CAPACITOR_SERVER_URL if needed.
  */
 const serverUrl =
-  process.env.CAPACITOR_SERVER_URL?.trim() || "https://itunes-mu.vercel.app";
+  process.env.CAPACITOR_SERVER_URL?.trim() ||
+  "https://itunes-mu.vercel.app/login";
 
 const config: CapacitorConfig = {
   appId: "com.zumelia.app",

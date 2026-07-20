@@ -41,7 +41,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
         env:
-          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app
+          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app/login
 
       - name: Build debug APK
         working-directory: android
@@ -66,9 +66,8 @@ jobs:
           body: |
             Install **Zumelia.apk** on your Android phone.
 
-            After install, open the **Zumelia** icon — it launches the app directly (no browser).
-
-            Allow “Install unknown apps” for your browser/Files if Android asks.
+            After install, open the **Zumelia** icon — login/signup opens first (no browser).
+            Install prompts are hidden inside the app.
           files: dist/Zumelia.apk
           make_latest: true
         env:

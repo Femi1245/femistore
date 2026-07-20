@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { useIdleMount } from "@/hooks/use-idle-mount";
+import { isInstalledAppShell } from "@/lib/native-shell";
 
 const InstallAppPrompt = dynamic(
   () =>
@@ -19,8 +21,16 @@ const RegisterServiceWorker = dynamic(
 
 export function DeferredClientWidgets() {
   const ready = useIdleMount();
+  const [inApp, setInApp] = useState(false);
+
+  useEffect(() => {
+    setInApp(isInstalledAppShell());
+  }, []);
 
   if (!ready) return null;
+
+  // Inside the installed app: never show download/install prompts
+  if (inApp) return null;
 
   return (
     <>

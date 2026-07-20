@@ -4,10 +4,10 @@ import Link from "next/link";
 import { Download, MonitorSmartphone, Share, Smartphone } from "lucide-react";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { getAndroidApkUrl } from "@/lib/app-download";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { isInstalledAppShell } from "@/lib/native-shell";
 import { useEffect, useState } from "react";
 
-/** Permanent install section — real Android APK + optional browser install. */
+/** Permanent install section — hidden when already inside the installed app. */
 export function GetTheAppSection({
   compact = false,
   showPageLink = true,
@@ -19,7 +19,7 @@ export function GetTheAppSection({
   const [inNativeApp, setInNativeApp] = useState(false);
 
   useEffect(() => {
-    setInNativeApp(isCapacitorNative());
+    setInNativeApp(isInstalledAppShell());
   }, []);
 
   if (inNativeApp) return null;

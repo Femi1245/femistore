@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Check, Download, Loader2, Share, Smartphone } from "lucide-react";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { isInstalledAppShell } from "@/lib/native-shell";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
-
-function isStandalone(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
 
 function detectPlatform(): "ios" | "android" | "desktop" {
   if (typeof window === "undefined") return "desktop";
@@ -41,7 +33,7 @@ export function InstallAppButton({
 
   useEffect(() => {
     setPlatform(detectPlatform());
-    if (isStandalone() || isCapacitorNative()) {
+    if (isInstalledAppShell()) {
       setInstalled(true);
       setReady(true);
       return;

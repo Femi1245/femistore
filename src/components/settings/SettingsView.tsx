@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Download, LifeBuoy, Loader2, Shield, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
+import { isInstalledAppShell } from "@/lib/native-shell";
 import {
   PROFILE_THEMES,
   privacyFromProfile,
@@ -48,6 +49,11 @@ export function SettingsView({ profile }: { profile: Profile }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [inInstalledApp, setInInstalledApp] = useState(false);
+
+  useEffect(() => {
+    setInInstalledApp(isInstalledAppShell());
+  }, []);
 
   const refresh = useCallback(async () => {
     const supabase = createClient();
@@ -444,6 +450,7 @@ export function SettingsView({ profile }: { profile: Profile }) {
         </Link>
       </section>
 
+      {!inInstalledApp && (
       <section className="vintage-card p-5 space-y-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
@@ -460,6 +467,7 @@ export function SettingsView({ profile }: { profile: Profile }) {
           Open install page
         </Link>
       </section>
+      )}
 
       <section className="vintage-card p-5 space-y-3">
         <h2 className="font-display font-bold text-vintage-ink">Your data</h2>

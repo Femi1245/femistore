@@ -11,6 +11,7 @@
     "lint": "eslint",
     "logo": "node scripts/make-logo-transparent.mjs",
     "pwa:icons": "node scripts/generate-pwa-icons.mjs",
+    "android:icons": "node scripts/generate-android-icons.mjs",
     "seed:assistant": "node scripts/seed-zumelia-ai.mjs",
     "email:welcome-backfill": "node scripts/send-welcome-backfill.mjs",
     "email:verify-setup": "node scripts/verify-resend-setup.mjs",

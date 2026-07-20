@@ -4,20 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Download, Share, X } from "lucide-react";
 import { getAndroidApkUrl } from "@/lib/app-download";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { isInstalledAppShell } from "@/lib/native-shell";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
-
-function isStandalone(): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
 
 function isIos(): boolean {
   if (typeof window === "undefined") return false;
@@ -29,7 +21,7 @@ function isAndroid(): boolean {
   return /android/i.test(window.navigator.userAgent);
 }
 
-/** Floating reminder — prefers real Android APK on Android phones. */
+/** Floating reminder — never shown inside the installed app. */
 export function InstallAppPrompt() {
   const [visible, setVisible] = useState(false);
   const [iosHint, setIosHint] = useState(false);
@@ -39,7 +31,7 @@ export function InstallAppPrompt() {
 
   useEffect(() => {
     setAndroid(isAndroid());
-    if (isStandalone() || isCapacitorNative()) return;
+    if (isInstalledAppShell()) return;
     if (sessionStorage.getItem("zumelia-install-session-dismissed")) return;
 
     if (isIos()) {

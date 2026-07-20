@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -49,6 +49,28 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthUiProvider | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Already signed in (e.g. reopening the native app) → go straight to feed
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+        if (!cancelled && data.session) {
+          window.location.replace(nextAfterAuth || "/feed");
+          return;
+        }
+      } catch {
+        // stay on auth form
+      }
+      if (!cancelled) setCheckingSession(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [nextAfterAuth]);
 
   async function handleOAuthSignIn(provider: OAuthUiProvider) {
     setError(null);
@@ -299,6 +321,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  if (checkingSession) {
+    return (
+      <div className="vintage-page flex min-h-full flex-1 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Logo size="lg" href="/login" />
+          <p className="text-sm text-vintage-ink-muted">Opening Zumelia…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="vintage-page relative flex min-h-full flex-1 flex-col items-center justify-center px-4 py-12">
       <div className="absolute right-4 top-4">
@@ -306,7 +339,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       </div>
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
-          <Logo size="lg" />
+          <Logo size="lg" href="/login" />
         </div>
 
         <div className="vintage-card p-8">
