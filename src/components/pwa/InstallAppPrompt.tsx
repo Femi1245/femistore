@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Download, Share, X } from "lucide-react";
+import { getAndroidApkUrl } from "@/lib/app-download";
 import { isCapacitorNative } from "@/lib/native-shell";
 
 type BeforeInstallPromptEvent = Event & {
@@ -22,22 +24,29 @@ function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
+function isAndroid(): boolean {
+  if (typeof window === "undefined") return false;
+  return /android/i.test(window.navigator.userAgent);
+}
+
+/** Floating reminder — dismiss only for this browser session so it returns next visit. */
 export function InstallAppPrompt() {
   const [visible, setVisible] = useState(false);
   const [iosHint, setIosHint] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const apkUrl = getAndroidApkUrl();
 
   useEffect(() => {
     if (isStandalone() || isCapacitorNative()) return;
 
-    const dismissed = localStorage.getItem("zumelia-install-dismissed");
-    if (dismissed) return;
+    // Session-only dismiss so the prompt can return; permanent download lives at /download
+    if (sessionStorage.getItem("zumelia-install-session-dismissed")) return;
 
     if (isIos()) {
       const timer = window.setTimeout(() => {
         setIosHint(true);
         setVisible(true);
-      }, 2500);
+      }, 1800);
       return () => window.clearTimeout(timer);
     }
 
@@ -48,11 +57,20 @@ export function InstallAppPrompt() {
     }
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+
+    // Android / desktop: show download CTA even without beforeinstallprompt
+    const timer = window.setTimeout(() => {
+      setVisible(true);
+    }, 2200);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   function dismiss() {
-    localStorage.setItem("zumelia-install-dismissed", "1");
+    sessionStorage.setItem("zumelia-install-session-dismissed", "1");
     setVisible(false);
   }
 
@@ -74,28 +92,44 @@ export function InstallAppPrompt() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold text-vintage-ink">
-            Install Zumelia app
+            Get the Zumelia app
           </p>
           {iosHint ? (
             <p className="mt-1 text-xs leading-relaxed text-vintage-ink-muted">
               Tap <Share className="inline h-3.5 w-3.5 align-text-bottom" /> Share,
-              then <strong>Add to Home Screen</strong> for a full-screen app experience.
+              then <strong>Add to Home Screen</strong> — or open the full download page.
             </p>
           ) : (
             <p className="mt-1 text-xs text-vintage-ink-muted">
-              Add Zumelia to your home screen for faster access and notifications.
+              Install Zumelia on your phone for faster access and notifications.
             </p>
           )}
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {!iosHint && deferred && (
               <button type="button" onClick={install} className="vintage-btn px-3 py-1.5 text-xs">
                 Install
               </button>
             )}
+            {apkUrl && isAndroid() && (
+              <a
+                href={apkUrl}
+                className="vintage-btn px-3 py-1.5 text-xs"
+                rel="noopener noreferrer"
+              >
+                Download APK
+              </a>
+            )}
+            <Link
+              href="/download"
+              className="vintage-btn-outline px-3 py-1.5 text-xs"
+              onClick={dismiss}
+            >
+              Download page
+            </Link>
             <button
               type="button"
               onClick={dismiss}
-              className="vintage-btn-outline px-3 py-1.5 text-xs"
+              className="px-2 py-1.5 text-xs text-vintage-ink-muted hover:text-vintage-ink"
             >
               Not now
             </button>

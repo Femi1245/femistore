@@ -17,6 +17,7 @@ import {
 import { HomeAuthLabel, HomeAuthLink } from "@/components/home/HomeAuthLink";
 import { HomeNavActions } from "@/components/layout/HomeNavActions";
 import { Logo } from "@/components/Logo";
+import { GetTheAppSection } from "@/components/pwa/GetTheAppSection";
 
 const pillars = [
   {
@@ -125,14 +126,12 @@ export default async function HomePage({
                 <HomeAuthLabel loggedIn="Open your feed" guest="Create your space" />
                 <ArrowRight className="h-5 w-5" />
               </HomeAuthLink>
-              <HomeAuthLink
-                loggedInHref="/chat"
-                guestHref="/login"
+              <Link
+                href="/download"
                 className="vintage-btn-outline flex w-full items-center justify-center gap-2 px-7 py-3.5 text-base sm:w-auto"
               >
-                <MessageCircle className="h-5 w-5" />
-                <HomeAuthLabel loggedIn="Messages" guest="Sign in" />
-              </HomeAuthLink>
+                Download the app
+              </Link>
             </div>
 
             <div className="mt-12 grid max-w-lg grid-cols-3 gap-6 lg:mx-0">
@@ -270,6 +269,8 @@ export default async function HomePage({
         </div>
       </section>
 
+      <GetTheAppSection />
+
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
         <div className="vintage-card relative overflow-hidden px-8 py-14 text-center md:px-16 md:py-16">
@@ -304,6 +305,9 @@ export default async function HomePage({
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-vintage-ink-muted sm:flex-row">
           <Logo size="sm" showWordmark />
           <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/download" className="hover:text-vintage-ink">
+              Download app
+            </Link>
             <Link href="/support" className="hover:text-vintage-ink">
               Support
             </Link>

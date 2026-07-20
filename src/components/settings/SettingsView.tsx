@@ -445,6 +445,23 @@ export function SettingsView({ profile }: { profile: Profile }) {
       </section>
 
       <section className="vintage-card p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
+            <Download className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-vintage-ink">Get the app</h2>
+            <p className="text-xs text-vintage-ink-muted">
+              Download Android APK or add Zumelia to your home screen.
+            </p>
+          </div>
+        </div>
+        <Link href="/download" className="vintage-btn-outline inline-flex px-5 py-2.5 text-sm">
+          Open download page
+        </Link>
+      </section>
+
+      <section className="vintage-card p-5 space-y-3">
         <h2 className="font-display font-bold text-vintage-ink">Your data</h2>
         <button
           type="button"
