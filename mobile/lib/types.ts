@@ -215,6 +215,31 @@ export type StatusUpdate = {
   background_color: string;
   created_at: string;
   expires_at: string;
+  reshare_of?: string | null;
+};
+
+export type StatusEngagement = {
+  likes: number;
+  comments: number;
+  reshares: number;
+  views: number;
+  liked_by_me: boolean;
+  reshared_by_me: boolean;
+};
+
+export type StatusComment = {
+  id: string;
+  status_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  author?: Profile;
+};
+
+export type StatusViewerRow = {
+  viewerId: string;
+  viewedAt: string;
+  profile?: Profile;
 };
 
 export type StatusGroup = {

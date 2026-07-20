@@ -7,6 +7,7 @@ import {
   Check,
   Compass,
   Copy,
+  Eye,
   Lock,
   MessageCircle,
   Phone,
@@ -32,6 +33,7 @@ const SLIDE_ICONS: Record<MarketingMockupSlideId, typeof Briefcase> = {
   "post-analytics": BarChart3,
   "section-tips": Compass,
   "privacy-controls": Lock,
+  "status-engagement": Eye,
 };
 
 function PhoneFrame({ children, label }: { children: React.ReactNode; label: string }) {
@@ -340,6 +342,45 @@ function SectionTipsMock() {
   );
 }
 
+function StatusEngagementMock() {
+  const viewers = [
+    { name: DEMO_PERSONAS.buyer.name, when: "2m ago" },
+    { name: "Chioma A.", when: "8m ago" },
+    { name: "Tunde K.", when: "14m ago" },
+  ];
+  return (
+    <div className="relative min-h-[380px] overflow-hidden bg-[#3d2e24]">
+      <div className="absolute inset-x-3 top-3 flex gap-1">
+        {[100, 40, 0].map((w, i) => (
+          <div key={i} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/25">
+            <div className="h-full bg-white" style={{ width: `${w}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="px-4 pb-4 pt-8 text-center">
+        <p className="font-display text-lg font-bold text-white">Sunset market run ✨</p>
+        <p className="mt-1 text-[9px] text-white/60">18h left</p>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-vintage-paper px-3 py-3 text-vintage-ink">
+        <p className="text-[10px] font-bold">12 viewed</p>
+        <ul className="mt-2 space-y-2">
+          {viewers.map((v) => (
+            <li key={v.name} className="flex items-center justify-between text-[9px]">
+              <span className="font-semibold">{v.name}</span>
+              <span className="text-vintage-ink-muted">{v.when}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex justify-between border-t border-vintage-border pt-2 text-[9px] text-vintage-ink-muted">
+          <span>♥ 9</span>
+          <span>💬 4</span>
+          <span>↻ 2</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PrivacyControlsMock() {
   const toggles = [
     { label: "Private account", on: true, hint: "Followers-only posts" },
@@ -400,6 +441,7 @@ const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   "post-analytics": <PostAnalyticsMock />,
   "section-tips": <SectionTipsMock />,
   "privacy-controls": <PrivacyControlsMock />,
+  "status-engagement": <StatusEngagementMock />,
 };
 
 export function SocialMockups() {

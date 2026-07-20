@@ -50,7 +50,7 @@ Rotate mockups and text. Check off each week.
 | Day | Type | Content |
 |-----|------|---------|
 | **Mon** | 🖼️ Mockup | `seller-inbox` — Seller vs personal inbox |
-| **Tue** | Text / 📱 | Build-in-public *or* mockup `post-analytics` |
+| **Tue** | Text / 📱 | Build-in-public *or* mockup `post-analytics` / `status-engagement` |
 | **Wed** | 🖼️ Mockup | `service-gig`, `storefront`, or `section-tips` |
 | **Thu** | Text / 📱 | Ask a question / poll *or* mockup `privacy-controls` |
 | **Fri** | 🖼️ Mockup | `auto-reply`, `calls`, or `section-tips` |

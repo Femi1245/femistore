@@ -116,6 +116,9 @@ export function StatusBar({ user }: { user: Profile }) {
             setViewGroupIndex(null);
             setShowCreate(true);
           }}
+          onReshared={() => {
+            void refresh();
+          }}
           onClose={() => {
             setViewGroupIndex(null);
             refresh();

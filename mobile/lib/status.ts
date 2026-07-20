@@ -1,5 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Profile, StatusGroup, StatusMediaType, StatusUpdate } from "./types";
+import type {
+  Profile,
+  StatusComment,
+  StatusEngagement,
+  StatusGroup,
+  StatusMediaType,
+  StatusUpdate,
+  StatusViewerRow,
+} from "./types";
+
+const STATUS_COMMENT_MAX = 500;
 
 export const STATUS_BACKGROUNDS = [
   "#b85c38",
@@ -190,4 +200,211 @@ export function statusTimeLeft(expiresAt: string): string {
   if (hours >= 1) return `${hours}h left`;
   const mins = Math.max(1, Math.floor(ms / 60000));
   return `${mins}m left`;
+}
+
+export async function getStatusEngagement(
+  supabase: SupabaseClient,
+  statusId: string,
+  currentUserId: string,
+): Promise<StatusEngagement> {
+  const empty: StatusEngagement = {
+    likes: 0,
+    comments: 0,
+    reshares: 0,
+    views: 0,
+    liked_by_me: false,
+    reshared_by_me: false,
+  };
+  if (!statusId) return empty;
+
+  const [likes, comments, reshares, views, myLike, myReshare] = await Promise.all([
+    supabase
+      .from("status_likes")
+      .select("status_id", { count: "exact", head: true })
+      .eq("status_id", statusId),
+    supabase
+      .from("status_comments")
+      .select("status_id", { count: "exact", head: true })
+      .eq("status_id", statusId),
+    supabase
+      .from("status_reshares")
+      .select("status_id", { count: "exact", head: true })
+      .eq("status_id", statusId),
+    supabase
+      .from("status_views")
+      .select("status_id", { count: "exact", head: true })
+      .eq("status_id", statusId),
+    supabase
+      .from("status_likes")
+      .select("status_id")
+      .eq("status_id", statusId)
+      .eq("user_id", currentUserId)
+      .maybeSingle(),
+    supabase
+      .from("status_reshares")
+      .select("status_id")
+      .eq("status_id", statusId)
+      .eq("user_id", currentUserId)
+      .maybeSingle(),
+  ]);
+
+  return {
+    likes: likes.count ?? 0,
+    comments: comments.count ?? 0,
+    reshares: reshares.count ?? 0,
+    views: views.count ?? 0,
+    liked_by_me: !!myLike.data,
+    reshared_by_me: !!myReshare.data,
+  };
+}
+
+export async function loadStatusViewers(
+  supabase: SupabaseClient,
+  statusId: string,
+  limit = 50,
+): Promise<StatusViewerRow[]> {
+  const { data } = await supabase
+    .from("status_views")
+    .select("viewer_id, viewed_at")
+    .eq("status_id", statusId)
+    .order("viewed_at", { ascending: false })
+    .limit(limit);
+
+  if (!data?.length) return [];
+
+  const viewerIds = [...new Set(data.map((r) => r.viewer_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", viewerIds);
+  const profileMap = new Map((profiles as Profile[] | null)?.map((p) => [p.id, p]));
+
+  return data.map((row) => ({
+    viewerId: row.viewer_id,
+    viewedAt: row.viewed_at,
+    profile: profileMap.get(row.viewer_id),
+  }));
+}
+
+export async function toggleStatusLike(
+  supabase: SupabaseClient,
+  statusId: string,
+  userId: string,
+  liked: boolean,
+): Promise<{ error?: string }> {
+  if (liked) {
+    const { error } = await supabase
+      .from("status_likes")
+      .delete()
+      .eq("status_id", statusId)
+      .eq("user_id", userId);
+    return error ? { error: error.message } : {};
+  }
+  const { error } = await supabase
+    .from("status_likes")
+    .insert({ status_id: statusId, user_id: userId });
+  return error ? { error: error.message } : {};
+}
+
+export async function loadStatusComments(
+  supabase: SupabaseClient,
+  statusId: string,
+): Promise<StatusComment[]> {
+  const { data } = await supabase
+    .from("status_comments")
+    .select("*")
+    .eq("status_id", statusId)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  if (!data?.length) return [];
+
+  const userIds = [...new Set((data as StatusComment[]).map((c) => c.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", userIds);
+  const profileMap = new Map((profiles as Profile[] | null)?.map((p) => [p.id, p]));
+
+  return (data as StatusComment[]).map((c) => ({
+    ...c,
+    author: profileMap.get(c.user_id),
+  }));
+}
+
+export async function addStatusComment(
+  supabase: SupabaseClient,
+  statusId: string,
+  userId: string,
+  content: string,
+): Promise<{ comment: StatusComment | null; error?: string }> {
+  const trimmed = content.trim();
+  if (!trimmed) return { comment: null, error: "Comment cannot be empty." };
+  if (trimmed.length > STATUS_COMMENT_MAX) {
+    return {
+      comment: null,
+      error: `Comments must be ${STATUS_COMMENT_MAX} characters or less.`,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("status_comments")
+    .insert({ status_id: statusId, user_id: userId, content: trimmed })
+    .select()
+    .single();
+
+  if (error) return { comment: null, error: error.message };
+  return { comment: data as StatusComment };
+}
+
+export async function reshareStatus(
+  supabase: SupabaseClient,
+  original: StatusUpdate,
+  userId: string,
+  caption?: string,
+): Promise<{ status: StatusUpdate | null; error?: string }> {
+  if (original.user_id === userId) {
+    return { status: null, error: "You cannot reshare your own status." };
+  }
+  if (new Date(original.expires_at).getTime() <= Date.now()) {
+    return { status: null, error: "This status has expired." };
+  }
+
+  const { data: existing } = await supabase
+    .from("status_reshares")
+    .select("status_id")
+    .eq("status_id", original.id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing) return { status: null, error: "You already reshared this status." };
+
+  const { data: newStatus, error: insertError } = await supabase
+    .from("status_updates")
+    .insert({
+      user_id: userId,
+      content: (caption?.trim() || original.content || "").slice(0, 500),
+      media_url: original.media_url,
+      media_type: original.media_type,
+      background_color: original.background_color,
+      reshare_of: original.id,
+    })
+    .select()
+    .single();
+
+  if (insertError || !newStatus) {
+    return { status: null, error: insertError?.message ?? "Could not reshare." };
+  }
+
+  const { error: reshareError } = await supabase.from("status_reshares").insert({
+    status_id: original.id,
+    user_id: userId,
+  });
+
+  if (reshareError) {
+    await supabase.from("status_updates").delete().eq("id", newStatus.id);
+    return { status: null, error: reshareError.message };
+  }
+
+  return { status: newStatus as StatusUpdate };
 }

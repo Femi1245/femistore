@@ -2,11 +2,35 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Heart,
+  MessageCircle,
+  Repeat2,
+  Send,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getPersonalProfileUrl } from "@/lib/business";
-import { markStatusViewed, statusTimeLeft } from "@/lib/status";
-import type { StatusGroup, StatusUpdate } from "@/lib/types";
+import {
+  addStatusComment,
+  getStatusEngagement,
+  loadStatusComments,
+  loadStatusViewers,
+  markStatusViewed,
+  reshareStatus,
+  statusTimeLeft,
+  toggleStatusLike,
+} from "@/lib/status";
+import type {
+  StatusComment,
+  StatusEngagement,
+  StatusGroup,
+  StatusUpdate,
+  StatusViewerRow,
+} from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 
 const SLIDE_MS = 5000;
@@ -17,22 +41,32 @@ export function StatusViewer({
   viewerId,
   onClose,
   onAddStatus,
+  onReshared,
 }: {
   groups: StatusGroup[];
   startGroupIndex: number;
   viewerId: string;
   onClose: () => void;
   onAddStatus?: () => void;
+  onReshared?: () => void;
 }) {
   const [groupIndex, setGroupIndex] = useState(startGroupIndex);
   const [itemIndex, setItemIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [engagement, setEngagement] = useState<StatusEngagement | null>(null);
+  const [panel, setPanel] = useState<"none" | "viewers" | "comments">("none");
+  const [viewers, setViewers] = useState<StatusViewerRow[]>([]);
+  const [comments, setComments] = useState<StatusComment[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const group = groups[groupIndex];
   const item = group?.items[itemIndex];
 
   const goNext = useCallback(() => {
-    if (!group) return;
+    if (!group || panel !== "none") return;
 
     if (itemIndex < group.items.length - 1) {
       setItemIndex((i) => i + 1);
@@ -51,9 +85,10 @@ export function StatusViewer({
     }
 
     onClose();
-  }, [group, groupIndex, groups, itemIndex, onClose]);
+  }, [group, groupIndex, groups, itemIndex, onClose, panel]);
 
   const goPrev = useCallback(() => {
+    if (panel !== "none") return;
     if (itemIndex > 0) {
       setItemIndex((i) => i - 1);
       setProgress(0);
@@ -68,7 +103,7 @@ export function StatusViewer({
         setProgress(0);
       }
     }
-  }, [groupIndex, groups, itemIndex]);
+  }, [groupIndex, groups, itemIndex, panel]);
 
   useEffect(() => {
     if (!item || group.isOwn) return;
@@ -77,6 +112,24 @@ export function StatusViewer({
 
   useEffect(() => {
     if (!item) return;
+    setPanel("none");
+    setActionError(null);
+    setCommentDraft("");
+    let cancelled = false;
+    void getStatusEngagement(createClient(), item.id, viewerId).then((data) => {
+      if (!cancelled) setEngagement(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.id, viewerId]);
+
+  useEffect(() => {
+    setProgress(0);
+  }, [item?.id]);
+
+  useEffect(() => {
+    if (!item || paused || panel !== "none") return;
 
     const started = Date.now();
     const timer = window.setInterval(() => {
@@ -87,17 +140,105 @@ export function StatusViewer({
     }, 50);
 
     return () => window.clearInterval(timer);
-  }, [item, groupIndex, itemIndex, goNext]);
+  }, [item?.id, groupIndex, itemIndex, goNext, paused, panel]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (panel !== "none") {
+          setPanel("none");
+          return;
+        }
+        onClose();
+      }
+      if (panel !== "none") return;
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft") goPrev();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, onClose]);
+  }, [goNext, goPrev, onClose, panel]);
+
+  async function openViewers() {
+    if (!item || !group.isOwn) return;
+    setPaused(true);
+    setPanel("viewers");
+    const rows = await loadStatusViewers(createClient(), item.id);
+    setViewers(rows);
+  }
+
+  async function openComments() {
+    if (!item) return;
+    setPaused(true);
+    setPanel("comments");
+    const rows = await loadStatusComments(createClient(), item.id);
+    setComments(rows);
+  }
+
+  async function handleLike() {
+    if (!item || !engagement || busy) return;
+    const wasLiked = engagement.liked_by_me;
+    setEngagement({
+      ...engagement,
+      liked_by_me: !wasLiked,
+      likes: engagement.likes + (wasLiked ? -1 : 1),
+    });
+    const { error } = await toggleStatusLike(
+      createClient(),
+      item.id,
+      viewerId,
+      wasLiked,
+    );
+    if (error) {
+      setEngagement(engagement);
+      setActionError(error);
+    }
+  }
+
+  async function handleReshare() {
+    if (!item || !engagement || busy || group.isOwn) return;
+    if (engagement.reshared_by_me) {
+      setActionError("You already reshared this status.");
+      return;
+    }
+    setBusy(true);
+    setActionError(null);
+    const { error } = await reshareStatus(createClient(), item, viewerId);
+    setBusy(false);
+    if (error) {
+      setActionError(error);
+      return;
+    }
+    setEngagement({
+      ...engagement,
+      reshared_by_me: true,
+      reshares: engagement.reshares + 1,
+    });
+    onReshared?.();
+  }
+
+  async function handleSendComment() {
+    if (!item || !commentDraft.trim() || busy) return;
+    setBusy(true);
+    setActionError(null);
+    const { comment, error } = await addStatusComment(
+      createClient(),
+      item.id,
+      viewerId,
+      commentDraft,
+    );
+    setBusy(false);
+    if (error || !comment) {
+      setActionError(error ?? "Could not post comment");
+      return;
+    }
+    setCommentDraft("");
+    const rows = await loadStatusComments(createClient(), item.id);
+    setComments(rows);
+    setEngagement((prev) =>
+      prev ? { ...prev, comments: prev.comments + 1 } : prev,
+    );
+  }
 
   if (!group || !item) {
     onClose();
@@ -163,7 +304,12 @@ export function StatusViewer({
           </div>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center">
+        <div
+          className="relative flex flex-1 items-center justify-center"
+          onPointerDown={() => setPaused(true)}
+          onPointerUp={() => panel === "none" && setPaused(false)}
+          onPointerLeave={() => panel === "none" && setPaused(false)}
+        >
           <StatusSlide item={item} />
 
           <button
@@ -184,9 +330,178 @@ export function StatusViewer({
           </button>
         </div>
 
-        {item.content && item.media_type !== "text" && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-12">
-            <p className="text-center text-sm text-white">{item.content}</p>
+        <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-5 pt-16">
+          {item.content && item.media_type !== "text" && (
+            <p className="mb-3 text-center text-sm text-white">{item.content}</p>
+          )}
+          {item.reshare_of && (
+            <p className="mb-2 text-center text-[11px] text-white/60">Reshared status</p>
+          )}
+          {actionError && (
+            <p className="mb-2 text-center text-xs text-red-300">{actionError}</p>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            {group.isOwn ? (
+              <button
+                type="button"
+                onClick={() => void openViewers()}
+                className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-sm text-white hover:bg-white/25"
+              >
+                <Eye className="h-4 w-4" />
+                {engagement?.views ?? 0} viewed
+              </button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => void handleLike()}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-white hover:bg-white/15"
+                  aria-label={engagement?.liked_by_me ? "Unlike" : "Like"}
+                >
+                  <Heart
+                    className={`h-5 w-5 ${
+                      engagement?.liked_by_me ? "fill-red-500 text-red-500" : ""
+                    }`}
+                  />
+                  {engagement && engagement.likes > 0 ? engagement.likes : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void openComments()}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-white hover:bg-white/15"
+                  aria-label="Comments"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  {engagement && engagement.comments > 0 ? engagement.comments : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleReshare()}
+                  disabled={busy || !!engagement?.reshared_by_me}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-white hover:bg-white/15 disabled:opacity-50"
+                  aria-label="Reshare"
+                >
+                  <Repeat2
+                    className={`h-5 w-5 ${
+                      engagement?.reshared_by_me ? "text-emerald-400" : ""
+                    }`}
+                  />
+                  {engagement && engagement.reshares > 0 ? engagement.reshares : ""}
+                </button>
+              </div>
+            )}
+            {group.isOwn && (
+              <div className="flex items-center gap-3 text-xs text-white/80">
+                <span className="inline-flex items-center gap-1">
+                  <Heart className="h-3.5 w-3.5" /> {engagement?.likes ?? 0}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void openComments()}
+                  className="inline-flex items-center gap-1 hover:text-white"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" /> {engagement?.comments ?? 0}
+                </button>
+                <span className="inline-flex items-center gap-1">
+                  <Repeat2 className="h-3.5 w-3.5" /> {engagement?.reshares ?? 0}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {panel !== "none" && (
+          <div className="absolute inset-x-0 bottom-0 z-30 max-h-[55%] rounded-t-2xl bg-vintage-paper text-vintage-ink shadow-2xl">
+            <div className="flex items-center justify-between border-b border-vintage-border px-4 py-3">
+              <p className="font-semibold">
+                {panel === "viewers" ? "Viewers" : "Comments"}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPanel("none");
+                  setPaused(false);
+                }}
+                className="rounded-full p-1 hover:bg-black/5"
+                aria-label="Close panel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto px-4 py-3">
+              {panel === "viewers" &&
+                (viewers.length === 0 ? (
+                  <p className="text-sm text-vintage-ink-muted">No views yet</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {viewers.map((row) => (
+                      <li key={row.viewerId} className="flex items-center gap-3">
+                        <Avatar
+                          name={row.profile?.display_name ?? "Viewer"}
+                          avatarUrl={row.profile?.avatar_url}
+                          size="sm"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {row.profile?.display_name ?? "Someone"}
+                          </p>
+                          <p className="text-[11px] text-vintage-ink-muted">
+                            {new Date(row.viewedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+              {panel === "comments" &&
+                (comments.length === 0 ? (
+                  <p className="mb-3 text-sm text-vintage-ink-muted">No comments yet</p>
+                ) : (
+                  <ul className="mb-3 space-y-3">
+                    {comments.map((c) => (
+                      <li key={c.id} className="flex gap-2">
+                        <Avatar
+                          name={c.author?.display_name ?? "Member"}
+                          avatarUrl={c.author?.avatar_url}
+                          size="sm"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold">
+                            {c.author?.display_name ?? "Member"}
+                          </p>
+                          <p className="text-sm">{c.content}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ))}
+            </div>
+            {panel === "comments" && (
+              <div className="flex gap-2 border-t border-vintage-border p-3">
+                <input
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  placeholder="Write a comment…"
+                  maxLength={500}
+                  className="vintage-input flex-1 px-3 py-2 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleSendComment();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleSendComment()}
+                  disabled={busy || !commentDraft.trim()}
+                  className="vintage-btn rounded-lg px-3 py-2 disabled:opacity-50"
+                  aria-label="Send comment"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

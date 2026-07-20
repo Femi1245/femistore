@@ -23,7 +23,8 @@ export type MarketingMockupSlideId =
   | "live"
   | "post-analytics"
   | "section-tips"
-  | "privacy-controls";
+  | "privacy-controls"
+  | "status-engagement";
 
 export type MarketingMockupSlide = {
   id: MarketingMockupSlideId;
@@ -166,6 +167,25 @@ Privacy shouldn't be a premium feature. 🟠
 
 Try it: ${MARKETING_APP_URL}`,
     hashtags: "#privacy #buildinpublic #Zumelia",
+  },
+  {
+    id: "status-engagement",
+    title: "Status viewers & reactions",
+    feature: "See who viewed your status — plus likes, comments, and reshares",
+    planDayRefs: ["Ongoing Tue", "Ongoing Sun"],
+    shippedAt: "2026-07",
+    caption: `Your status isn't a black hole anymore.
+
+Zumelia statuses now show:
+→ Who viewed it
+→ Likes
+→ Comments
+→ Reshares into their ring
+
+Stories with receipts. 🟠
+
+Try it: ${MARKETING_APP_URL}/feed`,
+    hashtags: "#buildinpublic #Zumelia",
   },
 ];
 

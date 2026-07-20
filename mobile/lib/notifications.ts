@@ -98,15 +98,17 @@ export function getNotificationHref(
     case "like":
     case "reshare":
     case "new_post":
+      if (notification.entity_type === "status") return "/feed";
       return notification.entity_id
         ? `/post/${notification.entity_id}`
         : "/feed";
     case "comment":
+      if (notification.entity_type === "status") return "/feed";
       return notification.entity_id
         ? `/post/${notification.entity_id}?comments=1`
         : "/feed";
     case "new_status":
-      return actorUsername ? `/profile/${actorUsername}` : "/feed";
+      return "/feed";
     case "message":
       return notification.entity_id
         ? `/chat?c=${encodeURIComponent(notification.entity_id)}`
@@ -131,13 +133,22 @@ export function getNotificationText(notification: Notification): string {
     case "follow":
       return `${name} connected with you`;
     case "like":
-      return `${name} liked your post`;
+      return notification.entity_type === "status"
+        ? `${name} liked your status`
+        : `${name} liked your post`;
     case "comment":
+      if (notification.entity_type === "status") {
+        return notification.message
+          ? `${name} commented on your status: "${notification.message}"`
+          : `${name} commented on your status`;
+      }
       return notification.message
         ? `${name} commented: "${notification.message}"`
         : `${name} commented on your post`;
     case "reshare":
-      return `${name} reshared your post`;
+      return notification.entity_type === "status"
+        ? `${name} reshared your status`
+        : `${name} reshared your post`;
     case "new_post":
       return notification.message
         ? `${name} posted: "${notification.message}"`
