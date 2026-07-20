@@ -736,3 +736,10 @@ code {
   background: var(--vintage-olive);
   box-shadow: 0 0 8px color-mix(in srgb, var(--vintage-olive) 80%, transparent);
 }
+
+/* Installed app (Capacitor / PWA): never show download / install chrome */
+html[data-zumelia-native="1"] #get-the-app,
+html[data-zumelia-native="1"] [data-install-prompt] {
+  display: none !important;
+}
+

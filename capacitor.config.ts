@@ -9,7 +9,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const serverUrl =
   process.env.CAPACITOR_SERVER_URL?.trim() ||
-  "https://itunes-mu.vercel.app/login";
+  "https://itunes-mu.vercel.app/login?native=1";
 
 const config: CapacitorConfig = {
   appId: "com.zumelia.app",
@@ -28,6 +28,10 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     backgroundColor: "#FAF8F5",
+    appendUserAgent: " ZumeliaNativeApp/1",
+  },
+  ios: {
+    appendUserAgent: " ZumeliaNativeApp/1",
   },
   plugins: {
     SplashScreen: {

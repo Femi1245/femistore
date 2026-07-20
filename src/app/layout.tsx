@@ -5,6 +5,7 @@ import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoa
 import { CallProviderLoader } from "@/components/chat/CallProviderLoader";
 import { ChunkRecovery } from "@/components/ChunkRecovery";
 import { HydrationExtensionGuard } from "@/components/HydrationExtensionGuard";
+import { NativeShellGuard } from "@/components/NativeShellGuard";
 import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import "./globals.css";
 
@@ -63,6 +64,7 @@ export default function RootLayout({
     >
       <head>
         <HydrationExtensionGuard />
+        <NativeShellGuard />
         {supabaseOrigin ? (
           <>
             <link rel="preconnect" href={supabaseOrigin} />

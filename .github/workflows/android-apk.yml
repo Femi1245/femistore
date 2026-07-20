@@ -8,6 +8,8 @@ on:
       - "android/**"
       - "capacitor.config.ts"
       - "public/index.html"
+      - "public/images/zumelia.png"
+      - "scripts/generate-android-icons.mjs"
       - ".github/workflows/android-apk.yml"
       - "package.json"
 
@@ -38,10 +40,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Zumelia launcher icons
+        run: npm run android:icons
+
       - name: Sync Capacitor
         run: npx cap sync android
         env:
-          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app/login
+          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app/login?native=1
 
       - name: Build debug APK
         working-directory: android
@@ -58,16 +63,27 @@ jobs:
           name: zumelia-android
           path: dist/Zumelia.apk
 
-      - name: Publish / update GitHub Release
+      - name: Delete old android-latest release (force refresh)
+        continue-on-error: true
+        run: |
+          gh release delete android-latest --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
           name: Zumelia Android App
           body: |
-            Install **Zumelia.apk** on your Android phone.
+            ## Install Zumelia (real app)
 
-            After install, open the **Zumelia** icon — login/signup opens first (no browser).
-            Install prompts are hidden inside the app.
+            1. Download **Zumelia.apk** below
+            2. Uninstall any older Zumelia app first
+            3. Install this APK
+            4. Open the **Zumelia** icon → login/signup (not the browser)
+
+            Icon uses the official Zumelia logo. Download/install banners are hidden inside the app.
           files: dist/Zumelia.apk
           make_latest: true
         env:
