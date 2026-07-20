@@ -24,6 +24,8 @@
     "mobile:apk": "cd mobile && npm run build:apk"
   },
   "dependencies": {
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/browser": "^7.0.5",
     "@livekit/components-react": "^2.9.21",
     "@livekit/components-styles": "^1.2.0",
     "@supabase/ssr": "^0.10.3",

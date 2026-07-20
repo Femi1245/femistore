@@ -18,7 +18,12 @@ import {
 import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } from "@/lib/birthday";
 import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { COUNTRIES } from "@/lib/countries";
-import { authCallbackUrl, safeNextPath } from "@/lib/app-url";
+import { authCallbackUrl, nativeOAuthBridgeUrl, safeNextPath } from "@/lib/app-url";
+import {
+  applyNativeOAuthResult,
+  canUseInAppOAuth,
+  runNativeOAuth,
+} from "@/lib/native-oauth";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
@@ -80,7 +85,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
-      const redirectTo = authCallbackUrl(nextAfterAuth, window.location.origin);
+      const inApp = canUseInAppOAuth();
+      // Native shell: HTTPS bridge → zumelia:// deep link (stays in-app Custom Tab).
+      // Web: normal /auth/callback cookie/PKCE route.
+      const redirectTo = inApp
+        ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
+        : authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: supabaseProvider,
         options: {
@@ -104,6 +114,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (data?.url) {
+        if (inApp) {
+          const result = await runNativeOAuth(data.url);
+          if (result.error) {
+            setError(formatOAuthError(result.error));
+            setOauthLoading(null);
+            return;
+          }
+          await applyNativeOAuthResult(result);
+          return;
+        }
         window.location.assign(data.url);
         return;
       }

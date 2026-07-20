@@ -42,3 +42,19 @@ NEXT_PUBLIC_ANDROID_APK_URL=https://github.com/Femi1245/femistore/releases/lates
 ```
 
 Install guide page: https://itunes-mu.vercel.app/download
+
+## Google / X / GitHub sign-in (required once)
+
+OAuth must return to the app (in-app browser + deep link), not Chrome.
+
+In **Supabase → Authentication → URL Configuration → Redirect URLs**, add:
+
+```
+https://itunes-mu.vercel.app/auth/native-bridge
+https://itunes-mu.vercel.app/auth/native-bridge/**
+zumelia://auth/callback
+```
+
+Site URL can stay `https://itunes-mu.vercel.app`.
+
+Without these URLs, Google (and other providers) will fail or open the system browser after login.

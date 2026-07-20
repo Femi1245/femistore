@@ -29,3 +29,21 @@ export function authCallbackUrl(next?: string, origin?: string): string {
   if (!next || next === "/chat") return base;
   return `${base}?next=${encodeURIComponent(next)}`;
 }
+
+/**
+ * HTTPS bridge used by the native app OAuth flow.
+ * Supabase redirects here (allowed HTTPS URL); the page immediately bounces to
+ * `zumelia://auth/callback` so the Capacitor WebView can finish the session.
+ */
+export function nativeOAuthBridgeUrl(next?: string, origin?: string): string {
+  const base = `${getAuthRedirectOrigin(origin)}/auth/native-bridge`;
+  if (!next || next === "/chat") return base;
+  return `${base}?next=${encodeURIComponent(next)}`;
+}
+
+/** Deep link the Android/iOS app listens for after OAuth. */
+export function nativeOAuthDeepLinkUrl(search = "", hash = ""): string {
+  const q = search.startsWith("?") || search === "" ? search : `?${search}`;
+  const h = hash.startsWith("#") || hash === "" ? hash : `#${hash}`;
+  return `zumelia://auth/callback${q}${h}`;
+}

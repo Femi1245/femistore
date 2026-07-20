@@ -6,6 +6,7 @@ import { CallProviderLoader } from "@/components/chat/CallProviderLoader";
 import { ChunkRecovery } from "@/components/ChunkRecovery";
 import { HydrationExtensionGuard } from "@/components/HydrationExtensionGuard";
 import { NativeShellGuard } from "@/components/NativeShellGuard";
+import { NativeOAuthListener } from "@/components/NativeOAuthListener";
 import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import "./globals.css";
 
@@ -79,6 +80,7 @@ export default function RootLayout({
             {children}
           </CallProviderLoader>
           <DeferredClientWidgets />
+          <NativeOAuthListener />
           <AssistantWidgetLoader />
         </ThemeProvider>
       </body>
