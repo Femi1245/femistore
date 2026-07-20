@@ -452,12 +452,12 @@ export function SettingsView({ profile }: { profile: Profile }) {
           <div>
             <h2 className="font-display font-bold text-vintage-ink">Get the app</h2>
             <p className="text-xs text-vintage-ink-muted">
-              Download Android APK or add Zumelia to your home screen.
+              Install Zumelia from this website onto your home screen (no app store).
             </p>
           </div>
         </div>
         <Link href="/download" className="vintage-btn-outline inline-flex px-5 py-2.5 text-sm">
-          Open download page
+          Open install page
         </Link>
       </section>
 
