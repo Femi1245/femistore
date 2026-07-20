@@ -16,7 +16,7 @@
     "email:verify-setup": "node scripts/verify-resend-setup.mjs",
     "push:setup": "node scripts/setup-push-notifications.mjs",
     "test:groq": "node scripts/test-groq.mjs",
-    "cap:sync": "npx cap sync",
+    "cap:sync": "npx cap sync android",
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios",
     "mobile": "cd mobile && npm start",

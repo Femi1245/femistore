@@ -1,37 +1,37 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
- * Native app shell for Zumelia (WebView wrapper).
+ * Zumelia native Android/iOS shell (JavaScript + Capacitor).
+ * Opens your live site inside a real app icon — no Chrome address bar.
  *
- * ⚠️ For a real standalone APK, use the Expo app in `mobile/` instead.
- * See MOBILE_APK.md — users open the app directly without a browser.
- *
- * This Capacitor shell loads your deployed website URL. Only use it if you
- * intentionally want a thin WebView around the web app.
- *
- * Deploy your Next.js app first (Vercel, etc.), then set CAPACITOR_SERVER_URL
- * to that HTTPS URL before building Android/iOS packages.
- *
- * Example: CAPACITOR_SERVER_URL=https://your-app.vercel.app
+ * Default production URL: https://itunes-mu.vercel.app
+ * Override with CAPACITOR_SERVER_URL if needed.
  */
-const serverUrl = process.env.CAPACITOR_SERVER_URL;
+const serverUrl =
+  process.env.CAPACITOR_SERVER_URL?.trim() || "https://itunes-mu.vercel.app";
 
 const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  server: serverUrl
-    ? {
-        url: serverUrl,
-        cleartext: serverUrl.startsWith("http://"),
-      }
-    : undefined,
+  server: {
+    url: serverUrl,
+    cleartext: serverUrl.startsWith("http://"),
+    allowNavigation: [
+      "itunes-mu.vercel.app",
+      "*.vercel.app",
+      "*.supabase.co",
+      "*.livekit.cloud",
+    ],
+  },
   android: {
     allowMixedContent: false,
+    backgroundColor: "#FAF8F5",
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1800,
+      launchAutoHide: true,
       backgroundColor: "#FAF8F5",
       showSpinner: false,
     },

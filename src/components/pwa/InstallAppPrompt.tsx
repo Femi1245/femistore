@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Download, Share, X } from "lucide-react";
+import { getAndroidApkUrl } from "@/lib/app-download";
 import { isCapacitorNative } from "@/lib/native-shell";
 
 type BeforeInstallPromptEvent = Event & {
@@ -23,13 +24,21 @@ function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
-/** Floating reminder for browser install (PWA / JavaScript). */
+function isAndroid(): boolean {
+  if (typeof window === "undefined") return false;
+  return /android/i.test(window.navigator.userAgent);
+}
+
+/** Floating reminder — prefers real Android APK on Android phones. */
 export function InstallAppPrompt() {
   const [visible, setVisible] = useState(false);
   const [iosHint, setIosHint] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [android, setAndroid] = useState(false);
+  const apkUrl = getAndroidApkUrl();
 
   useEffect(() => {
+    setAndroid(isAndroid());
     if (isStandalone() || isCapacitorNative()) return;
     if (sessionStorage.getItem("zumelia-install-session-dismissed")) return;
 
@@ -48,8 +57,7 @@ export function InstallAppPrompt() {
     }
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
-
-    const timer = window.setTimeout(() => setVisible(true), 2200);
+    const timer = window.setTimeout(() => setVisible(true), 2000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
@@ -80,22 +88,37 @@ export function InstallAppPrompt() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold text-vintage-ink">
-            Install Zumelia
+            Get the Zumelia app
           </p>
           {iosHint ? (
             <p className="mt-1 text-xs leading-relaxed text-vintage-ink-muted">
-              Tap <Share className="inline h-3.5 w-3.5 align-text-bottom" /> Share,
-              then <strong>Add to Home Screen</strong>.
+              Tap <Share className="inline h-3.5 w-3.5 align-text-bottom" /> Share →{" "}
+              <strong>Add to Home Screen</strong>.
             </p>
           ) : (
             <p className="mt-1 text-xs text-vintage-ink-muted">
-              Add Zumelia to your home screen from this website — no app store needed.
+              Install the Android app once — then open Zumelia from your app icon,
+              not the browser.
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
+            {android && (
+              <a
+                href={apkUrl}
+                className="vintage-btn px-3 py-1.5 text-xs"
+                rel="noopener noreferrer"
+                onClick={dismiss}
+              >
+                Download app
+              </a>
+            )}
             {!iosHint && deferred && (
-              <button type="button" onClick={install} className="vintage-btn px-3 py-1.5 text-xs">
-                Install
+              <button
+                type="button"
+                onClick={install}
+                className="vintage-btn-outline px-3 py-1.5 text-xs"
+              >
+                Install from browser
               </button>
             )}
             <Link
@@ -103,7 +126,7 @@ export function InstallAppPrompt() {
               className="vintage-btn-outline px-3 py-1.5 text-xs"
               onClick={dismiss}
             >
-              How to install
+              Guide
             </Link>
             <button
               type="button"
