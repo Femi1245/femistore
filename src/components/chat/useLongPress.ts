@@ -39,10 +39,12 @@ export function useLongPress(onLongPress: () => void, delayMs = 450) {
   );
 
   return {
-    onTouchStart,
-    onTouchEnd,
-    onTouchMove,
-    onContextMenu,
+    handlers: {
+      onTouchStart,
+      onTouchEnd,
+      onTouchMove,
+      onContextMenu,
+    },
     wasLongPress: () => firedRef.current,
     clearLongPress: () => {
       firedRef.current = false;

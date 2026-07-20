@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AssistantWidgetLoader } from "@/components/assistant/AssistantWidgetLoader";
 import { CallProviderLoader } from "@/components/chat/CallProviderLoader";
 import { ChunkRecovery } from "@/components/ChunkRecovery";
+import { HydrationExtensionGuard } from "@/components/HydrationExtensionGuard";
 import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import "./globals.css";
 
@@ -61,6 +62,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <HydrationExtensionGuard />
         {supabaseOrigin ? (
           <>
             <link rel="preconnect" href={supabaseOrigin} />

@@ -12,6 +12,8 @@ const DEFAULTS: MobileAppearance = {
   compactSpacing: false,
 };
 
+export const DEFAULT_MOBILE_APPEARANCE = DEFAULTS;
+
 export function getMobileAppearance(): MobileAppearance {
   if (typeof window === "undefined") return DEFAULTS;
   try {

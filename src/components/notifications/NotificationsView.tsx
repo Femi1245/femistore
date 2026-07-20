@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bell,
   CircleDot,
@@ -53,11 +53,20 @@ const iconMap: Record<
   connection_request: UserPlus,
 };
 
-export function NotificationsView({ currentUser }: { currentUser: Profile }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+export function NotificationsView({
+  currentUser,
+  initialNotifications,
+}: {
+  currentUser: Profile;
+  initialNotifications?: Notification[];
+}) {
+  const [notifications, setNotifications] = useState<Notification[]>(
+    initialNotifications ?? [],
+  );
+  const [loading, setLoading] = useState(initialNotifications === undefined);
   const [markingAll, setMarkingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const usedInitial = useRef(initialNotifications !== undefined);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -72,8 +81,14 @@ export function NotificationsView({ currentUser }: { currentUser: Profile }) {
   }, [currentUser.id]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (usedInitial.current && initialNotifications) {
+      usedInitial.current = false;
+      setNotifications(initialNotifications);
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [refresh, initialNotifications]);
 
   useEffect(() => {
     const supabase = createClient();

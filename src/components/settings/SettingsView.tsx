@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Download, Loader2, Shield, BadgeCheck } from "lucide-react";
+import { Download, LifeBuoy, Loader2, Shield, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { usePlatformAdmin } from "@/hooks/usePlatformAdmin";
 import {
@@ -428,6 +428,23 @@ export function SettingsView({ profile }: { profile: Profile }) {
       </section>
 
       <section className="vintage-card p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-vintage-rust/10 text-vintage-rust">
+            <LifeBuoy className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-vintage-ink">Help & support</h2>
+            <p className="text-xs text-vintage-ink-muted">
+              Account issues, bugs, billing, or feedback — we reply by email.
+            </p>
+          </div>
+        </div>
+        <Link href="/support" className="vintage-btn inline-flex px-5 py-2.5 text-sm">
+          Contact support
+        </Link>
+      </section>
+
+      <section className="vintage-card p-5 space-y-3">
         <h2 className="font-display font-bold text-vintage-ink">Your data</h2>
         <button
           type="button"
@@ -443,8 +460,11 @@ export function SettingsView({ profile }: { profile: Profile }) {
           Download my data (JSON)
         </button>
         <p className="text-xs text-vintage-ink-muted">
-          Includes profile, posts, and notifications. To delete your account, contact support via
-          appeal or email support@zumelia.app.
+          Includes profile, posts, and notifications. To delete your account,{" "}
+          <Link href="/support" className="font-semibold text-vintage-rust hover:underline">
+            contact support
+          </Link>
+          .
         </p>
         <BackButton
           fallbackHref="/profile/edit"

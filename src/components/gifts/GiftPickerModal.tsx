@@ -80,14 +80,29 @@ export function GiftPickerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
-      <div className="vintage-card w-full max-w-md p-5">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="vintage-card w-full max-w-md border-vintage-border-strong bg-vintage-paper p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-labelledby="gift-picker-title"
+      >
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Gift className="h-5 w-5 text-vintage-rust" />
-            <h2 className="font-display text-lg font-bold">Send a gift</h2>
+            <h2 id="gift-picker-title" className="font-display text-lg font-bold">
+              Send a gift
+            </h2>
           </div>
-          <button type="button" onClick={onClose} className="text-vintage-ink-muted">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-vintage-ink-muted transition hover:bg-vintage-paper-dark hover:text-vintage-ink"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -117,10 +132,10 @@ export function GiftPickerModal({
                   key={item.id}
                   type="button"
                   onClick={() => setSelected(item.id)}
-                  className={`flex flex-col items-center rounded-sm border-2 p-3 transition ${
+                  className={`flex flex-col items-center rounded-lg border-2 p-3 transition-[transform,background-color,border-color,box-shadow] touch-manipulation active:scale-[0.98] ${
                     selected === item.id
-                      ? "border-vintage-rust bg-vintage-rust/10"
-                      : "border-vintage-border hover:bg-vintage-paper-dark/40"
+                      ? "border-vintage-rust bg-vintage-rust/25 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--vintage-rust)_35%,transparent)]"
+                      : "border-vintage-border bg-vintage-paper-dark hover:border-vintage-rust/40 hover:bg-vintage-paper-dark active:bg-vintage-rust/15"
                   }`}
                 >
                   <span className="text-2xl">{item.emoji}</span>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Smartphone } from "lucide-react";
 import {
+  DEFAULT_MOBILE_APPEARANCE,
   getMobileAppearance,
   setMobileAppearance,
   MOBILE_APPEARANCE_EVENT,
@@ -10,9 +11,10 @@ import {
 } from "@/lib/mobile-appearance";
 
 export function MobileAppearanceSection() {
-  const [prefs, setPrefs] = useState<MobileAppearance>(() => getMobileAppearance());
+  const [prefs, setPrefs] = useState<MobileAppearance>(DEFAULT_MOBILE_APPEARANCE);
 
   useEffect(() => {
+    setPrefs(getMobileAppearance());
     const sync = () => setPrefs(getMobileAppearance());
     window.addEventListener(MOBILE_APPEARANCE_EVENT, sync);
     return () => window.removeEventListener(MOBILE_APPEARANCE_EVENT, sync);

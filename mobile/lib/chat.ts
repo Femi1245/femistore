@@ -321,30 +321,24 @@ export async function loadPublicChannels(
     }));
 }
 
-async function getLastMessage(
-  supabase: SupabaseClient,
-  convId: string,
-): Promise<{ content: string | null; created_at: string | null }> {
-  const { data } = await supabase
-    .from("messages")
-    .select("content, created_at")
-    .eq("conversation_id", convId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return {
-    content: data?.content ?? null,
-    created_at: data?.created_at ?? null,
-  };
-}
-
 export type ConversationFilter = "all" | "regular" | "secret";
 
-export async function loadConversations(
+export function filterConversationPreviews(
+  previews: ConversationPreview[],
+  filter: ConversationFilter,
+): ConversationPreview[] {
+  return previews.filter((preview) => {
+    const isSecret = !!preview.is_secret;
+    if (filter === "regular" && isSecret) return false;
+    if (filter === "secret" && !isSecret) return false;
+    return true;
+  });
+}
+
+/** One batched fetch for inbox tabs (avoids N+1 per conversation). */
+export async function loadAllConversations(
   supabase: SupabaseClient,
   userId: string,
-  filter: ConversationFilter = "regular",
 ): Promise<ConversationPreview[]> {
   const { data: memberships } = await supabase
     .from("conversation_members")
@@ -353,40 +347,80 @@ export async function loadConversations(
 
   if (!memberships?.length) return [];
 
+  const convIds = memberships.map((m) => m.conversation_id);
+  const roleByConv = new Map(
+    memberships.map((m) => [m.conversation_id, m.role as MemberRole]),
+  );
+
+  const [{ data: convRows }, { data: memberRows }, { data: recentMsgs }] =
+    await Promise.all([
+      supabase
+        .from("conversations")
+        .select("id, kind, name, is_secret")
+        .in("id", convIds),
+      supabase
+        .from("conversation_members")
+        .select("conversation_id, user_id")
+        .in("conversation_id", convIds),
+      supabase
+        .from("messages")
+        .select("conversation_id, content, created_at")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: false })
+        .limit(Math.min(convIds.length * 3, 400)),
+    ]);
+
+  const lastMsgByConv = new Map<
+    string,
+    { content: string | null; created_at: string | null }
+  >();
+  for (const msg of recentMsgs ?? []) {
+    if (!lastMsgByConv.has(msg.conversation_id)) {
+      lastMsgByConv.set(msg.conversation_id, {
+        content: msg.content,
+        created_at: msg.created_at,
+      });
+    }
+  }
+
+  const membersByConv = new Map<string, string[]>();
+  for (const row of memberRows ?? []) {
+    const list = membersByConv.get(row.conversation_id) ?? [];
+    list.push(row.user_id);
+    membersByConv.set(row.conversation_id, list);
+  }
+
+  const otherUserIds = new Set<string>();
+  for (const conv of convRows ?? []) {
+    if ((conv.kind ?? "dm") !== "dm") continue;
+    const members = membersByConv.get(conv.id) ?? [];
+    const otherId = members.find((id) => id !== userId);
+    if (otherId) otherUserIds.add(otherId);
+  }
+
+  const { data: profileRows } = otherUserIds.size
+    ? await supabase.from("profiles").select("*").in("id", [...otherUserIds])
+    : { data: [] as Profile[] };
+
+  const profileMap = new Map(
+    ((profileRows as Profile[]) ?? []).map((p) => [p.id, p]),
+  );
+
   const previews: ConversationPreview[] = [];
 
-  for (const membership of memberships) {
-    const convId = membership.conversation_id;
-    const { data: conv } = await supabase
-      .from("conversations")
-      .select("kind, name, is_secret")
-      .eq("id", convId)
-      .single();
-
-    if (!conv) continue;
-
-    const isSecret = !!conv.is_secret;
-    if (filter === "regular" && isSecret) continue;
-    if (filter === "secret" && !isSecret) continue;
-
-    const lastMsg = await getLastMessage(supabase, convId);
+  for (const conv of convRows ?? []) {
+    const convId = conv.id;
     const kind = (conv.kind ?? "dm") as ConversationKind;
+    const isSecret = !!conv.is_secret;
+    const lastMsg = lastMsgByConv.get(convId) ?? { content: null, created_at: null };
+    const myRole = roleByConv.get(convId);
 
     if (kind === "dm") {
-      const { data: members } = await supabase
-        .from("conversation_members")
-        .select("user_id")
-        .eq("conversation_id", convId);
-
-      const otherId = members?.find((m) => m.user_id !== userId)?.user_id;
+      const members = membersByConv.get(convId) ?? [];
+      const otherId = members.find((id) => id !== userId);
       if (!otherId) continue;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", otherId)
-        .single();
-
+      const profile = profileMap.get(otherId);
       if (!profile) continue;
 
       previews.push({
@@ -394,26 +428,20 @@ export async function loadConversations(
         kind,
         name: null,
         is_secret: isSecret,
-        other_user: profile as Profile,
-        my_role: membership.role as MemberRole,
+        other_user: profile,
+        my_role: myRole,
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
       });
     } else {
-      if (filter === "secret") continue;
-
-      const { count } = await supabase
-        .from("conversation_members")
-        .select("*", { count: "exact", head: true })
-        .eq("conversation_id", convId);
-
+      const memberCount = (membersByConv.get(convId) ?? []).length;
       previews.push({
         id: convId,
         kind,
         name: conv.name,
         is_secret: false,
-        member_count: count ?? 0,
-        my_role: membership.role as MemberRole,
+        member_count: memberCount,
+        my_role: myRole,
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
       });
@@ -427,6 +455,15 @@ export async function loadConversations(
   });
 
   return previews;
+}
+
+export async function loadConversations(
+  supabase: SupabaseClient,
+  userId: string,
+  filter: ConversationFilter = "regular",
+): Promise<ConversationPreview[]> {
+  const all = await loadAllConversations(supabase, userId);
+  return filterConversationPreviews(all, filter);
 }
 
 export async function loadActiveChat(

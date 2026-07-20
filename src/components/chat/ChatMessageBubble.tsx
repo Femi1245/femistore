@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, DollarSign, Pencil, Reply, X } from "lucide-react";
+import { Check, CheckCheck, DollarSign, Pencil, Reply, X } from "lucide-react";
 import { useCallback } from "react";
 import { VoiceMessageBubble } from "@/components/chat/VoiceMessageBubble";
 import { PollMessage } from "@/components/chat/PollMessage";
@@ -29,6 +29,9 @@ type Props = {
   onCancelEdit: () => void;
   onEditDraftChange: (value: string) => void;
   onReply: (msg: Message) => void;
+  /** DM read receipt: other person read up to this message. */
+  isRead?: boolean;
+  showReadReceipt?: boolean;
 };
 
 export function ChatMessageBubble({
@@ -50,6 +53,8 @@ export function ChatMessageBubble({
   onCancelEdit,
   onEditDraftChange,
   onReply,
+  isRead = false,
+  showReadReceipt = false,
 }: Props) {
   const isText = !msg.message_type || msg.message_type === "text";
   const isDeleted = !!msg.deleted_at;
@@ -58,7 +63,7 @@ export function ChatMessageBubble({
     onLongPress(msg);
   }, [msg, onLongPress]);
 
-  const longPress = useLongPress(handleLongPress);
+  const { handlers: longPressHandlers } = useLongPress(handleLongPress);
 
   return (
     <div
@@ -66,7 +71,7 @@ export function ChatMessageBubble({
       className={`group flex ${isMine ? "justify-end" : "justify-start"}`}
     >
       <div
-        {...longPress}
+        {...longPressHandlers}
         className={`max-w-[85%] select-none rounded-2xl px-4 py-2.5 md:max-w-[75%] md:select-text ${
           isMine
             ? "rounded-br-sm vintage-btn text-on-rust"
@@ -164,6 +169,20 @@ export function ChatMessageBubble({
             {formatMessageTime(msg.created_at)}
             {msg.edited_at ? " · edited" : ""}
           </span>
+          {isMine && showReadReceipt && !isDeleted && (
+            <span
+              className={`inline-flex items-center gap-0.5 ${
+                isRead ? "text-white/90" : "text-white/60"
+              }`}
+              title={isRead ? "Read" : "Sent"}
+            >
+              {isRead ? (
+                <CheckCheck className="h-3 w-3" aria-label="Read" />
+              ) : (
+                <Check className="h-3 w-3" aria-label="Sent" />
+              )}
+            </span>
+          )}
           {canEditMsg && !isEditing && (
             <button
               type="button"

@@ -49,7 +49,7 @@ export function LiveGiftFeed({
   }, [roomName]);
 
   return (
-    <div className="vintage-card flex flex-col overflow-hidden">
+    <div className="flex flex-col overflow-hidden bg-vintage-paper">
       <div className="flex items-center justify-between border-b border-vintage-border px-3 py-2">
         <div className="flex items-center gap-2">
           <Gift className="h-4 w-4 text-vintage-rust" />

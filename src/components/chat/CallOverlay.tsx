@@ -10,6 +10,7 @@ import {
 import "@livekit/components-styles";
 import { Loader2, Mic, PhoneOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isBenignLiveKitError } from "@/lib/livekit-errors";
 import type { CallSession, CallType } from "@/lib/types";
 
 function CallSessionWatcher({
@@ -36,7 +37,7 @@ function CallSessionWatcher({
         (payload) => {
           const session = payload.new as CallSession;
           if (!["ringing", "active"].includes(session.status)) {
-            void room.disconnect(true);
+            void room.disconnect(false);
             onRemoteEnd();
           }
         },
@@ -147,6 +148,10 @@ export function CallOverlay({
           connect
           video={callType === "video"}
           audio
+          onError={(err) => {
+            if (isBenignLiveKitError(err)) return;
+            setError(err.message || "Call connection error");
+          }}
           onDisconnected={finishCall}
           className="flex flex-1 flex-col"
         >

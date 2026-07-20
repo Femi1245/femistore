@@ -54,8 +54,9 @@ export function WatchHub({ user }: { user: Profile }) {
   }, [user.id]);
 
   useEffect(() => {
-    refreshLibrary();
-  }, [refreshLibrary]);
+    if (tab === "search") return;
+    void refreshLibrary();
+  }, [refreshLibrary, tab]);
 
   useEffect(() => {
     if (!selectedPlaylist) {

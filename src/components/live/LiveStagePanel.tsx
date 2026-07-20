@@ -232,7 +232,7 @@ export function LiveStagePanel({
       <div className="vintage-card border-vintage-olive/30 bg-vintage-olive/10 p-4 text-sm">
         <p className="font-semibold text-vintage-ink">You&apos;re on stage</p>
         <p className="mt-1 text-vintage-ink-muted">
-          Your camera and mic are enabled — you&apos;re co-hosting this live.
+          Your camera and mic are enabled — viewers can see you alongside the host and other co-hosts.
         </p>
       </div>
     );

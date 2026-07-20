@@ -166,12 +166,14 @@ export async function enrichPosts(
   posts: Post[],
   currentUserId: string,
 ): Promise<PostWithMeta[]> {
-  const withAuthors = await attachAuthors(supabase, posts);
-  const engagement = await getEngagement(
-    supabase,
-    withAuthors.map((p) => p.id),
-    currentUserId,
-  );
+  const [withAuthors, engagement] = await Promise.all([
+    attachAuthors(supabase, posts),
+    getEngagement(
+      supabase,
+      posts.map((p) => p.id),
+      currentUserId,
+    ),
+  ]);
 
   return withAuthors.map((p) => ({
     ...p,

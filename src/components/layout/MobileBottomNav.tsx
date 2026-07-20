@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { UnreadChatBadge } from "@/components/chat/UnreadChatBadge";
 import { useUnreadChatCount } from "@/components/chat/useUnreadChatCount";
 import {
+  DEFAULT_MOBILE_APPEARANCE,
   getMobileAppearance,
   MOBILE_APPEARANCE_EVENT,
   type MobileAppearance,
@@ -70,11 +71,12 @@ function buildTabs(user: Profile): Tab[] {
 export function MobileBottomNav({ user }: { user: Profile }) {
   const pathname = usePathname();
   const unreadChats = useUnreadChatCount(user.id);
-  const [appearance, setAppearance] = useState<MobileAppearance>(() =>
-    getMobileAppearance(),
+  const [appearance, setAppearance] = useState<MobileAppearance>(
+    DEFAULT_MOBILE_APPEARANCE,
   );
 
   useEffect(() => {
+    setAppearance(getMobileAppearance());
     const sync = () => setAppearance(getMobileAppearance());
     window.addEventListener(MOBILE_APPEARANCE_EVENT, sync);
     return () => window.removeEventListener(MOBILE_APPEARANCE_EVENT, sync);

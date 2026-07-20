@@ -7,7 +7,7 @@ import type { AccountKind } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-/** Idempotent welcome email — safe to call after signup or OAuth (web or mobile). */
+/** Idempotent welcome email — safe to call after signup, login, or OAuth (web or mobile). */
 export async function POST(request: Request) {
   if (!isEmailConfigured()) {
     return NextResponse.json({ ok: false, sent: false, message: "Email not configured" });

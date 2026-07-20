@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Sparkles, Store } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,10 +28,17 @@ import { SectionTipBanner } from "@/components/layout/SectionTipBanner";
 
 type Tab = "all" | "services" | "hiring" | "mine";
 
-export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
+export function OpportunityHub({
+  currentUser,
+  initialOpportunities,
+}: {
+  currentUser: Profile;
+  initialOpportunities?: Opportunity[];
+}) {
   const [tab, setTab] = useState<Tab>("all");
-  const [items, setItems] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Opportunity[]>(initialOpportunities ?? []);
+  const [loading, setLoading] = useState(initialOpportunities === undefined);
+  const usedInitial = useRef(initialOpportunities !== undefined);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<OpportunityType | "">("");
   const [category, setCategory] = useState("");
@@ -70,9 +77,23 @@ export function OpportunityHub({ currentUser }: { currentUser: Profile }) {
   }, [search, type, category, workMode, listingKind, tab]);
 
   useEffect(() => {
+    if (
+      usedInitial.current &&
+      initialOpportunities &&
+      tab === "all" &&
+      !search &&
+      !type &&
+      !category &&
+      !workMode
+    ) {
+      usedInitial.current = false;
+      setItems(initialOpportunities);
+      setLoading(false);
+      return;
+    }
     const timer = window.setTimeout(load, 250);
     return () => window.clearTimeout(timer);
-  }, [load]);
+  }, [load, initialOpportunities, tab, search, type, category, workMode]);
 
   return (
     <div className="space-y-6">

@@ -221,7 +221,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         }
 
         if (data.session) {
-          const { profile, error: profileError, isNewUser } = await ensureProfile(
+          const { profile, error: profileError } = await ensureProfile(
             supabase,
             data.user,
           );
@@ -230,9 +230,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             return;
           }
 
-          if (isNewUser) {
-            void fetch("/api/email/welcome", { method: "POST" });
-          }
+          void fetch("/api/email/welcome", { method: "POST" });
 
           if (!profile.date_of_birth && !dateOfBirth) {
             window.location.assign(
@@ -292,6 +290,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setError(profileError ?? "Could not load your profile.");
         return;
       }
+
+      void fetch("/api/email/welcome", { method: "POST" });
 
       window.location.assign(nextAfterAuth);
     } finally {

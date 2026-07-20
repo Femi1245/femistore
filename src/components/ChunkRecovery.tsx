@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isBenignLiveKitError } from "@/lib/livekit-errors";
 
 const RELOAD_KEY = "zumelia-chunk-reload";
 
@@ -20,6 +21,10 @@ function isChunkLoadFailure(reason: unknown): boolean {
 export function ChunkRecovery() {
   useEffect(() => {
     function onRejection(event: PromiseRejectionEvent) {
+      if (isBenignLiveKitError(event.reason)) {
+        event.preventDefault();
+        return;
+      }
       if (!isChunkLoadFailure(event.reason)) return;
       if (sessionStorage.getItem(RELOAD_KEY)) return;
       sessionStorage.setItem(RELOAD_KEY, "1");
@@ -27,6 +32,10 @@ export function ChunkRecovery() {
     }
 
     function onError(event: ErrorEvent) {
+      if (isBenignLiveKitError(event.error ?? event.message)) {
+        event.preventDefault();
+        return;
+      }
       if (!isChunkLoadFailure(event.error ?? event.message)) return;
       if (sessionStorage.getItem(RELOAD_KEY)) return;
       sessionStorage.setItem(RELOAD_KEY, "1");
