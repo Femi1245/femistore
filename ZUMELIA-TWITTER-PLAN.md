@@ -57,6 +57,10 @@ Rotate mockups and text. Check off each week.
 | **Sat** | 🖼️ Mockup | `live` |
 | **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` |
 
+**Live category launch:** use mockup `live` to show the Video, Gaming, Music,
+Talk, Events and Shopping category picker. Copy its current caption from
+`MARKETING_MOCKUP_SLIDES`.
+
 ---
 
 **The arc (Days 1–30):**

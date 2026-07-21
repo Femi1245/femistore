@@ -197,12 +197,26 @@ function LiveMock() {
     <div className="relative min-h-[380px] overflow-hidden bg-zinc-900">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(185,92,56,0.35),_transparent_55%)]" />
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/50" />
+      <div className="relative flex gap-1 overflow-hidden border-b border-white/10 bg-black/30 px-2 py-2">
+        {["Video", "Gaming", "Music", "Talk"].map((category, index) => (
+          <span
+            key={category}
+            className={`shrink-0 rounded-full px-2 py-1 text-[7px] font-bold ${
+              index === 1
+                ? "bg-vintage-rust text-white"
+                : "bg-white/10 text-white/70"
+            }`}
+          >
+            {category}
+          </span>
+        ))}
+      </div>
       <div className="relative flex items-start justify-between gap-2 p-3">
         <div>
           <span className="rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
             LIVE
           </span>
-          <p className="mt-1 text-[10px] font-bold text-white">Behind the scenes drop</p>
+          <p className="mt-1 text-[10px] font-bold text-white">Ranked climb with the squad</p>
           <p className="text-[8px] text-white/70">{DEMO_PERSONAS.seller.name}</p>
         </div>
         <span className="rounded-full bg-black/40 px-2 py-0.5 text-[8px] text-white/80">

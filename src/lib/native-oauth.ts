@@ -6,7 +6,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { ensureProfile } from "@/lib/auth";
 import { safeNextPath } from "@/lib/app-url";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { isCapacitorAppShell } from "@/lib/native-shell";
 
 export const NATIVE_OAUTH_DEEP_LINK_HOST = "auth/callback";
 
@@ -27,7 +27,7 @@ let pendingOAuth: PendingOAuth | null = null;
 let listenerBoot: Promise<void> | null = null;
 
 export function canUseInAppOAuth(): boolean {
-  return isCapacitorNative();
+  return isCapacitorAppShell();
 }
 
 export function isNativeAuthDeepLink(url: string): boolean {
@@ -109,7 +109,7 @@ async function handleDeepLink(url: string) {
 /** Start listening for OAuth deep links (idempotent). */
 export function ensureNativeOAuthListener(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (!isCapacitorNative()) return Promise.resolve();
+  if (!isCapacitorAppShell()) return Promise.resolve();
   if (listenerBoot) return listenerBoot;
 
   listenerBoot = (async () => {

@@ -45,7 +45,8 @@ Install guide page: https://itunes-mu.vercel.app/download
 
 ## Google / X / GitHub sign-in (required once)
 
-OAuth must return to the app (in-app browser + deep link), not Chrome.
+OAuth uses Google/X/GitHub's secure Android Custom Tab, then returns directly
+to the app through the `zumelia://` deep link.
 
 In **Supabase → Authentication → URL Configuration → Redirect URLs**, add:
 
@@ -57,4 +58,5 @@ zumelia://auth/callback
 
 Site URL can stay `https://itunes-mu.vercel.app`.
 
-Without these URLs, Google (and other providers) will fail or open the system browser after login.
+`zumelia://auth/callback` is the primary native return URL. The HTTPS entries
+remain as a fallback for older APK builds.

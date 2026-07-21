@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Radio } from "lucide-react";
 import { LiveSetupNotice } from "@/components/live/LiveSetupNotice";
+import {
+  LIVE_CATEGORIES,
+  type LiveCategory,
+} from "@/lib/live-categories";
 
 export function GoLiveForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<LiveCategory>("video");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canGoLive, setCanGoLive] = useState(true);
@@ -29,7 +34,7 @@ export function GoLiveForm() {
     const res = await fetch("/api/live/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim() }),
+      body: JSON.stringify({ title: title.trim(), category }),
     });
 
     const data = await res.json();
@@ -51,8 +56,38 @@ export function GoLiveForm() {
         <h2 className="font-display text-lg font-bold text-vintage-ink">Go live</h2>
       </div>
       <p className="text-sm text-vintage-ink-muted">
-        Share live video with people on Zumelia. Allow camera and microphone when prompted.
+        Choose what you are streaming, then allow camera and microphone when prompted.
       </p>
+      <fieldset>
+        <legend className="mb-2 block text-xs font-medium text-vintage-ink-muted">
+          Stream category
+        </legend>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {LIVE_CATEGORIES.map((option) => {
+            const Icon = option.icon;
+            const selected = category === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setCategory(option.id)}
+                aria-pressed={selected}
+                className={`rounded-lg border p-3 text-left transition ${
+                  selected
+                    ? "border-vintage-rust bg-vintage-rust/10 text-vintage-rust"
+                    : "border-vintage-border bg-vintage-paper text-vintage-ink hover:border-vintage-rust/50"
+                }`}
+              >
+                <Icon className="mb-2 h-4 w-4" />
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className="mt-1 block text-[11px] leading-snug text-vintage-ink-muted">
+                  {option.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
       <div>
         <label className="mb-1 block text-xs font-medium text-vintage-ink-muted">
           Stream title

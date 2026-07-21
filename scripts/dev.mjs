@@ -31,10 +31,13 @@ if (inUse) {
   process.exit(0);
 }
 
-const child = spawn("npx", ["next", "dev"], {
+const nextCli = join(root, "node_modules", "next", "dist", "bin", "next");
+// Webpack is more reliable on this Windows setup; Turbopack occasionally
+// stalls forever while compiling the first page.
+const child = spawn(process.execPath, [nextCli, "dev", "--webpack"], {
   cwd: root,
   stdio: "inherit",
-  shell: true,
+  shell: false,
   env: process.env,
 });
 

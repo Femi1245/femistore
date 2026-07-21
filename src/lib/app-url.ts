@@ -47,3 +47,15 @@ export function nativeOAuthDeepLinkUrl(search = "", hash = ""): string {
   const h = hash.startsWith("#") || hash === "" ? hash : `#${hash}`;
   return `zumelia://auth/callback${q}${h}`;
 }
+
+/**
+ * Direct Supabase OAuth return URL for the native app.
+ * A direct 302 to the registered custom scheme reliably reopens Android;
+ * Chrome may block a JavaScript-driven custom-scheme redirect from a web page.
+ */
+export function nativeOAuthRedirectUrl(next?: string): string {
+  if (!next || next === "/chat") return nativeOAuthDeepLinkUrl();
+  return nativeOAuthDeepLinkUrl(
+    `?next=${encodeURIComponent(safeNextPath(next))}`,
+  );
+}

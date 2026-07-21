@@ -18,7 +18,11 @@ import {
 import { validateDateOfBirth, maxBirthdayInputValue, minBirthdayInputValue } from "@/lib/birthday";
 import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { COUNTRIES } from "@/lib/countries";
-import { authCallbackUrl, nativeOAuthBridgeUrl, safeNextPath } from "@/lib/app-url";
+import {
+  authCallbackUrl,
+  nativeOAuthRedirectUrl,
+  safeNextPath,
+} from "@/lib/app-url";
 import {
   applyNativeOAuthResult,
   canUseInAppOAuth,
@@ -86,10 +90,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
       const inApp = canUseInAppOAuth();
-      // Native shell: HTTPS bridge → zumelia:// deep link (stays in-app Custom Tab).
+      // Native shell: Supabase redirects directly to the registered app scheme.
       // Web: normal /auth/callback cookie/PKCE route.
       const redirectTo = inApp
-        ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
+        ? nativeOAuthRedirectUrl(nextAfterAuth)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: supabaseProvider,

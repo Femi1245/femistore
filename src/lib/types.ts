@@ -404,10 +404,19 @@ export type Notification = {
   actor?: Profile;
 };
 
+export type LiveCategory =
+  | "video"
+  | "gaming"
+  | "music"
+  | "talk"
+  | "events"
+  | "shopping";
+
 export type LiveStream = {
   id: string;
   host_id: string;
   title: string;
+  category: LiveCategory;
   room_name: string;
   is_live: boolean;
   started_at: string;

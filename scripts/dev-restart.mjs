@@ -4,17 +4,17 @@ import { fileURLToPath } from "url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const stop = spawn("node", ["scripts/dev-stop.mjs"], {
+const stop = spawn(process.execPath, ["scripts/dev-stop.mjs"], {
   cwd: root,
   stdio: "inherit",
-  shell: true,
+  shell: false,
 });
 
 stop.on("exit", () => {
-  const dev = spawn("node", ["scripts/dev.mjs"], {
+  const dev = spawn(process.execPath, ["scripts/dev.mjs"], {
     cwd: root,
     stdio: "inherit",
-    shell: true,
+    shell: false,
     env: process.env,
   });
   dev.on("exit", (code) => process.exit(code ?? 0));

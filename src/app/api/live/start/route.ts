@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createLiveKitToken, getLiveKitUrl, isLiveKitConfigured } from "@/lib/livekit";
+import { isLiveCategory } from "@/lib/live-categories";
 import { createAuthenticatedClient } from "@/lib/supabase/route-auth";
 
 export async function POST(request: Request) {
@@ -21,8 +22,16 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const title = String(body.title ?? "").trim();
+  // Default keeps older app builds compatible after categories launch.
+  const category = body.category ?? "video";
   if (!title) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  }
+  if (!isLiveCategory(category)) {
+    return NextResponse.json(
+      { error: "Choose a valid stream category" },
+      { status: 400 },
+    );
   }
 
   const roomName = `live-${user.id.slice(0, 8)}-${Date.now()}`;
@@ -32,6 +41,7 @@ export async function POST(request: Request) {
     .insert({
       host_id: user.id,
       title,
+      category,
       room_name: roomName,
       is_live: true,
     })

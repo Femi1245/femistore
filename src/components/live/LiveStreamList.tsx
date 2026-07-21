@@ -7,19 +7,33 @@ import { createClient } from "@/lib/supabase/client";
 import type { LiveStream, Profile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { PostCardSkeleton } from "@/components/skeletons/PostCardSkeleton";
+import {
+  getLiveCategory,
+  type LiveCategory,
+} from "@/lib/live-categories";
 
-export function LiveStreamList() {
+export function LiveStreamList({
+  category,
+}: {
+  category: LiveCategory | "all";
+}) {
   const [streams, setStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("live_streams")
       .select("*")
       .eq("is_live", true)
       .order("started_at", { ascending: false });
+
+    if (category !== "all") {
+      query = query.eq("category", category);
+    }
+
+    const { data, error } = await query;
 
     if (error?.code === "PGRST205") {
       setStreams([]);
@@ -43,7 +57,7 @@ export function LiveStreamList() {
     const map = new Map((profiles as Profile[])?.map((p) => [p.id, p]));
     setStreams(rows.map((s) => ({ ...s, host: map.get(s.host_id) })));
     setLoading(false);
-  }, []);
+  }, [category]);
 
   useEffect(() => {
     load();
@@ -64,7 +78,11 @@ export function LiveStreamList() {
     return (
       <div className="vintage-card py-12 text-center">
         <Radio className="mx-auto h-10 w-10 text-vintage-border" />
-        <p className="mt-3 text-vintage-ink-muted">No one is live right now.</p>
+        <p className="mt-3 text-vintage-ink-muted">
+          {category === "all"
+            ? "No one is live right now."
+            : `No ${getLiveCategory(category).label.toLowerCase()} streams are live right now.`}
+        </p>
         <Link href="/live/go-live" className="vintage-btn mt-4 inline-block px-6 py-2">
           Be the first to go live
         </Link>
@@ -94,10 +112,22 @@ export function LiveStreamList() {
               </p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-sm bg-vintage-rust px-2 py-0.5 text-xs font-bold text-[var(--vintage-btn-text)]">
-            <Radio className="h-3 w-3 animate-pulse" />
-            LIVE
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-sm bg-vintage-rust px-2 py-0.5 text-xs font-bold text-[var(--vintage-btn-text)]">
+              <Radio className="h-3 w-3 animate-pulse" />
+              LIVE
+            </span>
+            {(() => {
+              const categoryInfo = getLiveCategory(stream.category ?? "video");
+              const CategoryIcon = categoryInfo.icon;
+              return (
+                <span className="inline-flex items-center gap-1 rounded-full border border-vintage-border px-2 py-0.5 text-xs font-medium text-vintage-ink-muted">
+                  <CategoryIcon className="h-3 w-3" />
+                  {categoryInfo.label}
+                </span>
+              );
+            })()}
+          </div>
         </Link>
       ))}
     </div>

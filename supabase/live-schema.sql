@@ -4,14 +4,29 @@ create table if not exists public.live_streams (
   id uuid primary key default gen_random_uuid(),
   host_id uuid not null references public.profiles (id) on delete cascade,
   title text not null check (char_length(title) between 1 and 120),
+  category text not null default 'video'
+    check (category in ('video', 'gaming', 'music', 'talk', 'events', 'shopping')),
   room_name text unique not null,
   is_live boolean not null default true,
   started_at timestamptz not null default now(),
   ended_at timestamptz
 );
 
+alter table public.live_streams
+  add column if not exists category text not null default 'video';
+
+alter table public.live_streams
+  drop constraint if exists live_streams_category_check;
+
+alter table public.live_streams
+  add constraint live_streams_category_check
+  check (category in ('video', 'gaming', 'music', 'talk', 'events', 'shopping'));
+
 create index if not exists live_streams_live_idx
   on public.live_streams (is_live, started_at desc);
+
+create index if not exists live_streams_category_live_idx
+  on public.live_streams (category, is_live, started_at desc);
 
 alter table public.live_streams enable row level security;
 

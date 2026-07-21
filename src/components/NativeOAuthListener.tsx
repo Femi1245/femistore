@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 import { ensureNativeOAuthListener } from "@/lib/native-oauth";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { isCapacitorAppShell } from "@/lib/native-shell";
 
 /** Keeps Capacitor deep-link OAuth ready for the whole app session. */
 export function NativeOAuthListener() {
   useEffect(() => {
-    if (!isCapacitorNative()) return;
+    if (!isCapacitorAppShell()) return;
     void ensureNativeOAuthListener();
   }, []);
 

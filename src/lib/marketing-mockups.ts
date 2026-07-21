@@ -108,13 +108,19 @@ Zumelia: DMs, voice notes, and crystal-clear video calls — when the conversati
   },
   {
     id: "live",
-    title: "Go live with gifts",
-    feature: "Live streaming + AR + gifts",
+    title: "Live for every kind of creator",
+    feature: "Video, Gaming, Music, Talk, Events and Shopping streams",
     planDayRefs: ["Day 24 alt", "Ongoing Sat"],
-    shippedAt: "2026-06",
-    caption: `Go live on Zumelia — AR lenses, co-hosts, real-time chat, and gifts.
+    shippedAt: "2026-07",
+    caption: `What are you streaming today?
 
-Not another boring stream. A stage. 🟠`,
+Zumelia Live now has a place for:
+→ Video
+→ Gaming
+→ Music
+→ Talk, events & live shopping
+
+Pick a category, go live, add co-hosts, chat and receive gifts. 🟠`,
     hashtags: "#livestreaming #creators #Zumelia",
   },
   {
