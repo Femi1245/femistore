@@ -46,7 +46,8 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
         env:
-          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app/login?native=1
+          # Origin only — path/query breaks Android Capacitor plugin injection
+          CAPACITOR_SERVER_URL: https://itunes-mu.vercel.app
 
       - name: Build debug APK
         working-directory: android
@@ -83,8 +84,8 @@ jobs:
             3. Install this APK
             4. Open the **Zumelia** icon → login/signup (not the browser)
 
-            Includes Google sign-in fixes (Custom Tab + WebView fallback).
-            Icon uses the official Zumelia logo. Download/install banners are hidden inside the app.
+            Includes Google sign-in (Custom Tab) — requires this build (origin-only Capacitor URL).
+            Uninstall any older Zumelia first, then install this APK.
           files: dist/Zumelia.apk
           make_latest: true
         env:

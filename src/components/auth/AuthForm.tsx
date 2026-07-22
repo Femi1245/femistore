@@ -27,9 +27,9 @@ import {
   applyNativeOAuthResult,
   ensureNativeOAuthListener,
   runNativeOAuth,
-  waitForInAppOAuth,
+  shouldUseNativeOAuth,
 } from "@/lib/native-oauth";
-import { isCapacitorAppShell } from "@/lib/native-shell";
+import { isCapacitorNative } from "@/lib/native-shell";
 import { getAndroidApkUrl } from "@/lib/app-download";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
@@ -98,11 +98,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
-      // Native shell must use Custom Tab + deep link. Navigating the WebView to
-      // Google opens external Chrome and leaves the session outside the app.
-      const nativeShell = isCapacitorAppShell();
-      const inAppBrowser = nativeShell ? await waitForInAppOAuth() : false;
-      const redirectTo = nativeShell
+      // Only use Custom Tab when we are actually in the APK WebView (UA / bridge).
+      // Do NOT trust localStorage native flags alone — that blocked Google on old builds.
+      const useNativeOAuth =
+        isCapacitorNative() || (await shouldUseNativeOAuth());
+      const redirectTo = useNativeOAuth
         ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -128,15 +128,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (data?.url) {
-        if (nativeShell) {
-          if (!inAppBrowser) {
-            setNeedsApkUpdate(true);
-            setError(
-              "This app build is outdated for Google sign-in. Uninstall Zumelia, then download the latest APK from the website.",
-            );
-            setOauthLoading(null);
-            return;
-          }
+        if (useNativeOAuth) {
           try {
             const result = await runNativeOAuth(data.url);
             if (result.error) {
@@ -149,7 +141,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           } catch (nativeErr) {
             const message =
               nativeErr instanceof Error ? nativeErr.message : String(nativeErr);
-            if (/plugin|browser|update|missing/i.test(message)) {
+            if (/apk|reinstall|latest|plugin|not implemented|browser/i.test(message)) {
               setNeedsApkUpdate(true);
             }
             setError(formatOAuthError(message));

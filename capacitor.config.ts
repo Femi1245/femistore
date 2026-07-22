@@ -4,18 +4,32 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * Zumelia native Android/iOS shell (JavaScript + Capacitor).
  * Opens your live site inside a real app icon — no Chrome address bar.
  *
- * Default production URL: https://itunes-mu.vercel.app
- * Override with CAPACITOR_SERVER_URL if needed.
+ * IMPORTANT: server.url MUST be origin-only (no path/query). Capacitor Android
+ * injects the native bridge via DOCUMENT_START_SCRIPT only for that origin.
+ * A path like /login?native=1 breaks plugin detection (Browser/App unavailable).
+ *
+ * Override with CAPACITOR_SERVER_URL if needed (still use origin only).
  */
-const serverUrl =
+const rawServer =
   process.env.CAPACITOR_SERVER_URL?.trim() ||
-  "https://itunes-mu.vercel.app/login?native=1";
+  "https://itunes-mu.vercel.app";
+
+function originOnly(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.origin;
+  } catch {
+    return "https://itunes-mu.vercel.app";
+  }
+}
+
+const serverUrl = originOnly(rawServer);
 
 const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  // APK build: 20260722b — Google sign-in Custom Tab + deep link
+  // APK build: 20260722c — origin-only server.url restores Capacitor plugins
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),
@@ -24,7 +38,7 @@ const config: CapacitorConfig = {
       "*.vercel.app",
       "*.supabase.co",
       "*.livekit.cloud",
-      // Keep OAuth hosts allowlisted for Custom Tab / WebView safety
+      // OAuth hosts — Custom Tab / WebView safety
       "accounts.google.com",
       "*.google.com",
       "github.com",

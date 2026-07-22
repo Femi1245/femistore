@@ -45,12 +45,11 @@ export default function DownloadPage() {
 
         <div className="mt-6 rounded-2xl border border-vintage-rust/40 bg-vintage-rust/10 p-4 text-sm text-vintage-ink">
           <p className="font-semibold text-vintage-rust">
-            Google sign-in update ({ANDROID_APK_CACHE_BUST})
+            Google sign-in fix — build {ANDROID_APK_CACHE_BUST}
           </p>
           <p className="mt-1 text-vintage-ink-muted">
-            If Google login fails or opens Chrome without signing you in, you
-            still have an old APK. Uninstall Zumelia first, then download the
-            latest file below and install it.
+            Critical: uninstall the old Zumelia app first, then install this new
+            APK. Older builds could not load Google sign-in plugins.
           </p>
         </div>
 

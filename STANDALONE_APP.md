@@ -48,6 +48,11 @@ Install guide page: https://itunes-mu.vercel.app/download
 OAuth uses Google/X/GitHub's secure Android Custom Tab, then returns directly
 to the app through the `zumelia://` deep link.
 
+**APK Capacitor `server.url` must be origin-only** (`https://itunes-mu.vercel.app`)
+with no `/login` path or `?native=1` query. A path breaks Android plugin injection
+(Browser/App unavailable → Google sign-in fails). The app detects the native shell
+via User-Agent `ZumeliaNativeApp/1` and redirects to login in the web app.
+
 In **Supabase → Authentication → URL Configuration → Redirect URLs**, add:
 
 ```
