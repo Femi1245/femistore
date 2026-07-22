@@ -15,6 +15,7 @@ const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
+  // APK build: 20260722b — Google sign-in Custom Tab + deep link
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),

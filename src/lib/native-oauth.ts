@@ -66,6 +66,19 @@ export function canUseInAppOAuth(): boolean {
   );
 }
 
+/** Wait for the native bridge — plugins are sometimes late after WebView boot. */
+export async function waitForInAppOAuth(timeoutMs = 4000): Promise<boolean> {
+  if (!isCapacitorAppShell()) return false;
+  if (canUseInAppOAuth()) return true;
+
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    await new Promise((r) => window.setTimeout(r, 150));
+    if (canUseInAppOAuth()) return true;
+  }
+  return canUseInAppOAuth();
+}
+
 export function isNativeAuthDeepLink(url: string): boolean {
   return (
     url.startsWith("zumelia://auth/callback") ||

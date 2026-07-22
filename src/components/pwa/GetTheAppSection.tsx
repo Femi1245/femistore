@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Download, MonitorSmartphone, Share, Smartphone } from "lucide-react";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
-import { getAndroidApkUrl } from "@/lib/app-download";
+import { getAndroidApkLabel, getAndroidApkUrl } from "@/lib/app-download";
 import { isInstalledAppShell } from "@/lib/native-shell";
 import { useEffect, useState } from "react";
 
@@ -72,16 +72,17 @@ export function GetTheAppSection({
               Android app (recommended)
             </h3>
             <p className="flex-1 text-sm text-vintage-ink-muted">
-              Download the APK, install it, then open Zumelia from your app
-              drawer — full screen, no browser bar.
+              Latest build includes Google sign-in. Uninstall any older Zumelia
+              first, then install this APK and open it from your app drawer.
             </p>
             <a
               href={apkUrl}
               className="vintage-btn inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm"
               rel="noopener noreferrer"
+              download="Zumelia.apk"
             >
               <Download className="h-4 w-4" />
-              Download Zumelia.apk
+              Download {getAndroidApkLabel()}
             </a>
           </div>
 

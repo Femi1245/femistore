@@ -25,11 +25,12 @@ import {
 } from "@/lib/app-url";
 import {
   applyNativeOAuthResult,
-  canUseInAppOAuth,
   ensureNativeOAuthListener,
   runNativeOAuth,
+  waitForInAppOAuth,
 } from "@/lib/native-oauth";
 import { isCapacitorAppShell } from "@/lib/native-shell";
+import { getAndroidApkUrl } from "@/lib/app-download";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
@@ -56,6 +57,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(
     urlError ? formatOAuthError(urlError) : null,
   );
+  const [needsApkUpdate, setNeedsApkUpdate] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   async function handleOAuthSignIn(provider: OAuthUiProvider) {
     setError(null);
+    setNeedsApkUpdate(false);
     setSuccess(null);
     setOauthLoading(provider);
 
@@ -98,7 +101,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       // Native shell must use Custom Tab + deep link. Navigating the WebView to
       // Google opens external Chrome and leaves the session outside the app.
       const nativeShell = isCapacitorAppShell();
-      const inAppBrowser = canUseInAppOAuth();
+      const inAppBrowser = nativeShell ? await waitForInAppOAuth() : false;
       const redirectTo = nativeShell
         ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
@@ -127,20 +130,32 @@ export function AuthForm({ mode }: { mode: Mode }) {
       if (data?.url) {
         if (nativeShell) {
           if (!inAppBrowser) {
+            setNeedsApkUpdate(true);
             setError(
-              "This Zumelia build cannot finish Google sign-in. Uninstall the app, then install the latest APK from GitHub Releases.",
+              "This app build is outdated for Google sign-in. Uninstall Zumelia, then download the latest APK from the website.",
             );
             setOauthLoading(null);
             return;
           }
-          const result = await runNativeOAuth(data.url);
-          if (result.error) {
-            setError(formatOAuthError(result.error));
+          try {
+            const result = await runNativeOAuth(data.url);
+            if (result.error) {
+              setError(formatOAuthError(result.error));
+              setOauthLoading(null);
+              return;
+            }
+            await applyNativeOAuthResult(result);
+            return;
+          } catch (nativeErr) {
+            const message =
+              nativeErr instanceof Error ? nativeErr.message : String(nativeErr);
+            if (/plugin|browser|update|missing/i.test(message)) {
+              setNeedsApkUpdate(true);
+            }
+            setError(formatOAuthError(message));
             setOauthLoading(null);
             return;
           }
-          await applyNativeOAuthResult(result);
-          return;
         }
         window.location.assign(data.url);
         return;
@@ -616,7 +631,24 @@ export function AuthForm({ mode }: { mode: Mode }) {
             )}
 
             {error && (
-              <p className="vintage-card-inset px-3 py-2 text-sm text-vintage-rust">{error}</p>
+              <div className="vintage-card-inset space-y-2 px-3 py-2 text-sm text-vintage-rust">
+                <p>{error}</p>
+                {needsApkUpdate && (
+                  <p>
+                    <a
+                      href={getAndroidApkUrl()}
+                      className="font-semibold underline"
+                      rel="noopener noreferrer"
+                    >
+                      Download latest Zumelia.apk
+                    </a>
+                    {" · "}
+                    <Link href="/download" className="font-semibold underline">
+                      Install guide
+                    </Link>
+                  </p>
+                )}
+              </div>
             )}
 
             {success && (

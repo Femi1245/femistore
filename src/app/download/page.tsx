@@ -3,12 +3,17 @@ import Link from "next/link";
 import { ArrowLeft, Download, Share, Smartphone } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { GetTheAppSection } from "@/components/pwa/GetTheAppSection";
-import { getAndroidApkUrl } from "@/lib/app-download";
+import {
+  ANDROID_APK_CACHE_BUST,
+  ANDROID_RELEASES_PAGE,
+  getAndroidApkLabel,
+  getAndroidApkUrl,
+} from "@/lib/app-download";
 
 export const metadata: Metadata = {
   title: "Download Zumelia app",
   description:
-    "Install the Zumelia Android app — opens as a real app, not a browser.",
+    "Install the latest Zumelia Android app — Google sign-in fix, opens as a real app.",
 };
 
 export default function DownloadPage() {
@@ -38,26 +43,37 @@ export default function DownloadPage() {
           browser.
         </p>
 
+        <div className="mt-6 rounded-2xl border border-vintage-rust/40 bg-vintage-rust/10 p-4 text-sm text-vintage-ink">
+          <p className="font-semibold text-vintage-rust">
+            Google sign-in update ({ANDROID_APK_CACHE_BUST})
+          </p>
+          <p className="mt-1 text-vintage-ink-muted">
+            If Google login fails or opens Chrome without signing you in, you
+            still have an old APK. Uninstall Zumelia first, then download the
+            latest file below and install it.
+          </p>
+        </div>
+
         <div className="mt-8">
           <a
             href={apkUrl}
             className="vintage-btn inline-flex items-center gap-2 px-6 py-3.5 text-base"
             rel="noopener noreferrer"
+            download="Zumelia.apk"
           >
             <Download className="h-5 w-5" />
-            Download Zumelia.apk
+            Download {getAndroidApkLabel()}
           </a>
           <p className="mt-3 text-xs text-vintage-ink-muted">
-            If the file is not ready yet, wait a few minutes after the latest
-            GitHub deploy, or open{" "}
+            Direct from GitHub Releases. If the file looks old, open{" "}
             <a
-              href="https://github.com/Femi1245/femistore/releases/latest"
+              href={ANDROID_RELEASES_PAGE}
               className="font-semibold text-vintage-rust hover:underline"
               rel="noopener noreferrer"
             >
-              GitHub Releases
-            </a>
-            .
+              the release page
+            </a>{" "}
+            and download <strong>Zumelia.apk</strong> again.
           </p>
         </div>
 
@@ -69,16 +85,27 @@ export default function DownloadPage() {
           <div className="vintage-card p-5">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-vintage-ink">
               <Smartphone className="h-5 w-5 text-vintage-rust" />
-              Android — real app
+              Android — update / install
             </h2>
             <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-vintage-ink-muted">
               <li>
-                Tap <strong>Download Zumelia.apk</strong> above.
+                <strong>Uninstall</strong> any existing Zumelia app (long-press
+                icon → Uninstall).
               </li>
-              <li>Open the file and allow install if Android asks.</li>
               <li>
-                Open <strong>Zumelia</strong> from your app list — it launches as
-                an app (no browser).
+                On your phone browser, open{" "}
+                <a
+                  href="https://itunes-mu.vercel.app/download"
+                  className="font-semibold text-vintage-rust hover:underline"
+                >
+                  itunes-mu.vercel.app/download
+                </a>{" "}
+                and tap <strong>Download {getAndroidApkLabel()}</strong>.
+              </li>
+              <li>Open the downloaded file and allow install if Android asks.</li>
+              <li>
+                Open <strong>Zumelia</strong> from your app list — then try Google
+                sign-in again.
               </li>
             </ol>
           </div>
