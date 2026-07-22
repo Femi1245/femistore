@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Capacitor appendUserAgent includes ZumeliaNativeApp/1 */
+function isZumeliaNativeApp(request: NextRequest): boolean {
+  const ua = request.headers.get("user-agent") ?? "";
+  return /ZumeliaNativeApp/i.test(ua);
+}
+
 export async function updateSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -46,6 +52,14 @@ export async function updateSession(request: NextRequest) {
 
   if (authCheckFailed) {
     return supabaseResponse;
+  }
+
+  // APK opens origin `/` — never paint the public marketing site in the app shell.
+  if (isZumeliaNativeApp(request) && request.nextUrl.pathname === "/") {
+    const dest = request.nextUrl.clone();
+    dest.pathname = user ? "/feed" : "/login";
+    dest.search = "";
+    return NextResponse.redirect(dest);
   }
 
   const isAuthPage =

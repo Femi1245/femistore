@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   ArrowRight,
@@ -92,6 +93,12 @@ export default async function HomePage({
     const login = new URLSearchParams({ error: params.error });
     if (params.next) login.set("next", params.next);
     redirect(`/login?${login.toString()}`);
+  }
+
+  // Capacitor opens origin `/` — never render the marketing landing in-app.
+  const ua = (await headers()).get("user-agent") ?? "";
+  if (/ZumeliaNativeApp/i.test(ua)) {
+    redirect("/login");
   }
 
   return (

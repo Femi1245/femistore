@@ -5,9 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { isCapacitorNative } from "@/lib/native-shell";
 
 /**
- * Capacitor server.url is origin-only (required for plugin injection).
- * Send native app users from `/` to `/login` when they are not already
- * inside an app route.
+ * Fallback if middleware/boot script miss: never leave native users on `/`
+ * (public marketing site). Logged-in users are bounced /login → /feed by middleware.
  */
 export function NativeAppEntryRedirect() {
   const pathname = usePathname();
