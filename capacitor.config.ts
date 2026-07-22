@@ -23,6 +23,14 @@ const config: CapacitorConfig = {
       "*.vercel.app",
       "*.supabase.co",
       "*.livekit.cloud",
+      // OAuth providers — keep sign-in inside the app WebView when needed
+      "accounts.google.com",
+      "*.google.com",
+      "github.com",
+      "*.github.com",
+      "twitter.com",
+      "x.com",
+      "*.twitter.com",
     ],
   },
   android: {

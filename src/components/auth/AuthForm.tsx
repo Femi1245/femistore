@@ -20,13 +20,16 @@ import { BUSINESS_CATEGORIES } from "@/lib/business";
 import { COUNTRIES } from "@/lib/countries";
 import {
   authCallbackUrl,
-  nativeOAuthRedirectUrl,
+  nativeOAuthBridgeUrl,
   safeNextPath,
 } from "@/lib/app-url";
 import {
   applyNativeOAuthResult,
   canUseInAppOAuth,
+  canUseWebViewOAuth,
+  ensureNativeOAuthListener,
   runNativeOAuth,
+  startWebViewOAuth,
 } from "@/lib/native-oauth";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
@@ -81,6 +84,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
     };
   }, [nextAfterAuth]);
 
+  useEffect(() => {
+    void ensureNativeOAuthListener();
+  }, []);
+
   async function handleOAuthSignIn(provider: OAuthUiProvider) {
     setError(null);
     setSuccess(null);
@@ -89,11 +96,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
-      const inApp = canUseInAppOAuth();
-      // Native shell: Supabase redirects directly to the registered app scheme.
-      // Web: normal /auth/callback cookie/PKCE route.
-      const redirectTo = inApp
-        ? nativeOAuthRedirectUrl(nextAfterAuth)
+      const inAppBrowser = canUseInAppOAuth();
+      const inAppWebView = canUseWebViewOAuth();
+      const redirectTo = inAppBrowser
+        ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: supabaseProvider,
@@ -118,7 +124,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (data?.url) {
-        if (inApp) {
+        if (inAppBrowser) {
           const result = await runNativeOAuth(data.url);
           if (result.error) {
             setError(formatOAuthError(result.error));
@@ -126,6 +132,10 @@ export function AuthForm({ mode }: { mode: Mode }) {
             return;
           }
           await applyNativeOAuthResult(result);
+          return;
+        }
+        if (inAppWebView) {
+          startWebViewOAuth(data.url);
           return;
         }
         window.location.assign(data.url);
@@ -136,8 +146,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
         `${provider === "twitter" ? "X" : provider === "github" ? "GitHub" : "Google"} sign-in could not start. Enable the provider in Supabase → Authentication → Providers.`,
       );
       setOauthLoading(null);
-    } catch {
-      setError("Could not start sign in. Check your connection and Supabase auth settings.");
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.trim()
+          ? err.message
+          : "Could not start sign in. Check your connection and Supabase auth settings.";
+      setError(formatOAuthError(message));
       setOauthLoading(null);
     }
   }

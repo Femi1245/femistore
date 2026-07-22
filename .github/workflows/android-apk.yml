@@ -83,6 +83,7 @@ jobs:
             3. Install this APK
             4. Open the **Zumelia** icon → login/signup (not the browser)
 
+            Includes Google sign-in fixes (Custom Tab + WebView fallback).
             Icon uses the official Zumelia logo. Download/install banners are hidden inside the app.
           files: dist/Zumelia.apk
           make_latest: true

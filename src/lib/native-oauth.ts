@@ -1,12 +1,16 @@
 /**
  * In-app OAuth for the Capacitor Android/iOS shell.
- * Opens the provider in a Custom Tab (not Chrome), then returns via zumelia:// deep link.
+ * Opens the provider in a Custom Tab when available, otherwise keeps OAuth
+ * inside the app WebView and finishes on /auth/callback.
  */
 
 import { createClient } from "@/lib/supabase/client";
 import { ensureProfile } from "@/lib/auth";
 import { safeNextPath } from "@/lib/app-url";
-import { isCapacitorAppShell } from "@/lib/native-shell";
+import {
+  hasCapacitorPlugin,
+  isCapacitorAppShell,
+} from "@/lib/native-shell";
 
 export const NATIVE_OAUTH_DEEP_LINK_HOST = "auth/callback";
 
@@ -26,8 +30,24 @@ type PendingOAuth = {
 let pendingOAuth: PendingOAuth | null = null;
 let listenerBoot: Promise<void> | null = null;
 
+function oauthErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
+}
+
+/** Custom Tab flow — needs @capacitor/browser + @capacitor/app in the APK. */
 export function canUseInAppOAuth(): boolean {
-  return isCapacitorAppShell();
+  return (
+    isCapacitorAppShell() &&
+    hasCapacitorPlugin("Browser") &&
+    hasCapacitorPlugin("App")
+  );
+}
+
+/** Fallback when the APK is missing Browser/App plugins. OAuth stays in the WebView. */
+export function canUseWebViewOAuth(): boolean {
+  return isCapacitorAppShell() && !canUseInAppOAuth();
 }
 
 export function isNativeAuthDeepLink(url: string): boolean {
@@ -77,8 +97,6 @@ async function handleDeepLink(url: string) {
   if (!isNativeAuthDeepLink(url)) return;
   const result = parseAuthCallbackUrl(url);
 
-  // Clear waiter before closing the Custom Tab so browserFinished cannot
-  // race and report a false "cancelled" after a successful return.
   if (pendingOAuth) {
     const pending = pendingOAuth;
     pendingOAuth = null;
@@ -89,7 +107,6 @@ async function handleDeepLink(url: string) {
 
   await closeInAppBrowser();
 
-  // Cold start / app resumed with auth deep link while no waiter is active
   if (result.error) {
     window.location.replace(
       `/login?error=${encodeURIComponent(result.error)}`,
@@ -100,38 +117,45 @@ async function handleDeepLink(url: string) {
   try {
     await applyNativeOAuthResult(result);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Could not finish sign in";
-    window.location.replace(`/login?error=${encodeURIComponent(message)}`);
+    window.location.replace(
+      `/login?error=${encodeURIComponent(oauthErrorMessage(err, "Could not finish sign in"))}`,
+    );
   }
 }
 
-/** Start listening for OAuth deep links (idempotent). */
+/** Start listening for OAuth deep links (idempotent, never throws). */
 export function ensureNativeOAuthListener(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   if (!isCapacitorAppShell()) return Promise.resolve();
   if (listenerBoot) return listenerBoot;
 
   listenerBoot = (async () => {
-    const { App } = await import("@capacitor/app");
-    const { Browser } = await import("@capacitor/browser");
-
-    await App.addListener("appUrlOpen", ({ url }) => {
-      void handleDeepLink(url);
-    });
-
-    await Browser.addListener("browserFinished", () => {
-      if (!pendingOAuth) return;
-      const pending = pendingOAuth;
-      pendingOAuth = null;
-      pending.resolve({ error: "Sign-in was cancelled" });
-    });
-
     try {
+      const { App } = await import("@capacitor/app");
+
+      await App.addListener("appUrlOpen", ({ url }) => {
+        void handleDeepLink(url);
+      });
+
+      if (hasCapacitorPlugin("Browser")) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.addListener(
+          "browserFinished",
+          () => {
+            window.setTimeout(() => {
+              if (!pendingOAuth) return;
+              const pending = pendingOAuth;
+              pendingOAuth = null;
+              pending.resolve({ error: "Sign-in was cancelled" });
+            }, 400);
+          },
+        );
+      }
+
       const launch = await App.getLaunchUrl();
       if (launch?.url) void handleDeepLink(launch.url);
     } catch {
-      // ignore
+      // Missing native plugins — WebView OAuth fallback still works.
     }
   })();
 
@@ -143,19 +167,37 @@ export async function runNativeOAuth(
   oauthUrl: string,
 ): Promise<NativeOAuthResult> {
   await ensureNativeOAuthListener();
+
+  if (!hasCapacitorPlugin("Browser")) {
+    throw new Error(
+      "This app build is missing the sign-in browser plugin. Update Zumelia from GitHub Releases, or retry after the app refreshes.",
+    );
+  }
+
   const { Browser } = await import("@capacitor/browser");
 
   return new Promise<NativeOAuthResult>((resolve, reject) => {
     pendingOAuth = { resolve, reject };
     void Browser.open({
       url: oauthUrl,
-      presentationStyle: "popover",
       toolbarColor: "#FAF8F5",
     }).catch((err) => {
       pendingOAuth = null;
-      reject(err);
+      reject(
+        new Error(
+          oauthErrorMessage(
+            err,
+            "Could not open the sign-in window. Update the Zumelia app and try again.",
+          ),
+        ),
+      );
     });
   });
+}
+
+/** Navigate the app WebView through OAuth (fallback when Browser plugin is absent). */
+export function startWebViewOAuth(oauthUrl: string): void {
+  window.location.assign(oauthUrl);
 }
 
 /** Exchange OAuth code / tokens inside the WebView session, then navigate. */

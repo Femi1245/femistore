@@ -36,6 +36,20 @@ export function markNativeShell(): void {
   persistNativeFlag();
 }
 
+export function hasCapacitorPlugin(name: string): boolean {
+  if (typeof window === "undefined") return false;
+  const cap = (
+    window as Window & {
+      Capacitor?: { isPluginAvailable?: (plugin: string) => boolean };
+    }
+  ).Capacitor;
+  try {
+    return cap?.isPluginAvailable?.(name) === true;
+  } catch {
+    return false;
+  }
+}
+
 export function isCapacitorNative(): boolean {
   if (typeof window === "undefined") return false;
   const cap = (
