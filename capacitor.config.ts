@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  // APK build: 20260722d — Java Custom Tab bridge + WebView OAuth fallback
+  // APK build: 20260722e — edge-to-edge status bar (no top gap)
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),
@@ -50,22 +50,26 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
-    backgroundColor: "#FAF8F5",
+    // Match dark default theme so the WebView letterbox isn't a cream flash.
+    backgroundColor: "#141414",
     appendUserAgent: " ZumeliaNativeApp/1",
   },
   ios: {
     appendUserAgent: " ZumeliaNativeApp/1",
+    backgroundColor: "#141414",
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1800,
       launchAutoHide: true,
-      backgroundColor: "#FAF8F5",
+      backgroundColor: "#141414",
       showSpinner: false,
     },
     StatusBar: {
-      style: "DARK",
-      backgroundColor: "#FAF8F5",
+      // Light icons for dark chrome; JS NativeStatusBar keeps this in sync.
+      style: "LIGHT",
+      backgroundColor: "#00000000",
+      overlaysWebView: true,
     },
   },
 };

@@ -2,11 +2,16 @@ package com.zumelia.app;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.view.Window;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import org.json.JSONObject;
@@ -32,8 +37,23 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    enableEdgeToEdge();
     attachNativeBridge();
     handleAuthIntent(getIntent());
+  }
+
+  /** Draw WebView under status/nav bars — CSS env(safe-area-*) handles padding. */
+  private void enableEdgeToEdge() {
+    Window window = getWindow();
+    WindowCompat.setDecorFitsSystemWindows(window, false);
+    window.setStatusBarColor(Color.TRANSPARENT);
+    window.setNavigationBarColor(Color.TRANSPARENT);
+    View decor = window.getDecorView();
+    WindowInsetsControllerCompat insets =
+      new WindowInsetsControllerCompat(window, decor);
+    // Default app theme is dark; JS StatusBar plugin updates icon style on theme change.
+    insets.setAppearanceLightStatusBars(false);
+    insets.setAppearanceLightNavigationBars(false);
   }
 
   @Override

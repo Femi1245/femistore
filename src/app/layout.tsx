@@ -8,6 +8,7 @@ import { HydrationExtensionGuard } from "@/components/HydrationExtensionGuard";
 import { NativeShellGuard } from "@/components/NativeShellGuard";
 import { NativeOAuthListener } from "@/components/NativeOAuthListener";
 import { NativeAppEntryRedirect } from "@/components/NativeAppEntryRedirect";
+import { NativeStatusBar } from "@/components/NativeStatusBar";
 import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import "./globals.css";
 
@@ -76,6 +77,7 @@ export default function RootLayout({
       </head>
       <body className="app-body min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
+          <NativeStatusBar />
           <ChunkRecovery />
           <CallProviderLoader>
             {children}

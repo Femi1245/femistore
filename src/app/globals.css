@@ -92,8 +92,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/*
+ * Safe-area is applied on chrome (mobile-top-bar / tab bar), not the body.
+ * Body padding + top-bar padding stacked into a large empty gap in the APK.
+ */
 .app-body {
-  padding-top: env(safe-area-inset-top);
+  padding-top: 0;
 }
 
 @media (display-mode: standalone) {
@@ -439,7 +443,8 @@ code {
 
 /* ── Mobile app shell — editorial luxury ─────────────────────────────────── */
 .mobile-top-bar {
-  padding-top: env(safe-area-inset-top);
+  /* Draws under the status bar; pad so logo/icons clear the clock/notch. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .mobile-tab-bar {

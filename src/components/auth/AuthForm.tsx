@@ -418,8 +418,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <div className="vintage-page relative flex min-h-full flex-1 flex-col items-center justify-center px-4 py-12">
-      <div className="absolute right-4 top-4">
+    <div className="vintage-page relative flex min-h-full flex-1 flex-col items-center justify-center px-4 py-12 pt-[max(3rem,env(safe-area-inset-top))]">
+      <div className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))]">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md">

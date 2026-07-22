@@ -13,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "Download Zumelia app",
   description:
-    "Install the latest Zumelia Android app — Google sign-in fix, opens as a real app.",
+    "Install the latest Zumelia Android app — full-screen edge-to-edge UI, opens as a real app.",
 };
 
 export default function DownloadPage() {
@@ -45,7 +45,7 @@ export default function DownloadPage() {
 
         <div className="mt-6 rounded-2xl border border-vintage-rust/40 bg-vintage-rust/10 p-4 text-sm text-vintage-ink">
           <p className="font-semibold text-vintage-rust">
-            Google sign-in fix — build {ANDROID_APK_CACHE_BUST} (v1.0.4)
+            Full-screen layout — build {ANDROID_APK_CACHE_BUST} (v1.0.5)
           </p>
           <p className="mt-1 text-vintage-ink-muted">
             You must uninstall the old app first. This build adds a native Google
