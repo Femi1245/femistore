@@ -1,7 +1,8 @@
 /**
  * In-app OAuth for the Capacitor Android/iOS shell.
- * Opens the provider in a Custom Tab when available, otherwise keeps OAuth
- * inside the app WebView and finishes on /auth/callback.
+ * Opens the provider in a Custom Tab, then returns via zumelia:// deep link.
+ * Never navigates the WebView to Google/X/GitHub — that escapes into Chrome
+ * and leaves the session cookies outside the app.
  */
 
 import { createClient } from "@/lib/supabase/client";
@@ -27,13 +28,33 @@ type PendingOAuth = {
   reject: (reason?: unknown) => void;
 };
 
+const PENDING_FLAG = "zumelia-oauth-pending";
+
 let pendingOAuth: PendingOAuth | null = null;
 let listenerBoot: Promise<void> | null = null;
+let deepLinkHandledAt = 0;
 
 function oauthErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) return error.message;
   if (typeof error === "string" && error.trim()) return error;
   return fallback;
+}
+
+function markOAuthPending(active: boolean) {
+  try {
+    if (active) sessionStorage.setItem(PENDING_FLAG, "1");
+    else sessionStorage.removeItem(PENDING_FLAG);
+  } catch {
+    // ignore
+  }
+}
+
+function isOAuthPending(): boolean {
+  try {
+    return sessionStorage.getItem(PENDING_FLAG) === "1";
+  } catch {
+    return false;
+  }
 }
 
 /** Custom Tab flow — needs @capacitor/browser + @capacitor/app in the APK. */
@@ -43,11 +64,6 @@ export function canUseInAppOAuth(): boolean {
     hasCapacitorPlugin("Browser") &&
     hasCapacitorPlugin("App")
   );
-}
-
-/** Fallback when the APK is missing Browser/App plugins. OAuth stays in the WebView. */
-export function canUseWebViewOAuth(): boolean {
-  return isCapacitorAppShell() && !canUseInAppOAuth();
 }
 
 export function isNativeAuthDeepLink(url: string): boolean {
@@ -95,7 +111,9 @@ async function closeInAppBrowser() {
 
 async function handleDeepLink(url: string) {
   if (!isNativeAuthDeepLink(url)) return;
+  deepLinkHandledAt = Date.now();
   const result = parseAuthCallbackUrl(url);
+  markOAuthPending(false);
 
   if (pendingOAuth) {
     const pending = pendingOAuth;
@@ -139,23 +157,27 @@ export function ensureNativeOAuthListener(): Promise<void> {
 
       if (hasCapacitorPlugin("Browser")) {
         const { Browser } = await import("@capacitor/browser");
-        await Browser.addListener(
-          "browserFinished",
-          () => {
-            window.setTimeout(() => {
-              if (!pendingOAuth) return;
-              const pending = pendingOAuth;
-              pendingOAuth = null;
-              pending.resolve({ error: "Sign-in was cancelled" });
-            }, 400);
-          },
-        );
+        await Browser.addListener("browserFinished", () => {
+          // Deep link often arrives just as the Custom Tab closes — wait before cancelling.
+          window.setTimeout(() => {
+            if (Date.now() - deepLinkHandledAt < 2000) return;
+            if (!pendingOAuth && !isOAuthPending()) return;
+            if (!pendingOAuth) {
+              markOAuthPending(false);
+              return;
+            }
+            const pending = pendingOAuth;
+            pendingOAuth = null;
+            markOAuthPending(false);
+            pending.resolve({ error: "Sign-in was cancelled" });
+          }, 1600);
+        });
       }
 
       const launch = await App.getLaunchUrl();
       if (launch?.url) void handleDeepLink(launch.url);
     } catch {
-      // Missing native plugins — WebView OAuth fallback still works.
+      // Missing native plugins — user needs an updated APK.
     }
   })();
 
@@ -170,11 +192,12 @@ export async function runNativeOAuth(
 
   if (!hasCapacitorPlugin("Browser")) {
     throw new Error(
-      "This app build is missing the sign-in browser plugin. Update Zumelia from GitHub Releases, or retry after the app refreshes.",
+      "This app build cannot open secure sign-in. Uninstall Zumelia, then install the latest APK from GitHub Releases.",
     );
   }
 
   const { Browser } = await import("@capacitor/browser");
+  markOAuthPending(true);
 
   return new Promise<NativeOAuthResult>((resolve, reject) => {
     pendingOAuth = { resolve, reject };
@@ -183,6 +206,7 @@ export async function runNativeOAuth(
       toolbarColor: "#FAF8F5",
     }).catch((err) => {
       pendingOAuth = null;
+      markOAuthPending(false);
       reject(
         new Error(
           oauthErrorMessage(
@@ -193,11 +217,6 @@ export async function runNativeOAuth(
       );
     });
   });
-}
-
-/** Navigate the app WebView through OAuth (fallback when Browser plugin is absent). */
-export function startWebViewOAuth(oauthUrl: string): void {
-  window.location.assign(oauthUrl);
 }
 
 /** Exchange OAuth code / tokens inside the WebView session, then navigate. */

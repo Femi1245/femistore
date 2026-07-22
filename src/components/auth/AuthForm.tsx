@@ -26,11 +26,10 @@ import {
 import {
   applyNativeOAuthResult,
   canUseInAppOAuth,
-  canUseWebViewOAuth,
   ensureNativeOAuthListener,
   runNativeOAuth,
-  startWebViewOAuth,
 } from "@/lib/native-oauth";
+import { isCapacitorAppShell } from "@/lib/native-shell";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
 import { PasswordInput, TextField } from "@/components/auth/AuthFields";
@@ -96,9 +95,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
+      // Native shell must use Custom Tab + deep link. Navigating the WebView to
+      // Google opens external Chrome and leaves the session outside the app.
+      const nativeShell = isCapacitorAppShell();
       const inAppBrowser = canUseInAppOAuth();
-      const inAppWebView = canUseWebViewOAuth();
-      const redirectTo = inAppBrowser
+      const redirectTo = nativeShell
         ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -124,7 +125,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (data?.url) {
-        if (inAppBrowser) {
+        if (nativeShell) {
+          if (!inAppBrowser) {
+            setError(
+              "This Zumelia build cannot finish Google sign-in. Uninstall the app, then install the latest APK from GitHub Releases.",
+            );
+            setOauthLoading(null);
+            return;
+          }
           const result = await runNativeOAuth(data.url);
           if (result.error) {
             setError(formatOAuthError(result.error));
@@ -132,10 +140,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
             return;
           }
           await applyNativeOAuthResult(result);
-          return;
-        }
-        if (inAppWebView) {
-          startWebViewOAuth(data.url);
           return;
         }
         window.location.assign(data.url);

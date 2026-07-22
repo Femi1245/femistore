@@ -40,14 +40,20 @@ export function hasCapacitorPlugin(name: string): boolean {
   if (typeof window === "undefined") return false;
   const cap = (
     window as Window & {
-      Capacitor?: { isPluginAvailable?: (plugin: string) => boolean };
+      Capacitor?: {
+        isPluginAvailable?: (plugin: string) => boolean;
+        Plugins?: Record<string, unknown>;
+      };
     }
   ).Capacitor;
   try {
-    return cap?.isPluginAvailable?.(name) === true;
+    if (cap?.isPluginAvailable?.(name) === true) return true;
+    // Some WebViews expose plugins before isPluginAvailable is ready.
+    if (cap?.Plugins && name in cap.Plugins) return true;
   } catch {
     return false;
   }
+  return false;
 }
 
 export function isCapacitorNative(): boolean {
