@@ -21,6 +21,7 @@ export type MarketingMockupSlideId =
   | "storefront"
   | "calls"
   | "live"
+  | "live-reactions"
   | "post-analytics"
   | "section-tips"
   | "privacy-controls"
@@ -116,12 +117,27 @@ Zumelia: DMs, voice notes, and crystal-clear video calls — when the conversati
 
 Zumelia Live now has a place for:
 → Video
-→ Gaming
+→ Gaming (real screen share — not just camera)
 → Music
 → Talk, events & live shopping
 
-Pick a category, go live, add co-hosts, chat and receive gifts. 🟠`,
+Pick a category, share your screen or camera, go live with co-hosts, chat, reactions and gifts. 🟠`,
     hashtags: "#livestreaming #creators #Zumelia",
+  },
+  {
+    id: "live-reactions",
+    title: "Live reactions",
+    feature: "Floating emoji reactions on live streams in realtime",
+    planDayRefs: ["Ongoing Sat", "Ongoing Wed"],
+    shippedAt: "2026-07",
+    caption: `Watching live shouldn't be silent.
+
+Tap ❤️ 🔥 😂 👏 on Zumelia Live — reactions float across the stream in realtime for everyone in the room.
+
+No paid gift required. Just vibes. 🟠
+
+Try it: ${MARKETING_APP_URL}/live`,
+    hashtags: "#livestreaming #buildinpublic #Zumelia",
   },
   {
     id: "post-analytics",

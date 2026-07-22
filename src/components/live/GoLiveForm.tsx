@@ -56,7 +56,9 @@ export function GoLiveForm() {
         <h2 className="font-display text-lg font-bold text-vintage-ink">Go live</h2>
       </div>
       <p className="text-sm text-vintage-ink-muted">
-        Choose what you are streaming, then allow camera and microphone when prompted.
+        Choose what you are streaming. For Gaming, Music, or Events, share your
+        screen once you are live so viewers see real gameplay or your desktop —
+        not only your camera.
       </p>
       <fieldset>
         <legend className="mb-2 block text-xs font-medium text-vintage-ink-muted">
@@ -110,7 +112,7 @@ export function GoLiveForm() {
         className="vintage-btn flex w-full items-center justify-center gap-2 py-3 disabled:opacity-50"
       >
         <Radio className="h-4 w-4" />
-        {loading ? "Starting…" : canGoLive ? "Start live video" : "Setup required first"}
+        {loading ? "Starting…" : canGoLive ? "Start live stream" : "Setup required first"}
       </button>
     </form>
     </>

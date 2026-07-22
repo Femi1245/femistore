@@ -37,13 +37,13 @@ export const LIVE_CATEGORIES: LiveCategoryOption[] = [
   {
     id: "gaming",
     label: "Gaming",
-    description: "Gameplay, challenges and esports",
+    description: "Share your screen for real gameplay streams",
     icon: Gamepad2,
   },
   {
     id: "music",
     label: "Music",
-    description: "Performances, DJ sets and listening parties",
+    description: "Performances, DJ sets — camera or screen share",
     icon: Music2,
   },
   {
@@ -55,7 +55,7 @@ export const LIVE_CATEGORIES: LiveCategoryOption[] = [
   {
     id: "events",
     label: "Events",
-    description: "Shows, launches and community moments",
+    description: "Shows and launches — stream stage or screen",
     icon: Sparkles,
   },
   {

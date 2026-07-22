@@ -35,7 +35,8 @@ A day-by-day "build in public" posting plan for launching the Zumelia brand as a
 | `service-gig` | Service gig → separate thread | Ongoing Wed, Day 24 |
 | `calls` | Voice & video calls | Ongoing Thu |
 | `auto-reply` | Seller auto-reply settings | Ongoing Fri |
-| `live` | Go live + gifts | Ongoing Sat |
+| `live` | Go live + screen share + gifts | Ongoing Sat |
+| `live-reactions` | Floating live emoji reactions | Ongoing Sat, Ongoing Wed |
 | `post-analytics` | Owner post insights | Ongoing Tue, Ongoing Sun |
 | `section-tips` | In-app navigation tips | Ongoing Wed, Ongoing Fri |
 
@@ -54,13 +55,15 @@ Rotate mockups and text. Check off each week.
 | **Wed** | 🖼️ Mockup | `service-gig`, `storefront`, or `section-tips` |
 | **Thu** | Text / 📱 | Ask a question / poll *or* mockup `privacy-controls` |
 | **Fri** | 🖼️ Mockup | `auto-reply`, `calls`, or `section-tips` |
-| **Sat** | 🖼️ Mockup | `live` |
+| **Sat** | 🖼️ Mockup | `live` or `live-reactions` |
 | **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` |
 
 **Live category launch:** use mockup `live` to show the Video, Gaming, Music,
-Talk, Events and Shopping category picker. Copy its current caption from
-`MARKETING_MOCKUP_SLIDES`.
+Talk, Events and Shopping category picker — including real screen share for
+Gaming. Copy its current caption from `MARKETING_MOCKUP_SLIDES`.
 
+**Live reactions:** use mockup `live-reactions` for floating emoji reactions on
+streams (❤️ 🔥 😂 👏) in realtime.
 ---
 
 **The arc (Days 1–30):**

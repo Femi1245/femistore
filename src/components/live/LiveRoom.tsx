@@ -20,6 +20,8 @@ import {
   Loader2,
   Mic,
   MicOff,
+  MonitorUp,
+  MonitorOff,
   Radio,
   Sparkles,
   UserPlus,
@@ -34,6 +36,7 @@ import type { LiveVideoEffect } from "@/lib/live-video-effects";
 import type { LiveStream, Profile } from "@/lib/types";
 import { LiveChat } from "@/components/live/LiveChat";
 import { LiveEffectPicker } from "@/components/live/LiveEffectPicker";
+import { LiveReactions } from "@/components/live/LiveReactions";
 import { LiveStagePanel } from "@/components/live/LiveStagePanel";
 import { LiveViewersPanel } from "@/components/live/LiveViewersPanel";
 import { useLiveStreamEffects } from "@/components/live/useLiveStreamEffects";
@@ -137,8 +140,22 @@ function LiveCameraGrid({
   emptyMessage?: string;
 }) {
   const tracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: false }],
+    [
+      { source: Track.Source.Camera, withPlaceholder: false },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
     { onlySubscribed: excludeLocal },
+  );
+
+  const screenTracks = tracks.filter(
+    (
+      t,
+    ): t is (typeof tracks)[number] & {
+      publication: NonNullable<(typeof tracks)[number]["publication"]>;
+    } =>
+      t.source === Track.Source.ScreenShare &&
+      t.publication?.kind === Track.Kind.Video &&
+      (!excludeLocal || !t.participant.isLocal),
   );
 
   const cameraTracks = tracks.filter(
@@ -147,9 +164,45 @@ function LiveCameraGrid({
     ): t is (typeof tracks)[number] & {
       publication: NonNullable<(typeof tracks)[number]["publication"]>;
     } =>
+      t.source === Track.Source.Camera &&
       t.publication?.kind === Track.Kind.Video &&
       (!excludeLocal || !t.participant.isLocal),
   );
+
+  // Prefer screen share as the main stage when anyone is sharing (gaming / desktop).
+  if (screenTracks.length > 0) {
+    const primary = screenTracks[0];
+    const pipCameras = cameraTracks.slice(0, 2);
+    return (
+      <div className="relative h-full w-full bg-black">
+        <VideoTrack
+          trackRef={primary}
+          className="h-full w-full object-contain"
+        />
+        <div className="absolute bottom-2 left-2 rounded bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+          {participantLabel(primary.participant)} · Screen
+        </div>
+        {pipCameras.length > 0 && (
+          <div className="absolute bottom-3 right-3 z-10 flex gap-2">
+            {pipCameras.map((track) => (
+              <div
+                key={track.publication.trackSid}
+                className="relative h-28 w-20 overflow-hidden rounded-xl border-2 border-white/40 shadow-2xl sm:h-36 sm:w-24"
+              >
+                <VideoTrack
+                  trackRef={track}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+                  {participantLabel(track.participant)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (cameraTracks.length === 0) {
     return (
@@ -188,71 +241,122 @@ function PublisherControls({
   showEffects,
   effectsOpen,
   onToggleEffects,
+  emphasizeScreenShare,
   endLabel,
   onEnd,
 }: {
   showEffects: boolean;
   effectsOpen: boolean;
   onToggleEffects: () => void;
+  emphasizeScreenShare?: boolean;
   endLabel?: string;
   onEnd?: () => void;
 }) {
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
-    useLocalParticipant();
+  const {
+    localParticipant,
+    isMicrophoneEnabled,
+    isCameraEnabled,
+    isScreenShareEnabled,
+  } = useLocalParticipant();
+  const [screenError, setScreenError] = useState<string | null>(null);
+
+  async function toggleScreenShare() {
+    setScreenError(null);
+    try {
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, {
+        audio: true,
+        selfBrowserSurface: "include",
+        contentHint: emphasizeScreenShare ? "motion" : "detail",
+      });
+    } catch (err) {
+      console.error("[Live] screen share failed:", err);
+      setScreenError(
+        "Could not share screen. Allow screen sharing in your browser, then try again.",
+      );
+    }
+  }
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
-      <button
-        type="button"
-        onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
-        aria-label={isMicrophoneEnabled ? "Mute" : "Unmute"}
-      >
-        {isMicrophoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          void (async () => {
-            try {
-              await localParticipant.setCameraEnabled(!isCameraEnabled);
-            } catch (err) {
-              console.error("[Live] camera toggle failed:", err);
+    <div className="space-y-2">
+      {emphasizeScreenShare && !isScreenShareEnabled && (
+        <p className="text-center text-[11px] text-white/70">
+          Gaming tip: tap <span className="font-semibold text-white">Share screen</span> to
+          stream gameplay live — not just your camera.
+        </p>
+      )}
+      {screenError && (
+        <p className="text-center text-[11px] text-red-300">{screenError}</p>
+      )}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => void localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+          aria-label={isMicrophoneEnabled ? "Mute" : "Unmute"}
+        >
+          {isMicrophoneEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void (async () => {
               try {
-                await localParticipant.setCameraEnabled(false);
-                await localParticipant.setCameraEnabled(true);
-              } catch (retryErr) {
-                console.error("[Live] camera restart failed:", retryErr);
+                await localParticipant.setCameraEnabled(!isCameraEnabled);
+              } catch (err) {
+                console.error("[Live] camera toggle failed:", err);
+                try {
+                  await localParticipant.setCameraEnabled(false);
+                  await localParticipant.setCameraEnabled(true);
+                } catch (retryErr) {
+                  console.error("[Live] camera restart failed:", retryErr);
+                }
               }
-            }
-          })();
-        }}
-        className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
-        aria-label={isCameraEnabled ? "Camera off" : "Camera on"}
-      >
-        {isCameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-      </button>
-      {showEffects && (
+            })();
+          }}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-md"
+          aria-label={isCameraEnabled ? "Camera off" : "Camera on"}
+        >
+          {isCameraEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+        </button>
         <button
           type="button"
-          onClick={onToggleEffects}
-          className={`inline-flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-md ${
-            effectsOpen ? "bg-red-500 text-white" : "bg-black/55 text-white"
+          onClick={() => void toggleScreenShare()}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-bold uppercase tracking-wide backdrop-blur-md ${
+            isScreenShareEnabled || emphasizeScreenShare
+              ? "bg-red-600 text-white"
+              : "bg-black/55 text-white"
           }`}
-          aria-label="Effects"
+          aria-label={isScreenShareEnabled ? "Stop sharing screen" : "Share screen"}
         >
-          <Sparkles className="h-5 w-5" />
+          {isScreenShareEnabled ? (
+            <MonitorOff className="h-4 w-4" />
+          ) : (
+            <MonitorUp className="h-4 w-4" />
+          )}
+          {isScreenShareEnabled ? "Stop share" : "Share screen"}
         </button>
-      )}
-      {onEnd && endLabel && (
-        <button
-          type="button"
-          onClick={onEnd}
-          className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white"
-        >
-          End
-        </button>
-      )}
+        {showEffects && (
+          <button
+            type="button"
+            onClick={onToggleEffects}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-md ${
+              effectsOpen ? "bg-red-500 text-white" : "bg-black/55 text-white"
+            }`}
+            aria-label="Effects"
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
+        )}
+        {onEnd && endLabel && (
+          <button
+            type="button"
+            onClick={onEnd}
+            className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white"
+          >
+            End
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -274,9 +378,12 @@ function PublisherStage({
   onArEffectChange: (e: LiveAREffect) => void;
   showEffectsPicker: boolean;
 }) {
-  const { isCameraEnabled } = useLocalParticipant();
+  const { isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const tracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
     { onlySubscribed: false },
   );
 
@@ -294,6 +401,12 @@ function PublisherStage({
       t.source === Track.Source.Camera &&
       t.publication?.kind === Track.Kind.Video,
   );
+  const localScreen = tracks.find(
+    (t) =>
+      t.participant.isLocal &&
+      t.source === Track.Source.ScreenShare &&
+      t.publication?.kind === Track.Kind.Video,
+  );
   const videoTrack = localCam?.publication?.track as LocalVideoTrack | undefined;
 
   const { arStatus, arError } = useLiveStreamEffects(
@@ -301,7 +414,7 @@ function PublisherStage({
     effectMode,
     videoEffect,
     arEffect,
-    !!videoTrack && isCameraEnabled,
+    !!videoTrack && isCameraEnabled && !isScreenShareEnabled,
   );
 
   const localPreview =
@@ -313,10 +426,33 @@ function PublisherStage({
       </div>
     );
 
+  const screenMain =
+    localScreen && localScreen.publication ? (
+      <div className="relative h-full w-full bg-black">
+        <VideoTrack
+          trackRef={localScreen}
+          className="h-full w-full object-contain"
+        />
+        <div className="absolute bottom-2 left-2 rounded bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">
+          Your screen
+        </div>
+        {isCameraEnabled && localCam?.publication && (
+          <div className="absolute bottom-3 right-3 z-10 h-28 w-20 overflow-hidden rounded-xl border-2 border-white/40 shadow-2xl sm:h-36 sm:w-24">
+            {localPreview}
+            <div className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white">
+              You
+            </div>
+          </div>
+        )}
+      </div>
+    ) : null;
+
   return (
     <>
       <div className="absolute inset-0">
-        {hasRemotes ? (
+        {screenMain ? (
+          screenMain
+        ) : hasRemotes ? (
           <>
             <LiveCameraGrid excludeLocal emptyMessage="Waiting for others…" />
             <div className="absolute bottom-28 right-3 z-10 h-40 w-28 overflow-hidden rounded-xl border-2 border-white/40 shadow-2xl sm:bottom-32 sm:h-44 sm:w-32">
@@ -336,11 +472,12 @@ function PublisherStage({
                 <p className="text-sm text-white/60">Starting camera…</p>
                 <p className="max-w-xs text-center text-xs text-white/40">
                   If this takes long, allow camera access in your browser and
-                  check no other app is using the camera.
+                  check no other app is using the camera. For games, use Share
+                  screen once you are live.
                 </p>
               </>
             ) : (
-              <p className="text-sm text-white/60">Camera is off</p>
+              <p className="text-sm text-white/60">Camera is off — share your screen to go live</p>
             )}
           </div>
         )}
@@ -641,6 +778,8 @@ export function LiveRoom({
               <Gift className="h-5 w-5" />
             </button>
           )}
+          {/* Spacer so Gift / Stage stay spaced around the reaction button */}
+          <div className="h-12 w-12 shrink-0" aria-hidden />
           <button
             type="button"
             onClick={() => setStageOpen((v) => !v)}
@@ -652,6 +791,11 @@ export function LiveRoom({
             <UserPlus className="h-5 w-5" />
           </button>
         </div>
+
+        <LiveReactions
+          currentUserId={currentUser.id}
+          displayName={currentUser.display_name}
+        />
 
         {/* Side panels */}
         {stageOpen && (
@@ -692,6 +836,11 @@ export function LiveRoom({
                 showEffects={isHost}
                 effectsOpen={effectsOpen}
                 onToggleEffects={() => setEffectsOpen((v) => !v)}
+                emphasizeScreenShare={
+                  stream.category === "gaming" ||
+                  stream.category === "events" ||
+                  stream.category === "music"
+                }
                 endLabel={isHost ? "End live stream" : undefined}
                 onEnd={isHost ? handleEndLive : undefined}
               />

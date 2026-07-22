@@ -30,6 +30,7 @@ const SLIDE_ICONS: Record<MarketingMockupSlideId, typeof Briefcase> = {
   storefront: Store,
   calls: Phone,
   live: Radio,
+  "live-reactions": Sparkles,
   "post-analytics": BarChart3,
   "section-tips": Compass,
   "privacy-controls": Lock,
@@ -218,15 +219,21 @@ function LiveMock() {
           </span>
           <p className="mt-1 text-[10px] font-bold text-white">Ranked climb with the squad</p>
           <p className="text-[8px] text-white/70">{DEMO_PERSONAS.seller.name}</p>
+          <p className="mt-1 text-[7px] font-semibold text-emerald-300">🖥 Screen sharing gameplay</p>
         </div>
         <span className="rounded-full bg-black/40 px-2 py-0.5 text-[8px] text-white/80">
           1.2k
         </span>
       </div>
+      <div className="pointer-events-none absolute inset-x-8 bottom-28 top-28">
+        <span className="absolute bottom-2 left-[20%] text-sm opacity-90">❤️</span>
+        <span className="absolute bottom-8 left-[45%] text-base opacity-80">🔥</span>
+        <span className="absolute bottom-14 left-[32%] text-sm opacity-70">👏</span>
+      </div>
       <div className="absolute bottom-16 left-3 right-14 space-y-1.5">
         <div className="max-w-[85%] rounded-2xl bg-black/45 px-2 py-1">
           <p className="text-[8px] font-semibold text-white">user12</p>
-          <p className="text-[8px] text-white/90">This AR filter 🔥</p>
+          <p className="text-[8px] text-white/90">This clutch 🔥</p>
         </div>
         <div className="max-w-[85%] rounded-2xl bg-black/45 px-2 py-1">
           <p className="text-[8px] font-semibold text-white">maya</p>
@@ -237,9 +244,50 @@ function LiveMock() {
         <div className="flex-1 rounded-full bg-white/15 px-3 py-1.5 text-[8px] text-white/60">
           Say something…
         </div>
+        <div className="rounded-full bg-zinc-800 px-2.5 py-1.5 text-[10px]">❤️</div>
         <div className="rounded-full bg-red-500 px-3 py-1.5 text-[8px] font-bold text-white">
           Gift
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveReactionsMock() {
+  return (
+    <div className="relative min-h-[380px] overflow-hidden bg-zinc-950">
+      <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-zinc-900 to-black" />
+      <div className="relative p-3">
+        <span className="rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
+          LIVE
+        </span>
+        <p className="mt-2 text-[11px] font-bold text-white">DJ set from the loft</p>
+        <p className="text-[8px] text-white/60">Realtime reactions for everyone watching</p>
+      </div>
+      <div className="absolute inset-x-6 top-28 bottom-24">
+        {["❤️", "🔥", "😂", "👏", "🎉", "💯"].map((emoji, i) => (
+          <span
+            key={`${emoji}-${i}`}
+            className="absolute text-lg"
+            style={{
+              left: `${12 + i * 14}%`,
+              bottom: `${8 + (i % 3) * 22}%`,
+              opacity: 0.95 - i * 0.08,
+            }}
+          >
+            {emoji}
+          </span>
+        ))}
+      </div>
+      <div className="absolute bottom-4 right-3 flex flex-col gap-1.5">
+        {["❤️", "🔥", "😂", "👏"].map((emoji) => (
+          <span
+            key={emoji}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm ring-1 ring-white/20"
+          >
+            {emoji}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -452,6 +500,7 @@ const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   storefront: <StorefrontMock />,
   calls: <CallsMock />,
   live: <LiveMock />,
+  "live-reactions": <LiveReactionsMock />,
   "post-analytics": <PostAnalyticsMock />,
   "section-tips": <SectionTipsMock />,
   "privacy-controls": <PrivacyControlsMock />,
