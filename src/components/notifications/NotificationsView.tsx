@@ -16,6 +16,8 @@ import {
   Gift,
   Check,
   MailOpen,
+  Phone,
+  PhoneMissed,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -51,6 +53,8 @@ const iconMap: Record<
   live_ended: Radio,
   gift: Gift,
   connection_request: UserPlus,
+  call: Phone,
+  missed_call: PhoneMissed,
 };
 
 export function NotificationsView({

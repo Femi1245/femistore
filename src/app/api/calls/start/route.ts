@@ -62,5 +62,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error?.message ?? "Could not start call" }, { status: 500 });
   }
 
+  // Persist + push-capable notification for the callee (DM ringing).
+  if (recipientId && initialStatus === "ringing") {
+    await supabase.rpc("notify_incoming_call", {
+      p_recipient_id: recipientId,
+      p_actor_id: user.id,
+      p_session_id: session.id,
+      p_call_type: callType,
+      p_conversation_id: conversationId,
+    });
+  }
+
   return NextResponse.json({ session });
 }

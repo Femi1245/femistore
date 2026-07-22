@@ -22,6 +22,7 @@ export type MarketingMockupSlideId =
   | "calls"
   | "live"
   | "live-reactions"
+  | "notifications"
   | "post-analytics"
   | "section-tips"
   | "privacy-controls"
@@ -138,6 +139,25 @@ No paid gift required. Just vibes. 🟠
 
 Try it: ${MARKETING_APP_URL}/live`,
     hashtags: "#livestreaming #buildinpublic #Zumelia",
+  },
+  {
+    id: "notifications",
+    title: "Stay in the loop",
+    feature: "Alerts for messages, likes, comments, calls, gifts, and live",
+    planDayRefs: ["Ongoing Thu", "Ongoing Sun"],
+    shippedAt: "2026-07",
+    caption: `Don't miss what matters.
+
+Zumelia notifies you for:
+→ New messages
+→ Likes & comments
+→ Incoming / missed calls
+→ Gifts, follows & live streams
+
+Bell + browser alerts, with quiet hours when you need space. 🟠
+
+Try it: ${MARKETING_APP_URL}/notifications`,
+    hashtags: "#buildinpublic #Zumelia",
   },
   {
     id: "post-analytics",

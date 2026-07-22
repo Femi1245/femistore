@@ -59,5 +59,19 @@ export async function POST(request: Request) {
     message_type: "call_log",
   });
 
+  if (
+    status === "missed" &&
+    session.recipient_id &&
+    session.recipient_id !== session.initiator_id
+  ) {
+    await supabase.rpc("notify_missed_call", {
+      p_recipient_id: session.recipient_id,
+      p_actor_id: session.initiator_id,
+      p_session_id: session.id,
+      p_call_type: session.call_type,
+      p_conversation_id: session.conversation_id,
+    });
+  }
+
   return NextResponse.json({ session: updated });
 }

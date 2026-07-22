@@ -125,6 +125,12 @@ export function getNotificationHref(
       return notification.entity_id
         ? `/chat?c=${encodeURIComponent(notification.entity_id)}`
         : "/chat";
+    case "call":
+      return "/chat";
+    case "missed_call":
+      return notification.entity_id
+        ? `/chat?c=${encodeURIComponent(notification.entity_id)}`
+        : "/chat";
     case "live_started":
       return `/live/${notification.entity_id}`;
     case "live_ended":
@@ -175,6 +181,14 @@ export function getNotificationText(notification: Notification): string {
       return notification.message
         ? `${name} sent you a message: "${notification.message}"`
         : `${name} sent you a message`;
+    case "call":
+      return notification.message
+        ? `${name}: ${notification.message}`
+        : `${name} is calling you`;
+    case "missed_call":
+      return notification.message
+        ? `${name}: ${notification.message}`
+        : `${name} tried to call you`;
     case "live_started":
       return notification.message
         ? `${name} is live: ${notification.message}`
@@ -213,12 +227,18 @@ export function getNotificationIcon(type: NotificationType): string {
       return "circle-dot";
     case "message":
       return "mail";
+    case "call":
+      return "phone";
+    case "missed_call":
+      return "phone-missed";
     case "live_started":
       return "radio";
     case "live_ended":
       return "radio-off";
     case "gift":
       return "gift";
+    case "connection_request":
+      return "user-plus";
     default:
       return "bell";
   }

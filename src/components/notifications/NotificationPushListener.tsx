@@ -38,6 +38,17 @@ export function NotificationPushListener({ userId }: { userId: string }) {
       ]);
       profileRef.current = profile as Profile | null;
       prefsRef.current = prefs;
+
+      // Ask once so messages/likes/calls can alert when the app is in the background.
+      if (typeof window !== "undefined" && "Notification" in window) {
+        if (Notification.permission === "default") {
+          try {
+            await Notification.requestPermission();
+          } catch {
+            // user dismissed
+          }
+        }
+      }
     })();
   }, [userId]);
 
@@ -90,10 +101,23 @@ export function NotificationPushListener({ userId }: { userId: string }) {
             enriched.actor?.username ?? profile?.username,
           );
 
+          const isCallAlert =
+            enriched.type === "call" || enriched.type === "missed_call";
+
+          // Incoming calls should interrupt even when the tab is visible.
+          if (
+            !isCallAlert &&
+            document.visibilityState === "visible" &&
+            document.hasFocus()
+          ) {
+            return;
+          }
+
           const notification = new Notification("Zumelia", {
             body: getNotificationText(enriched),
             icon: "/pwa/icon-192.png",
             tag: enriched.id,
+            requireInteraction: isCallAlert,
           });
           notification.onclick = () => {
             window.focus();

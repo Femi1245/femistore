@@ -3,12 +3,15 @@ import type { NotificationType } from "./types";
 
 export const NOTIFICATION_TYPES: { type: NotificationType; label: string }[] = [
   { type: "follow", label: "New followers" },
-  { type: "like", label: "Likes on your posts" },
-  { type: "comment", label: "Comments" },
+  { type: "connection_request", label: "Connection requests" },
+  { type: "like", label: "Likes on your posts & statuses" },
+  { type: "comment", label: "Comments & replies" },
   { type: "reshare", label: "Reshares" },
   { type: "new_post", label: "Posts from people you follow" },
   { type: "new_status", label: "Status updates" },
   { type: "message", label: "Messages" },
+  { type: "call", label: "Incoming calls" },
+  { type: "missed_call", label: "Missed calls" },
   { type: "live_started", label: "Live streams started" },
   { type: "live_ended", label: "Live streams ended" },
   { type: "gift", label: "Gifts received" },

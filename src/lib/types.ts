@@ -389,7 +389,9 @@ export type NotificationType =
   | "live_started"
   | "live_ended"
   | "gift"
-  | "connection_request";
+  | "connection_request"
+  | "call"
+  | "missed_call";
 
 export type Notification = {
   id: string;

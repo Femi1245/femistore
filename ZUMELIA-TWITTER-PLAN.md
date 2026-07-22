@@ -37,6 +37,7 @@ A day-by-day "build in public" posting plan for launching the Zumelia brand as a
 | `auto-reply` | Seller auto-reply settings | Ongoing Fri |
 | `live` | Go live + screen share + gifts | Ongoing Sat |
 | `live-reactions` | Floating live emoji reactions | Ongoing Sat, Ongoing Wed |
+| `notifications` | Messages, likes, comments, calls & more | Ongoing Thu, Ongoing Sun |
 | `post-analytics` | Owner post insights | Ongoing Tue, Ongoing Sun |
 | `section-tips` | In-app navigation tips | Ongoing Wed, Ongoing Fri |
 
@@ -53,10 +54,10 @@ Rotate mockups and text. Check off each week.
 | **Mon** | 🖼️ Mockup | `seller-inbox` — Seller vs personal inbox |
 | **Tue** | Text / 📱 | Build-in-public *or* mockup `post-analytics` / `status-engagement` |
 | **Wed** | 🖼️ Mockup | `service-gig`, `storefront`, or `section-tips` |
-| **Thu** | Text / 📱 | Ask a question / poll *or* mockup `privacy-controls` |
+| **Thu** | Text / 📱 | Ask a question / poll *or* mockup `privacy-controls` / `notifications` |
 | **Fri** | 🖼️ Mockup | `auto-reply`, `calls`, or `section-tips` |
 | **Sat** | 🖼️ Mockup | `live` or `live-reactions` |
-| **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` |
+| **Sun** | Text / 📱 | Thank followers *or* mockup `post-analytics` / `notifications` |
 
 **Live category launch:** use mockup `live` to show the Video, Gaming, Music,
 Talk, Events and Shopping category picker — including real screen share for
@@ -64,7 +65,9 @@ Gaming. Copy its current caption from `MARKETING_MOCKUP_SLIDES`.
 
 **Live reactions:** use mockup `live-reactions` for floating emoji reactions on
 streams (❤️ 🔥 😂 👏) in realtime.
----
+
+**Notifications:** use mockup `notifications` for the bell + alerts (messages,
+likes, comments, calls, live).
 
 **The arc (Days 1–30):**
 - **Week 1 (Days 1–7):** Mystery. Logo-only teasers. Establish "vibe coder building Zumelia."

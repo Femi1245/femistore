@@ -44,8 +44,8 @@ export function PushNotificationSettings() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-vintage-ink-muted">
-        Get instant alerts for messages, likes, and live streams — respects quiet hours
-        and notification toggles below.
+        Get instant alerts for messages, likes, comments, calls, gifts, and live
+        streams — respects quiet hours and the toggles below.
       </p>
       {permission === "granted" ? (
         <div className="flex items-center gap-2 text-sm font-medium text-vintage-olive">

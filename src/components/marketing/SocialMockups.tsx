@@ -3,11 +3,13 @@
 import { useState } from "react";
 import {
   BarChart3,
+  Bell,
   Briefcase,
   Check,
   Compass,
   Copy,
   Eye,
+  Heart,
   Lock,
   MessageCircle,
   Phone,
@@ -31,6 +33,7 @@ const SLIDE_ICONS: Record<MarketingMockupSlideId, typeof Briefcase> = {
   calls: Phone,
   live: Radio,
   "live-reactions": Sparkles,
+  notifications: Bell,
   "post-analytics": BarChart3,
   "section-tips": Compass,
   "privacy-controls": Lock,
@@ -443,6 +446,95 @@ function StatusEngagementMock() {
   );
 }
 
+function NotificationsMock() {
+  const items = [
+    {
+      icon: MessageCircle,
+      title: DEMO_PERSONAS.buyer.name,
+      body: "sent you a message",
+      when: "now",
+      unread: true,
+    },
+    {
+      icon: Phone,
+      title: "Incoming call",
+      body: `${DEMO_PERSONAS.seller.name} is calling…`,
+      when: "1m",
+      unread: true,
+    },
+    {
+      icon: Heart,
+      title: DEMO_PERSONAS.seller.name,
+      body: "liked your post",
+      when: "4m",
+      unread: true,
+    },
+    {
+      icon: MessageCircle,
+      title: "Chioma A.",
+      body: "replied to your comment",
+      when: "12m",
+      unread: false,
+    },
+    {
+      icon: Radio,
+      title: "Live now",
+      body: `${DEMO_PERSONAS.seller.name} started a stream`,
+      when: "1h",
+      unread: false,
+    },
+  ];
+  return (
+    <div className="min-h-[380px] bg-vintage-cream px-3 py-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-vintage-rust">
+            Alerts
+          </p>
+          <p className="mt-0.5 font-display text-sm font-bold text-vintage-ink">
+            Notifications
+          </p>
+        </div>
+        <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-vintage-paper text-vintage-rust">
+          <Bell className="h-3.5 w-3.5" />
+          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-vintage-rust px-0.5 text-[7px] font-bold text-white">
+            3
+          </span>
+        </span>
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <li
+              key={`${item.title}-${item.when}`}
+              className={`flex gap-2 rounded-sm border px-2 py-2 ${
+                item.unread
+                  ? "border-vintage-rust/40 bg-vintage-paper"
+                  : "border-vintage-border bg-vintage-paper/60"
+              }`}
+            >
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-vintage-cream text-vintage-rust">
+                <Icon className="h-3 w-3" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-semibold text-vintage-ink">
+                  {item.title}
+                </p>
+                <p className="truncate text-[9px] text-vintage-ink-muted">{item.body}</p>
+              </div>
+              <span className="shrink-0 text-[8px] text-vintage-ink-muted">{item.when}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-center text-[8px] text-vintage-ink-muted">
+        Messages · likes · comments · calls · live
+      </p>
+    </div>
+  );
+}
+
 function PrivacyControlsMock() {
   const toggles = [
     { label: "Private account", on: true, hint: "Followers-only posts" },
@@ -501,6 +593,7 @@ const MOCKUP_UI: Record<MarketingMockupSlideId, React.ReactNode> = {
   calls: <CallsMock />,
   live: <LiveMock />,
   "live-reactions": <LiveReactionsMock />,
+  notifications: <NotificationsMock />,
   "post-analytics": <PostAnalyticsMock />,
   "section-tips": <SectionTipsMock />,
   "privacy-controls": <PrivacyControlsMock />,
