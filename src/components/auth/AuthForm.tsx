@@ -26,10 +26,12 @@ import {
 import {
   applyNativeOAuthResult,
   ensureNativeOAuthListener,
+  isZumeliaAndroidShell,
   runNativeOAuth,
   shouldUseNativeOAuth,
+  waitForZumeliaNative,
 } from "@/lib/native-oauth";
-import { isCapacitorNative } from "@/lib/native-shell";
+import { hasCapacitorPlugin, isCapacitorNative } from "@/lib/native-shell";
 import { getAndroidApkUrl } from "@/lib/app-download";
 import { formatOAuthError, toSupabaseOAuthProvider, type OAuthUiProvider } from "@/lib/oauth-providers";
 import { Logo } from "@/components/Logo";
@@ -98,13 +100,21 @@ export function AuthForm({ mode }: { mode: Mode }) {
     try {
       const supabase = createClient();
       const supabaseProvider = toSupabaseOAuthProvider(provider);
-      // Only use Custom Tab when we are actually in the APK WebView (UA / bridge).
-      // Do NOT trust localStorage native flags alone — that blocked Google on old builds.
-      const useNativeOAuth =
-        isCapacitorNative() || (await shouldUseNativeOAuth());
-      const redirectTo = useNativeOAuth
+      const javaBridge = await waitForZumeliaNative(1200);
+      const inAndroidShell =
+        Boolean(javaBridge) ||
+        isZumeliaAndroidShell() ||
+        isCapacitorNative() ||
+        (await shouldUseNativeOAuth());
+
+      // Prefer Custom Tab only when a native opener is actually available.
+      // Otherwise finish OAuth inside the WebView via /auth/callback.
+      const useCustomTab =
+        Boolean(javaBridge) || hasCapacitorPlugin("Browser");
+      const redirectTo = useCustomTab
         ? nativeOAuthBridgeUrl(nextAfterAuth, window.location.origin)
         : authCallbackUrl(nextAfterAuth, window.location.origin);
+
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: supabaseProvider,
         options: {
@@ -128,7 +138,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (data?.url) {
-        if (useNativeOAuth) {
+        if (useCustomTab) {
           try {
             const result = await runNativeOAuth(data.url);
             if (result.error) {
@@ -138,17 +148,35 @@ export function AuthForm({ mode }: { mode: Mode }) {
             }
             await applyNativeOAuthResult(result);
             return;
-          } catch (nativeErr) {
-            const message =
-              nativeErr instanceof Error ? nativeErr.message : String(nativeErr);
-            if (/apk|reinstall|latest|plugin|not implemented|browser/i.test(message)) {
-              setNeedsApkUpdate(true);
-            }
-            setError(formatOAuthError(message));
-            setOauthLoading(null);
+          } catch {
+            // Fall through to WebView OAuth below.
+          }
+        }
+
+        if (inAndroidShell && useCustomTab) {
+          // Custom Tab failed — restart OAuth finishing inside the WebView.
+          const fallback = await supabase.auth.signInWithOAuth({
+            provider: supabaseProvider,
+            options: {
+              redirectTo: authCallbackUrl(nextAfterAuth, window.location.origin),
+              skipBrowserRedirect: true,
+              ...(provider === "google"
+                ? {
+                    queryParams: {
+                      access_type: "offline",
+                      prompt: "consent",
+                    },
+                  }
+                : {}),
+            },
+          });
+          if (fallback.data?.url) {
+            window.location.assign(fallback.data.url);
             return;
           }
         }
+
+        // WebView / normal browser: navigate this window through Google.
         window.location.assign(data.url);
         return;
       }
@@ -162,6 +190,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
         err instanceof Error && err.message.trim()
           ? err.message
           : "Could not start sign in. Check your connection and Supabase auth settings.";
+      if (/apk|reinstall|latest|plugin|not implemented/i.test(message)) {
+        setNeedsApkUpdate(true);
+      }
       setError(formatOAuthError(message));
       setOauthLoading(null);
     }

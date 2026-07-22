@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  // APK build: 20260722c — origin-only server.url restores Capacitor plugins
+  // APK build: 20260722d — Java Custom Tab bridge + WebView OAuth fallback
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),

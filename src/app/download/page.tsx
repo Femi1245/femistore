@@ -45,11 +45,11 @@ export default function DownloadPage() {
 
         <div className="mt-6 rounded-2xl border border-vintage-rust/40 bg-vintage-rust/10 p-4 text-sm text-vintage-ink">
           <p className="font-semibold text-vintage-rust">
-            Google sign-in fix — build {ANDROID_APK_CACHE_BUST}
+            Google sign-in fix — build {ANDROID_APK_CACHE_BUST} (v1.0.4)
           </p>
           <p className="mt-1 text-vintage-ink-muted">
-            Critical: uninstall the old Zumelia app first, then install this new
-            APK. Older builds could not load Google sign-in plugins.
+            You must uninstall the old app first. This build adds a native Google
+            sign-in bridge that does not depend on broken Capacitor plugins.
           </p>
         </div>
 

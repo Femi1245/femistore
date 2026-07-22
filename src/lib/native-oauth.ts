@@ -1,6 +1,10 @@
 /**
- * In-app OAuth for the Capacitor Android/iOS shell.
- * Opens the provider in a Custom Tab, then returns via zumelia:// deep link.
+ * In-app OAuth for the Capacitor Android shell.
+ *
+ * Order of attempts:
+ * 1) window.ZumeliaNative.openAuth (Java Custom Tabs — works even if Capacitor plugins fail)
+ * 2) @capacitor/browser Custom Tab
+ * 3) Caller should fall back to WebView navigation + /auth/callback
  */
 
 import { createClient } from "@/lib/supabase/client";
@@ -27,11 +31,17 @@ type PendingOAuth = {
   reject: (reason?: unknown) => void;
 };
 
+type ZumeliaNativeBridge = {
+  openAuth: (url: string) => void;
+  isNative?: () => boolean;
+};
+
 const PENDING_FLAG = "zumelia-oauth-pending";
 
 let pendingOAuth: PendingOAuth | null = null;
 let listenerBoot: Promise<void> | null = null;
 let deepLinkHandledAt = 0;
+let deepLinkWindowHooked = false;
 
 function oauthErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) return error.message;
@@ -62,11 +72,42 @@ function sleep(ms: number) {
   });
 }
 
-/** Wait until the native Capacitor bridge is present (not just native=1 flag). */
+function getZumeliaNative(): ZumeliaNativeBridge | null {
+  if (typeof window === "undefined") return null;
+  const bridge = (
+    window as Window & { ZumeliaNative?: ZumeliaNativeBridge }
+  ).ZumeliaNative;
+  if (bridge && typeof bridge.openAuth === "function") return bridge;
+  return null;
+}
+
+/** True when running inside the Zumelia APK WebView. */
+export function isZumeliaAndroidShell(): boolean {
+  if (typeof window === "undefined") return false;
+  if (getZumeliaNative()) return true;
+  if (isCapacitorNative()) return true;
+  return isCapacitorAppShell() && /ZumeliaNativeApp/i.test(navigator.userAgent);
+}
+
+export async function waitForZumeliaNative(
+  timeoutMs = 2500,
+): Promise<ZumeliaNativeBridge | null> {
+  const existing = getZumeliaNative();
+  if (existing) return existing;
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    await sleep(100);
+    const bridge = getZumeliaNative();
+    if (bridge) return bridge;
+  }
+  return getZumeliaNative();
+}
+
 export async function waitForCapacitorBridge(
-  timeoutMs = 5000,
+  timeoutMs = 3000,
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
+  if (getZumeliaNative()) return true;
   if (hasCapacitorPlugin("Browser") || hasCapacitorPlugin("App")) return true;
 
   const started = Date.now();
@@ -87,40 +128,23 @@ export async function waitForCapacitorBridge(
     if (cap?.isPluginAvailable?.("Browser") || cap?.isPluginAvailable?.("App")) {
       return true;
     }
+    if (getZumeliaNative()) return true;
     await sleep(100);
   }
 
-  return (
-    hasCapacitorPlugin("Browser") ||
-    hasCapacitorPlugin("App") ||
-    isCapacitorNative()
-  );
+  return Boolean(getZumeliaNative() || isCapacitorNative());
 }
 
-/**
- * True when we should run the Custom Tab OAuth flow.
- * Prefer live bridge detection over the persisted shell flag alone.
- */
 export async function shouldUseNativeOAuth(): Promise<boolean> {
-  if (!isCapacitorAppShell() && !isCapacitorNative()) return false;
-  return waitForCapacitorBridge();
+  return isZumeliaAndroidShell() || (await waitForCapacitorBridge(1500));
 }
 
-/** @deprecated use shouldUseNativeOAuth — kept for callers that need a sync hint */
 export function canUseInAppOAuth(): boolean {
-  return (
-    isCapacitorNative() ||
-    (isCapacitorAppShell() &&
-      (hasCapacitorPlugin("Browser") || hasCapacitorPlugin("App")))
-  );
+  return isZumeliaAndroidShell();
 }
 
-export async function waitForInAppOAuth(timeoutMs = 5000): Promise<boolean> {
-  return shouldUseNativeOAuth().then(async (ok) => {
-    if (ok) return true;
-    await waitForCapacitorBridge(timeoutMs);
-    return canUseInAppOAuth() || isCapacitorNative();
-  });
+export async function waitForInAppOAuth(): Promise<boolean> {
+  return shouldUseNativeOAuth();
 }
 
 export function isNativeAuthDeepLink(url: string): boolean {
@@ -198,17 +222,38 @@ async function handleDeepLink(url: string) {
   }
 }
 
+function hookWindowDeepLinkHandler() {
+  if (typeof window === "undefined" || deepLinkWindowHooked) return;
+  deepLinkWindowHooked = true;
+
+  const w = window as Window & {
+    __zumeliaHandleAuthDeepLink?: (url: string) => void;
+    __zumeliaPendingAuthDeepLink?: string;
+  };
+
+  w.__zumeliaHandleAuthDeepLink = (url: string) => {
+    void handleDeepLink(url);
+  };
+
+  if (w.__zumeliaPendingAuthDeepLink) {
+    const pending = w.__zumeliaPendingAuthDeepLink;
+    w.__zumeliaPendingAuthDeepLink = undefined;
+    void handleDeepLink(pending);
+  }
+}
+
 /** Start listening for OAuth deep links (idempotent, never throws). */
 export function ensureNativeOAuthListener(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
-  if (!isCapacitorAppShell() && !isCapacitorNative()) {
+  hookWindowDeepLinkHandler();
+  if (!isZumeliaAndroidShell() && !isCapacitorAppShell()) {
     return Promise.resolve();
   }
   if (listenerBoot) return listenerBoot;
 
   listenerBoot = (async () => {
     try {
-      await waitForCapacitorBridge(3000);
+      await waitForCapacitorBridge(2000);
       const { App } = await import("@capacitor/app");
 
       await App.addListener("appUrlOpen", ({ url }) => {
@@ -232,13 +277,13 @@ export function ensureNativeOAuthListener(): Promise<void> {
           }, 1600);
         });
       } catch {
-        // Browser plugin optional for listener boot
+        // optional
       }
 
       const launch = await App.getLaunchUrl();
       if (launch?.url) void handleDeepLink(launch.url);
     } catch {
-      // Bridge still missing — OAuth will surface a clear error on tap.
+      // Java bridge + window hook still handle return.
     }
   })();
 
@@ -246,48 +291,49 @@ export function ensureNativeOAuthListener(): Promise<void> {
 }
 
 /**
- * Open provider OAuth URL in Custom Tab and wait for zumelia:// return.
- * Always attempts Browser.open when called — do not pre-block on isPluginAvailable.
+ * Open OAuth in Custom Tab (Java bridge preferred), wait for deep-link return.
+ * Throws if neither Java bridge nor Capacitor Browser can open the URL.
  */
 export async function runNativeOAuth(
   oauthUrl: string,
 ): Promise<NativeOAuthResult> {
   await ensureNativeOAuthListener();
-  await waitForCapacitorBridge(5000);
+  hookWindowDeepLinkHandler();
 
-  let Browser: typeof import("@capacitor/browser").Browser;
-  try {
-    ({ Browser } = await import("@capacitor/browser"));
-  } catch (err) {
-    throw new Error(
-      oauthErrorMessage(
-        err,
-        "Sign-in browser module failed to load. Reinstall the latest Zumelia APK from the website.",
-      ),
-    );
-  }
-
+  const javaBridge = await waitForZumeliaNative(2000);
   markOAuthPending(true);
 
   return new Promise<NativeOAuthResult>((resolve, reject) => {
     pendingOAuth = { resolve, reject };
-    void Browser.open({
-      url: oauthUrl,
-      toolbarColor: "#FAF8F5",
-    }).catch((err) => {
+
+    const fail = (err: unknown) => {
       pendingOAuth = null;
       markOAuthPending(false);
-      const raw = oauthErrorMessage(err, "Could not open sign-in");
-      const needsUpdate =
-        /not implemented|plugin|unavailable|Browser/i.test(raw);
       reject(
         new Error(
-          needsUpdate
-            ? "Google sign-in needs the latest Zumelia APK. Uninstall the app, then download again from itunes-mu.vercel.app/download"
-            : raw,
+          oauthErrorMessage(err, "Could not open the sign-in window"),
         ),
       );
-    });
+    };
+
+    if (javaBridge) {
+      try {
+        javaBridge.openAuth(oauthUrl);
+        return;
+      } catch (err) {
+        fail(err);
+        return;
+      }
+    }
+
+    void (async () => {
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: oauthUrl, toolbarColor: "#FAF8F5" });
+      } catch (err) {
+        fail(err);
+      }
+    })();
   });
 }
 
