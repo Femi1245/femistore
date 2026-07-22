@@ -9,12 +9,20 @@ import {
 } from "@/lib/notifications";
 import { loadNotificationPreferences } from "@/lib/notification-prefs";
 import { shouldShowBrowserNotification } from "@/lib/notification-delivery";
+import {
+  attachNativeNotificationTapHandler,
+  canUseNativeLocalNotifications,
+  ensureNativeNotificationPermission,
+  ensureNativeNotificationChannel,
+  showNativeLocalNotification,
+} from "@/lib/native-local-notifications";
 import type { Notification, Profile } from "@/lib/types";
 import { NOTIFICATION_UNREAD_REFRESH_EVENT } from "@/components/notifications/useUnreadNotificationCount";
 
 /**
- * Single realtime subscription for browser push on new notifications.
- * Mount once per page in AppNav — not inside NotificationBell (renders twice in nav).
+ * Realtime alerts for new notification rows.
+ * Capacitor APK → Android Local Notifications (browser Notification API is unreliable in WebView).
+ * Web/PWA → browser Notification when permitted.
  */
 export function NotificationPushListener({ userId }: { userId: string }) {
   const profileRef = useRef<Pick<
@@ -27,6 +35,8 @@ export function NotificationPushListener({ userId }: { userId: string }) {
 
   useEffect(() => {
     const supabase = createClient();
+    let detachTap: (() => void) | undefined;
+
     void (async () => {
       const [{ data: profile }, prefs] = await Promise.all([
         supabase
@@ -39,7 +49,13 @@ export function NotificationPushListener({ userId }: { userId: string }) {
       profileRef.current = profile as Profile | null;
       prefsRef.current = prefs;
 
-      // Ask once so messages/likes/calls can alert when the app is in the background.
+      if (canUseNativeLocalNotifications()) {
+        await ensureNativeNotificationPermission();
+        await ensureNativeNotificationChannel();
+        detachTap = await attachNativeNotificationTapHandler();
+        return;
+      }
+
       if (typeof window !== "undefined" && "Notification" in window) {
         if (Notification.permission === "default") {
           try {
@@ -50,6 +66,10 @@ export function NotificationPushListener({ userId }: { userId: string }) {
         }
       }
     })();
+
+    return () => {
+      detachTap?.();
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -76,9 +96,6 @@ export function NotificationPushListener({ userId }: { userId: string }) {
         async (payload) => {
           window.dispatchEvent(new Event(NOTIFICATION_UNREAD_REFRESH_EVENT));
 
-          if (typeof window === "undefined" || !("Notification" in window)) return;
-          if (Notification.permission !== "granted") return;
-
           const incoming = payload.new as Notification;
           const profile = profileRef.current;
           if (
@@ -100,11 +117,30 @@ export function NotificationPushListener({ userId }: { userId: string }) {
             enriched,
             enriched.actor?.username ?? profile?.username,
           );
-
+          const body = getNotificationText(enriched);
           const isCallAlert =
             enriched.type === "call" || enriched.type === "missed_call";
+          const onNotificationsPage =
+            typeof window !== "undefined" &&
+            window.location.pathname.startsWith("/notifications");
 
-          // Incoming calls should interrupt even when the tab is visible.
+          // Native APK: always use system tray notifications (except quiet
+          // when already reading the notifications inbox, unless it's a call).
+          if (canUseNativeLocalNotifications()) {
+            if (onNotificationsPage && !isCallAlert) return;
+            await showNativeLocalNotification({
+              id: enriched.id,
+              body,
+              href,
+            });
+            return;
+          }
+
+          if (typeof window === "undefined" || !("Notification" in window)) return;
+          if (Notification.permission !== "granted") return;
+
+          // Web: skip OS toast when the tab is focused (bell still updates),
+          // except for calls.
           if (
             !isCallAlert &&
             document.visibilityState === "visible" &&
@@ -114,7 +150,7 @@ export function NotificationPushListener({ userId }: { userId: string }) {
           }
 
           const notification = new Notification("Zumelia", {
-            body: getNotificationText(enriched),
+            body,
             icon: "/pwa/icon-192.png",
             tag: enriched.id,
             requireInteraction: isCallAlert,

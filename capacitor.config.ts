@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  // APK build: 20260722f — native live screen share (MediaProjection)
+  // APK build: 20260722g — native phone notification tray alerts
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),
@@ -70,6 +70,11 @@ const config: CapacitorConfig = {
       style: "LIGHT",
       backgroundColor: "#00000000",
       overlaysWebView: true,
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample",
+      iconColor: "#C45C26",
+      sound: "default",
     },
   },
 };
