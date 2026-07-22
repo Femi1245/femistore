@@ -45,7 +45,7 @@ export default function DownloadPage() {
 
         <div className="mt-6 rounded-2xl border border-vintage-rust/40 bg-vintage-rust/10 p-4 text-sm text-vintage-ink">
           <p className="font-semibold text-vintage-rust">
-            Full-screen layout — build {ANDROID_APK_CACHE_BUST} (v1.0.5)
+            Full-screen + live screen share — build {ANDROID_APK_CACHE_BUST} (v1.0.6)
           </p>
           <p className="mt-1 text-vintage-ink-muted">
             You must uninstall the old app first. This build adds a native Google

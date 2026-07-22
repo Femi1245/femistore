@@ -12,7 +12,7 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { RoomEvent, Track, type LocalVideoTrack, type Participant } from "livekit-client";
+import { RoomEvent, Track, LocalVideoTrack, type Participant } from "livekit-client";
 import {
   ArrowLeft,
   Eye,
@@ -43,6 +43,11 @@ import { useLiveStreamEffects } from "@/components/live/useLiveStreamEffects";
 import { GiftPickerModal } from "@/components/gifts/GiftPickerModal";
 import { LiveGiftFeed } from "@/components/gifts/LiveGiftFeed";
 import { isBenignLiveKitError, logLiveKitError } from "@/lib/livekit-errors";
+import {
+  createNativeScreenShareStream,
+  isNativeScreenShareAvailable,
+  stopNativeScreenShare,
+} from "@/lib/native-screen-share";
 
 /** If LiveKit connected but camera stayed muted/off/dead, recover it. */
 function EnsurePublisherCamera({ active }: { active: boolean }) {
@@ -84,8 +89,17 @@ function EnsurePublisherCamera({ active }: { active: boolean }) {
     const onConnected = () => {
       void enable();
     };
+    const onLocalTrackPublished = () => {
+      // Don't force the camera on when a screen-share track publishes.
+      if (
+        localParticipant.isCameraEnabled &&
+        cameraMst()?.readyState === "ended"
+      ) {
+        void enable();
+      }
+    };
     room.on(RoomEvent.Connected, onConnected);
-    room.on(RoomEvent.LocalTrackPublished, onConnected);
+    room.on(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
 
     const startupTimer = window.setTimeout(() => {
       if (!cancelled && !localParticipant.isCameraEnabled) {
@@ -110,7 +124,7 @@ function EnsurePublisherCamera({ active }: { active: boolean }) {
       window.clearTimeout(startupTimer);
       window.clearInterval(watchdog);
       room.off(RoomEvent.Connected, onConnected);
-      room.off(RoomEvent.LocalTrackPublished, onConnected);
+      room.off(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
     };
   }, [active, localParticipant, room]);
 
@@ -259,20 +273,76 @@ function PublisherControls({
     isScreenShareEnabled,
   } = useLocalParticipant();
   const [screenError, setScreenError] = useState<string | null>(null);
+  const [screenBusy, setScreenBusy] = useState(false);
+  const nativeShare = isNativeScreenShareAvailable();
+
+  async function stopScreenShare() {
+    stopNativeScreenShare();
+    try {
+      await localParticipant.setScreenShareEnabled(false);
+    } catch {
+      // Manual native tracks may need explicit unpublish.
+    }
+    for (const pub of localParticipant.trackPublications.values()) {
+      if (pub.source === Track.Source.ScreenShare && pub.track) {
+        try {
+          await localParticipant.unpublishTrack(pub.track);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
 
   async function toggleScreenShare() {
     setScreenError(null);
+    if (screenBusy) return;
+    setScreenBusy(true);
     try {
-      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, {
-        audio: true,
-        selfBrowserSurface: "include",
-        contentHint: emphasizeScreenShare ? "motion" : "detail",
-      });
+      if (isScreenShareEnabled) {
+        await stopScreenShare();
+        return;
+      }
+
+      // Capacitor Android WebView: getDisplayMedia is unavailable — use MediaProjection.
+      if (nativeShare) {
+        const stream = await createNativeScreenShareStream();
+        const mediaTrack = stream.getVideoTracks()[0];
+        if (!mediaTrack) {
+          throw new Error("No screen video track");
+        }
+        mediaTrack.contentHint = emphasizeScreenShare ? "motion" : "detail";
+        const lkTrack = new LocalVideoTrack(mediaTrack, undefined, true);
+        await localParticipant.publishTrack(lkTrack, {
+          source: Track.Source.ScreenShare,
+          name: "screen",
+          simulcast: true,
+        });
+        return;
+      }
+
+      // Desktop / mobile browsers that support getDisplayMedia.
+      try {
+        await localParticipant.setScreenShareEnabled(true, {
+          audio: false,
+          contentHint: emphasizeScreenShare ? "motion" : "detail",
+        });
+      } catch (firstErr) {
+        console.warn("[Live] screen share retry without options:", firstErr);
+        await localParticipant.setScreenShareEnabled(true);
+      }
     } catch (err) {
       console.error("[Live] screen share failed:", err);
-      setScreenError(
-        "Could not share screen. Allow screen sharing in your browser, then try again.",
-      );
+      stopNativeScreenShare();
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : nativeShare
+            ? "Could not share screen. Allow screen capture when Android asks, then try again."
+            : "Could not share screen. Allow screen sharing in your browser, then try again.";
+      setScreenError(message);
+    } finally {
+      setScreenBusy(false);
     }
   }
 
@@ -280,8 +350,17 @@ function PublisherControls({
     <div className="space-y-2">
       {emphasizeScreenShare && !isScreenShareEnabled && (
         <p className="text-center text-[11px] text-white/70">
-          Gaming tip: tap <span className="font-semibold text-white">Share screen</span> to
-          stream gameplay live — not just your camera.
+          {nativeShare ? (
+            <>
+              Gaming tip: tap <span className="font-semibold text-white">Share screen</span>,
+              allow capture, then switch to your game — viewers see your display.
+            </>
+          ) : (
+            <>
+              Gaming tip: tap <span className="font-semibold text-white">Share screen</span> to
+              stream gameplay live — not just your camera.
+            </>
+          )}
         </p>
       )}
       {screenError && (
@@ -320,8 +399,9 @@ function PublisherControls({
         </button>
         <button
           type="button"
+          disabled={screenBusy}
           onClick={() => void toggleScreenShare()}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-bold uppercase tracking-wide backdrop-blur-md ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-bold uppercase tracking-wide backdrop-blur-md disabled:opacity-60 ${
             isScreenShareEnabled || emphasizeScreenShare
               ? "bg-red-600 text-white"
               : "bg-black/55 text-white"
@@ -333,7 +413,11 @@ function PublisherControls({
           ) : (
             <MonitorUp className="h-4 w-4" />
           )}
-          {isScreenShareEnabled ? "Stop share" : "Share screen"}
+          {screenBusy
+            ? "Starting…"
+            : isScreenShareEnabled
+              ? "Stop share"
+              : "Share screen"}
         </button>
         {showEffects && (
           <button
@@ -429,10 +513,22 @@ function PublisherStage({
   const screenMain =
     localScreen && localScreen.publication ? (
       <div className="relative h-full w-full bg-black">
-        <VideoTrack
-          trackRef={localScreen}
-          className="h-full w-full object-contain"
-        />
+        {/* Avoid mirroring the live UI into the capture (infinite preview). */}
+        {isNativeScreenShareAvailable() ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center">
+            <MonitorUp className="h-10 w-10 text-red-400" />
+            <p className="text-sm font-semibold text-white">Sharing your screen</p>
+            <p className="max-w-sm text-xs text-white/60">
+              Viewers see your display. Switch to your game or app — keep Zumelia
+              running in the background.
+            </p>
+          </div>
+        ) : (
+          <VideoTrack
+            trackRef={localScreen}
+            className="h-full w-full object-contain"
+          />
+        )}
         <div className="absolute bottom-2 left-2 rounded bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">
           Your screen
         </div>

@@ -29,7 +29,7 @@ const config: CapacitorConfig = {
   appId: "com.zumelia.app",
   appName: "Zumelia",
   webDir: "public",
-  // APK build: 20260722e — edge-to-edge status bar (no top gap)
+  // APK build: 20260722f — native live screen share (MediaProjection)
   server: {
     url: serverUrl,
     cleartext: serverUrl.startsWith("http://"),

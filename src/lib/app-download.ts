@@ -1,7 +1,7 @@
 /** Standalone Android APK (Capacitor). Built by GitHub Actions → Releases. */
 
 /** Bump this whenever a new APK is published so browsers don't keep an old file. */
-export const ANDROID_APK_CACHE_BUST = "20260722e";
+export const ANDROID_APK_CACHE_BUST = "20260722f";
 
 /** Direct tag URL (more reliable than /releases/latest for some clients). */
 export const DEFAULT_ANDROID_APK_URL =

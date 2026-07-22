@@ -56,9 +56,9 @@ export function GoLiveForm() {
         <h2 className="font-display text-lg font-bold text-vintage-ink">Go live</h2>
       </div>
       <p className="text-sm text-vintage-ink-muted">
-        Choose what you are streaming. For Gaming, Music, or Events, share your
-        screen once you are live so viewers see real gameplay or your desktop —
-        not only your camera.
+        Choose what you are streaming. For Gaming, Music, or Events, tap Share
+        screen once you are live (allow capture on Android, then switch to your
+        game) so viewers see real gameplay — not only your camera.
       </p>
       <fieldset>
         <legend className="mb-2 block text-xs font-medium text-vintage-ink-muted">
