@@ -19,14 +19,14 @@ export function getAuthRedirectOrigin(preferred?: string): string {
   return getAppOrigin();
 }
 
-export function safeNextPath(next: string | null | undefined, fallback = "/chat"): string {
+export function safeNextPath(next: string | null | undefined, fallback = "/feed"): string {
   if (!next || !next.startsWith("/") || next.startsWith("//")) return fallback;
   return next;
 }
 
 export function authCallbackUrl(next?: string, origin?: string): string {
-  const base = `${getAuthRedirectOrigin(origin)}/auth/callback`;
-  if (!next || next === "/chat") return base;
+  const base = `${getAuthRedirectOrigin(origin)}/auth/finish`;
+  if (!next || next === "/feed" || next === "/chat") return base;
   return `${base}?next=${encodeURIComponent(next)}`;
 }
 
@@ -37,7 +37,7 @@ export function authCallbackUrl(next?: string, origin?: string): string {
  */
 export function nativeOAuthBridgeUrl(next?: string, origin?: string): string {
   const base = `${getAuthRedirectOrigin(origin)}/auth/native-bridge`;
-  if (!next || next === "/chat") return base;
+  if (!next || next === "/feed" || next === "/chat") return base;
   return `${base}?next=${encodeURIComponent(next)}`;
 }
 
@@ -54,7 +54,7 @@ export function nativeOAuthDeepLinkUrl(search = "", hash = ""): string {
  * Chrome may block a JavaScript-driven custom-scheme redirect from a web page.
  */
 export function nativeOAuthRedirectUrl(next?: string): string {
-  if (!next || next === "/chat") return nativeOAuthDeepLinkUrl();
+  if (!next || next === "/feed" || next === "/chat") return nativeOAuthDeepLinkUrl();
   return nativeOAuthDeepLinkUrl(
     `?next=${encodeURIComponent(safeNextPath(next))}`,
   );

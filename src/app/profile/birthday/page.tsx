@@ -18,7 +18,7 @@ export default async function BirthdayPage({
   }
 
   const { next } = await searchParams;
-  const nextHref = next?.startsWith("/") ? next : "/chat";
+  const nextHref = next?.startsWith("/") ? next : "/feed";
 
   return (
     <AppShell user={user} wide>

@@ -56,6 +56,10 @@ via User-Agent `ZumeliaNativeApp/1` and redirects to login in the web app.
 In **Supabase → Authentication → URL Configuration → Redirect URLs**, add:
 
 ```
+https://itunes-mu.vercel.app/auth/finish
+https://itunes-mu.vercel.app/auth/finish/**
+https://itunes-mu.vercel.app/auth/callback
+https://itunes-mu.vercel.app/auth/callback/**
 https://itunes-mu.vercel.app/auth/native-bridge
 https://itunes-mu.vercel.app/auth/native-bridge/**
 zumelia://auth/callback
@@ -63,5 +67,6 @@ zumelia://auth/callback
 
 Site URL can stay `https://itunes-mu.vercel.app`.
 
-`zumelia://auth/callback` is the primary native return URL. The HTTPS entries
-remain as a fallback for older APK builds.
+`/auth/finish` is the client OAuth completion page (required for the Android app).
+`zumelia://auth/callback` is the Custom Tab deep-link return. The HTTPS bridge
+entries remain as a fallback.

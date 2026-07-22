@@ -10,6 +10,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { ensureProfile } from "@/lib/auth";
 import { safeNextPath } from "@/lib/app-url";
+import { persistServerSession } from "@/lib/auth-session-sync";
 import {
   hasCapacitorPlugin,
   isCapacitorAppShell,
@@ -352,7 +353,7 @@ export async function applyNativeOAuthResult(
     const { data, error } = await supabase.auth.exchangeCodeForSession(
       result.code,
     );
-    if (error || !data.user) {
+    if (error || !data.user || !data.session) {
       throw new Error(error?.message ?? "Could not sign in");
     }
     const { profile, error: profileError } = await ensureProfile(
@@ -362,6 +363,10 @@ export async function applyNativeOAuthResult(
     if (!profile) {
       throw new Error(profileError ?? "Could not create profile");
     }
+    await persistServerSession(
+      data.session.access_token,
+      data.session.refresh_token,
+    );
     const dest = profile.date_of_birth
       ? next
       : `/profile/birthday?next=${encodeURIComponent(next)}`;
@@ -374,7 +379,7 @@ export async function applyNativeOAuthResult(
       access_token: result.access_token,
       refresh_token: result.refresh_token,
     });
-    if (error || !data.user) {
+    if (error || !data.user || !data.session) {
       throw new Error(error?.message ?? "Could not sign in");
     }
     const { profile, error: profileError } = await ensureProfile(
@@ -384,6 +389,10 @@ export async function applyNativeOAuthResult(
     if (!profile) {
       throw new Error(profileError ?? "Could not create profile");
     }
+    await persistServerSession(
+      data.session.access_token,
+      data.session.refresh_token,
+    );
     const dest = profile.date_of_birth
       ? next
       : `/profile/birthday?next=${encodeURIComponent(next)}`;
