@@ -56,9 +56,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [accountType, setAccountType] = useState<"personal" | "business">("personal");
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState("Other");
-  const [error, setError] = useState<string | null>(
-    urlError ? formatOAuthError(urlError) : null,
-  );
+  const [error, setError] = useState<string | null>(null);
   const [needsApkUpdate, setNeedsApkUpdate] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
@@ -66,7 +64,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [oauthLoading, setOauthLoading] = useState<OAuthUiProvider | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // Already signed in (e.g. reopening the native app) → go straight to feed
+  // Already signed in (e.g. reopening the native app / OAuth bounce) → feed
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -74,18 +72,25 @@ export function AuthForm({ mode }: { mode: Mode }) {
         const supabase = createClient();
         const { data } = await supabase.auth.getSession();
         if (!cancelled && data.session) {
+          // Don't flash a stale ?error= from a double OAuth exchange.
           window.location.replace(nextAfterAuth || "/feed");
           return;
         }
       } catch {
         // stay on auth form
       }
-      if (!cancelled) setCheckingSession(false);
+      if (!cancelled) {
+        // Only show URL errors when there is no live session.
+        if (urlError) {
+          setError(formatOAuthError(urlError));
+        }
+        setCheckingSession(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [nextAfterAuth]);
+  }, [nextAfterAuth, urlError]);
 
   useEffect(() => {
     void ensureNativeOAuthListener();

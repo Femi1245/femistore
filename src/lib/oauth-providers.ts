@@ -21,9 +21,11 @@ export function formatOAuthError(message: string): string {
   if (
     lower.includes("pkce") ||
     lower.includes("code verifier") ||
-    lower.includes("auth code and code verifier")
+    lower.includes("auth code and code verifier") ||
+    lower.includes("invalid_grant") ||
+    (lower.includes("code") && lower.includes("expired"))
   ) {
-    return "Sign-in could not finish in this browser. Start again from the same tab and allow cookies for this site. If you use localhost, make sure Supabase redirect URLs include http://localhost:3000/auth/callback.";
+    return "Sign-in almost finished — tap Continue with Google once more if you are not signed in yet.";
   }
 
   if (
